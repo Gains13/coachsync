@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 
 export default function CreateClient() {
-  const [authUserId, setAuthUserId] = useState("");
+  const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [clientId, setClientId] = useState("");
   const [startingWeight, setStartingWeight] = useState("");
@@ -23,8 +23,8 @@ export default function CreateClient() {
   async function createClientProfile(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!authUserId || !fullName || !clientId) {
-      setStatusMessage("Auth User ID, full name, and client ID are required.");
+    if (!email || !fullName || !clientId) {
+      setStatusMessage("Email, full name, and client ID are required.");
       return;
     }
 
@@ -33,8 +33,40 @@ export default function CreateClient() {
 
     const cleanClientId = clientId.trim().toLowerCase();
 
+    // Step 1 — Send invite email and get new user ID back
+    let newUserId = "";
+
+    try {
+      const response = await fetch("/api/invite-client", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), clientId: cleanClientId }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setStatusMessage("Failed to send invite: " + result.error);
+        setIsSaving(false);
+        return;
+      }
+
+      newUserId = result.userId;
+    } catch (err) {
+      setStatusMessage("Network error sending invite. Check your connection.");
+      setIsSaving(false);
+      return;
+    }
+
+    if (!newUserId) {
+      setStatusMessage("Invite sent but no user ID returned. Check Supabase.");
+      setIsSaving(false);
+      return;
+    }
+
+    // Step 2 — Create profile row
     const { error: profileError } = await supabase.from("profiles").insert({
-      id: authUserId.trim(),
+      id: newUserId,
       role: "client",
       full_name: fullName.trim(),
       client_id: cleanClientId,
@@ -47,10 +79,11 @@ export default function CreateClient() {
       return;
     }
 
+    // Step 3 — Create assessment
     const { error: assessmentError } = await supabase
       .from("client_assessments")
       .insert({
-        client_user_id: authUserId.trim(),
+        client_user_id: newUserId,
         starting_weight: startingWeight,
         body_fat: bodyFat,
         muscle_mass: muscleMass,
@@ -63,15 +96,15 @@ export default function CreateClient() {
     if (assessmentError) {
       console.error(assessmentError);
       setStatusMessage(
-        "Profile was created, but assessment failed: " +
-          assessmentError.message
+        "Profile created but assessment failed: " + assessmentError.message
       );
       setIsSaving(false);
       return;
     }
 
+    // Step 4 — Create goals
     const { error: goalsError } = await supabase.from("client_goals").insert({
-      client_user_id: authUserId.trim(),
+      client_user_id: newUserId,
       main_goal: mainGoal,
       short_term_goal: shortTermGoal,
       long_term_goal: longTermGoal,
@@ -81,16 +114,18 @@ export default function CreateClient() {
     if (goalsError) {
       console.error(goalsError);
       setStatusMessage(
-        "Profile and assessment were created, but goals failed: " +
-          goalsError.message
+        "Profile and assessment created but goals failed: " + goalsError.message
       );
       setIsSaving(false);
       return;
     }
 
-    setStatusMessage("Client profile created successfully.");
+    setStatusMessage(
+      "Client profile created and invite email sent to " + email.trim()
+    );
 
-    setAuthUserId("");
+    // Reset all fields
+    setEmail("");
     setFullName("");
     setClientId("");
     setStartingWeight("");
@@ -123,8 +158,8 @@ export default function CreateClient() {
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-blue-50">
-                  Add a client profile, assessment details, and goals after
-                  creating their Supabase Auth login.
+                  Fill out the form below. The client will automatically receive
+                  an invite email to set up their account.
                 </p>
               </div>
 
@@ -138,18 +173,10 @@ export default function CreateClient() {
           </div>
 
           <div className="grid gap-4 p-6 md:grid-cols-3 md:p-8">
-            <SummaryCard title="Step 1" value="Auth User ID" />
+            <SummaryCard title="Step 1" value="Client Info" />
             <SummaryCard title="Step 2" value="Assessment" />
             <SummaryCard title="Step 3" value="Goals" />
           </div>
-        </div>
-
-        <div className="mb-6 rounded-3xl border border-amber-200 bg-amber-50 p-5 text-amber-900 shadow-sm">
-          <h2 className="font-semibold">Before using this page</h2>
-          <p className="mt-2 text-sm text-amber-800">
-            First create the client in Supabase → Authentication → Users. Then
-            copy their User UID and paste it below.
-          </p>
         </div>
 
         <form
@@ -158,15 +185,15 @@ export default function CreateClient() {
         >
           <div className="space-y-8">
             <FormSection
-              title="Client Login Link"
-              description="Connect this client profile to the Supabase Auth user account."
+              title="Client Info"
+              description="Enter the client's email and name. They will receive an invite link automatically."
             >
               <div className="grid gap-4 md:grid-cols-3">
                 <Input
-                  label="Supabase Auth User ID"
-                  value={authUserId}
-                  onChange={setAuthUserId}
-                  placeholder="Paste user UID"
+                  label="Client Email"
+                  value={email}
+                  onChange={setEmail}
+                  placeholder="client@email.com"
                 />
 
                 <Input
@@ -192,7 +219,7 @@ export default function CreateClient() {
 
             <FormSection
               title="Initial Assessment"
-              description="Record the client’s starting measurements and baseline notes."
+              description="Record the client's starting measurements and baseline notes."
             >
               <div className="grid gap-4 md:grid-cols-3">
                 <Input
@@ -248,7 +275,7 @@ export default function CreateClient() {
 
             <FormSection
               title="Client Goals"
-              description="Set the client’s main goal, short-term focus, and long-term target."
+              description="Set the client's main goal, short-term focus, and long-term target."
             >
               <div className="grid gap-4 md:grid-cols-3">
                 <Input
@@ -293,13 +320,15 @@ export default function CreateClient() {
             disabled={isSaving}
             className="mt-6 w-full rounded-2xl bg-blue-600 px-5 py-4 font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSaving ? "Creating Client..." : "Create Client Profile"}
+            {isSaving ? "Creating Client..." : "Create Client & Send Invite"}
           </button>
         </form>
       </section>
     </main>
   );
 }
+
+// — Sub-components unchanged below —
 
 function SummaryCard({ title, value }: { title: string; value: string }) {
   return (
@@ -325,7 +354,6 @@ function FormSection({
         <h2 className="text-xl font-bold text-slate-900">{title}</h2>
         <p className="mt-1 text-sm text-slate-500">{description}</p>
       </div>
-
       {children}
     </section>
   );
@@ -347,7 +375,6 @@ function Input({
       <label className="mb-2 block text-sm font-semibold text-slate-700">
         {label}
       </label>
-
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -374,7 +401,6 @@ function TextArea({
       <label className="mb-2 block text-sm font-semibold text-slate-700">
         {label}
       </label>
-
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}

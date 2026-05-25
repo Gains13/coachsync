@@ -1,32 +1,109 @@
-import { Link } from "react-router-dom";
-import { clients } from "../data/clients";
-import { logoutUser } from "../lib/authHelpers";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabaseClient";
 
-export default function ClientDashbord() {
-  const clientId = localStorage.getItem("coachsync-client-id");
-  const client = clients.find((person) => person.id === clientId);
+type ClientData = {
+  full_name: string;
+  client_id: string;
+};
+
+type GoalData = {
+  main_goal: string;
+};
+
+type WeekData = {
+  week_number: number;
+};
+
+export default function ClientDashboard() {
+  const navigate = useNavigate();
+  const [client, setClient] = useState<ClientData | null>(null);
+  const [goal, setGoal] = useState<GoalData | null>(null);
+  const [currentWeek, setCurrentWeek] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadDashboard() {
+      // Get logged in user from Supabase session
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        navigate("/");
+        return;
+      }
+
+      const userId = session.user.id;
+
+      // Pull profile
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("full_name, client_id")
+        .eq("id", userId)
+        .single();
+
+      if (!profileData) {
+        navigate("/");
+        return;
+      }
+
+      setClient(profileData);
+
+      // Pull goals
+      const { data: goalData } = await supabase
+        .from("client_goals")
+        .select("main_goal")
+        .eq("client_user_id", userId)
+        .single();
+
+      if (goalData) setGoal(goalData);
+
+      // Pull most recent active week
+      const { data: weekData } = await supabase
+        .from("client_plan_weeks")
+        .select("week_number")
+        .eq("client_user_id", userId)
+        .order("week_number", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (weekData) setCurrentWeek(weekData.week_number);
+
+      setLoading(false);
+    }
+
+    loadDashboard();
+  }, [navigate]);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    navigate("/");
+  }
+
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-sky-50">
+        <p className="text-slate-500">Loading your dashboard...</p>
+      </main>
+    );
+  }
 
   if (!client) {
     return (
       <main className="min-h-screen bg-sky-50 p-8 text-slate-900">
         <div className="mx-auto max-w-3xl rounded-3xl border border-sky-100 bg-white p-8 shadow-sm">
-          <h1 className="text-2xl font-bold">Client not found</h1>
-
+          <h1 className="text-2xl font-bold">Client profile not found</h1>
           <p className="mt-4 text-slate-600">
-            Saved client ID: {clientId || "No client ID saved"}
+            Your account exists but no profile has been set up yet. Contact
+            your trainer.
           </p>
-
-          <p className="mt-2 text-slate-500">
-            This must match one of the IDs in src/data/clients.ts, like adam,
-            suzanne, robert, or carol.
-          </p>
-
-          <Link
-            to="/"
+          <button
+            onClick={handleLogout}
             className="mt-5 inline-block rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
           >
-            Back to login
-          </Link>
+            Log out
+          </button>
         </div>
       </main>
     );
@@ -44,17 +121,17 @@ export default function ClientDashbord() {
                 </p>
 
                 <h1 className="mt-3 text-3xl font-bold md:text-4xl">
-                  Welcome, {client.name}
+                  Welcome, {client.full_name}
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-blue-50">
-                  Your assigned training plan, progress, completed workouts, and
-                  goals all in one place.
+                  Your assigned training plan, progress, completed workouts,
+                  and goals all in one place.
                 </p>
               </div>
 
               <button
-                onClick={logoutUser}
+                onClick={handleLogout}
                 className="rounded-xl bg-white/15 px-4 py-2 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur hover:bg-white/25"
               >
                 Log out
@@ -63,10 +140,16 @@ export default function ClientDashbord() {
           </div>
 
           <div className="grid gap-4 p-6 md:grid-cols-4 md:p-8">
-            <SummaryCard title="Current Week" value={`Week ${client.currentWeek}`} />
+            <SummaryCard
+              title="Current Week"
+              value={currentWeek ? `Week ${currentWeek}` : "Not assigned"}
+            />
             <SummaryCard title="Plan Status" value="Active" />
-            <SummaryCard title="Main Goal" value={client.goals.mainGoal} />
-            <SummaryCard title="Client" value={client.name} />
+            <SummaryCard
+              title="Main Goal"
+              value={goal?.main_goal || "Not set"}
+            />
+            <SummaryCard title="Client" value={client.full_name} />
           </div>
         </div>
 
@@ -89,22 +172,29 @@ export default function ClientDashbord() {
           <DashboardTile
             to="/client-goals"
             title="Goals"
-            description="See your short-term and long-term training goals."
+            description="See and update your short-term and long-term training goals."
             icon="🎯"
           />
 
           <DashboardTile
             to="/client-past-workouts"
             title="Past Workouts"
-            description="Look back at workouts completed before using the app."
+            description="Look back at workouts you have completed."
             icon="🕓"
           />
 
           <DashboardTile
             to="/client-progress"
             title="Progress"
-            description="Track your progress overview and improvement trends."
+            description="Track strength gains, progressive overload, and muscle growth."
             icon="📈"
+          />
+
+          <DashboardTile
+            to="/client-messages"
+            title="Messages"
+            description="Send a message to your trainer and view replies."
+            icon="💬"
           />
         </div>
       </section>
@@ -146,11 +236,19 @@ function DashboardTile({
 
       <h2 className="text-xl font-bold">{title}</h2>
 
-      <p className={`mt-2 text-sm ${highlight ? "text-blue-50" : "text-slate-500"}`}>
+      <p
+        className={`mt-2 text-sm ${
+          highlight ? "text-blue-50" : "text-slate-500"
+        }`}
+      >
         {description}
       </p>
 
-      <p className={`mt-5 text-sm font-semibold ${highlight ? "text-white" : "text-blue-600"}`}>
+      <p
+        className={`mt-5 text-sm font-semibold ${
+          highlight ? "text-white" : "text-blue-600"
+        }`}
+      >
         Open →
       </p>
     </Link>
