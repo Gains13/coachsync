@@ -41,65 +41,72 @@ export default function StartWorkout() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    async function loadWorkout() {
-      if (!workoutId) {
-        setIsLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("client_plan_workouts")
-        .select(
-          `
-          id,
-          title,
-          client_plan_exercises (
-            id,
-            exercise_name,
-            sets,
-            reps,
-            weight,
-            rest,
-            video_link,
-            exercise_order
-          )
-        `
-        )
-        .eq("id", workoutId)
-        .single();
-
-      if (error || !data) {
-        console.error(error);
-        setIsLoading(false);
-        return;
-      }
-
-      const sortedExercises = [...data.client_plan_exercises].sort(
-        (a, b) => a.exercise_order - b.exercise_order
-      );
-
-      setWorkout(data);
-      setLoggedExercises(
-        sortedExercises.map((exercise) => ({
-          exerciseName: exercise.exercise_name,
-          plannedSets: exercise.sets,
-          plannedReps: exercise.reps,
-          plannedRest: exercise.rest,
-          plannedWeight: exercise.weight,
-          videoLink: exercise.video_link,
-          completed: false,
-          difficulty: "",
-          notes: "",
-        }))
-      );
-
-      setIsLoading(false);
-    }
-
     loadWorkout();
   }, [workoutId]);
+
+  async function loadWorkout() {
+    setIsLoading(true);
+    setErrorMessage("");
+
+    if (!workoutId) {
+      setErrorMessage("No workout ID was found.");
+      setIsLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("client_plan_workouts")
+      .select(
+        `
+        id,
+        title,
+        client_plan_exercises (
+          id,
+          exercise_name,
+          sets,
+          reps,
+          weight,
+          rest,
+          video_link,
+          exercise_order
+        )
+      `
+      )
+      .eq("id", workoutId)
+      .single();
+
+    if (error || !data) {
+      console.error(error);
+      setErrorMessage("Could not load this workout.");
+      setIsLoading(false);
+      return;
+    }
+
+    const sortedExercises = [...(data.client_plan_exercises || [])].sort(
+      (a, b) => a.exercise_order - b.exercise_order
+    );
+
+    setWorkout(data as PlanWorkout);
+
+    setLoggedExercises(
+      sortedExercises.map((exercise) => ({
+        exerciseName: exercise.exercise_name,
+        plannedSets: exercise.sets,
+        plannedReps: exercise.reps,
+        plannedRest: exercise.rest,
+        plannedWeight: exercise.weight,
+        videoLink: exercise.video_link,
+        completed: false,
+        difficulty: "",
+        notes: "",
+      }))
+    );
+
+    setIsLoading(false);
+  }
 
   function toggleCompleted(exerciseIndex: number) {
     setLoggedExercises((currentExercises) =>
@@ -142,7 +149,7 @@ export default function StartWorkout() {
 
   async function submitWorkout() {
     if (!workout) {
-      alert("No workout found.");
+      setErrorMessage("No workout found.");
       return;
     }
 
@@ -150,6 +157,7 @@ export default function StartWorkout() {
 
     setIsSubmitting(true);
     setSuccessMessage("");
+    setErrorMessage("");
 
     const {
       data: { user },
@@ -157,7 +165,30 @@ export default function StartWorkout() {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      alert("You must be logged in to submit a workout.");
+      setErrorMessage("You must be logged in to submit a workout.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const { data: existingSubmission, error: existingSubmissionError } =
+      await supabase
+        .from("workout_submissions")
+        .select("id")
+        .eq("client_user_id", user.id)
+        .eq("workout_id", workout.id)
+        .maybeSingle();
+
+    if (existingSubmissionError) {
+      console.error(existingSubmissionError);
+      setErrorMessage("Could not check if this workout was already submitted.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (existingSubmission) {
+      setErrorMessage(
+        "You have already submitted this workout. Go back to My Plan to view it."
+      );
       setIsSubmitting(false);
       return;
     }
@@ -166,6 +197,7 @@ export default function StartWorkout() {
       .from("workout_submissions")
       .insert({
         client_user_id: user.id,
+        workout_id: workout.id,
         workout_title: workout.title,
         notes: "",
       })
@@ -174,7 +206,9 @@ export default function StartWorkout() {
 
     if (submissionError || !submission) {
       console.error(submissionError);
-      alert("Could not submit workout.");
+      setErrorMessage(
+        submissionError?.message || "Could not submit workout."
+      );
       setIsSubmitting(false);
       return;
     }
@@ -197,7 +231,10 @@ export default function StartWorkout() {
 
     if (exercisesError) {
       console.error(exercisesError);
-      alert("Workout was created, but exercises were not saved.");
+      setErrorMessage(
+        "Workout was created, but exercises were not saved: " +
+          exercisesError.message
+      );
       setIsSubmitting(false);
       return;
     }
@@ -206,7 +243,7 @@ export default function StartWorkout() {
     setSuccessMessage("Workout submitted successfully!");
 
     setTimeout(() => {
-      navigate("/client");
+      navigate("/client-plan");
     }, 900);
   }
 
@@ -226,7 +263,9 @@ export default function StartWorkout() {
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-600">
             CoachSync
           </p>
+
           <h1 className="mt-3 text-2xl font-bold">Loading workout...</h1>
+
           <p className="mt-2 text-slate-500">
             Getting your assigned workout ready.
           </p>
@@ -249,11 +288,17 @@ export default function StartWorkout() {
             Go back to your dashboard and start the current workout from My Plan.
           </p>
 
+          {errorMessage && (
+            <p className="mt-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-700">
+              {errorMessage}
+            </p>
+          )}
+
           <Link
-            to="/client"
+            to="/client-plan"
             className="mt-5 inline-block rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
           >
-            Back to Dashboard
+            Back to My Plan
           </Link>
         </div>
       </main>
@@ -262,20 +307,20 @@ export default function StartWorkout() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
-      <section className="mx-auto max-w-6xl px-6 py-10">
-        <div className="mb-8 overflow-hidden rounded-[2rem] border border-sky-100 bg-white shadow-sm">
-          <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-6 py-8 text-white md:px-8">
+      <section className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:py-10">
+        <div className="mb-8 overflow-hidden rounded-3xl border border-sky-100 bg-white shadow-sm sm:rounded-[2rem]">
+          <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-6 text-white sm:px-6 sm:py-8 md:px-8">
             <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-100">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
                   Start Workout
                 </p>
 
-                <h1 className="mt-3 text-3xl font-bold md:text-4xl">
+                <h1 className="mt-3 break-words text-3xl font-bold md:text-4xl">
                   {workout.title}
                 </h1>
 
-                <p className="mt-3 max-w-2xl text-blue-50">
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
                   Check off what you completed, rate the difficulty, and add
                   notes for your trainer.
                 </p>
@@ -283,15 +328,15 @@ export default function StartWorkout() {
 
               <Link
                 to="/client-plan"
-                className="rounded-xl bg-white/15 px-4 py-2 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur hover:bg-white/25"
+                className="w-full rounded-xl bg-white/15 px-4 py-3 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto sm:py-2"
               >
                 Back to My Plan
               </Link>
             </div>
           </div>
 
-          <div className="p-6 md:p-8">
-            <div className="rounded-3xl border border-sky-100 bg-sky-50 p-6">
+          <div className="p-4 sm:p-6 md:p-8">
+            <div className="rounded-3xl border border-sky-100 bg-sky-50 p-5 sm:p-6">
               <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-500">
@@ -304,7 +349,7 @@ export default function StartWorkout() {
                   </h2>
                 </div>
 
-                <div className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-blue-700 ring-1 ring-sky-100">
+                <div className="w-fit rounded-full bg-white px-4 py-2 text-sm font-semibold text-blue-700 ring-1 ring-sky-100">
                   {completionPercent}% complete
                 </div>
               </div>
@@ -321,7 +366,13 @@ export default function StartWorkout() {
 
         {successMessage && (
           <div className="mb-6 rounded-3xl border border-emerald-100 bg-emerald-50 p-5 text-center text-emerald-700 shadow-sm">
-            {successMessage} Redirecting back to your dashboard...
+            {successMessage} Redirecting back to your plan...
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="mb-6 rounded-3xl border border-red-100 bg-red-50 p-5 text-center text-red-700 shadow-sm">
+            {errorMessage}
           </div>
         )}
 
@@ -329,7 +380,7 @@ export default function StartWorkout() {
           {loggedExercises.map((exercise, exerciseIndex) => (
             <div
               key={`${exercise.exerciseName}-${exerciseIndex}`}
-              className={`rounded-3xl border p-6 shadow-sm transition ${
+              className={`rounded-3xl border p-5 shadow-sm transition sm:p-6 ${
                 exercise.completed
                   ? "border-emerald-200 bg-emerald-50"
                   : "border-sky-100 bg-white"

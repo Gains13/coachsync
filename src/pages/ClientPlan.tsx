@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 
 type CompletedSubmission = {
   id: string;
+  workout_id: string | null;
   workout_title: string;
 };
 
@@ -36,6 +37,7 @@ export default function ClientPlan() {
   const [completedSubmissions, setCompletedSubmissions] = useState<
     CompletedSubmission[]
   >([]);
+
   const [assignedWeeks, setAssignedWeeks] = useState<PlanWeek[]>([]);
   const [isLoadingCompleted, setIsLoadingCompleted] = useState(true);
   const [isLoadingProgram, setIsLoadingProgram] = useState(true);
@@ -64,7 +66,7 @@ export default function ClientPlan() {
 
     const { data: completedData, error: completedError } = await supabase
       .from("workout_submissions")
-      .select("id, workout_title")
+      .select("id, workout_id, workout_title")
       .eq("client_user_id", user.id);
 
     if (completedError) {
@@ -76,7 +78,7 @@ export default function ClientPlan() {
       return;
     }
 
-    setCompletedSubmissions(completedData || []);
+    setCompletedSubmissions((completedData || []) as CompletedSubmission[]);
     setIsLoadingCompleted(false);
 
     const { data: programData, error: programError } = await supabase
@@ -116,26 +118,91 @@ export default function ClientPlan() {
     setIsLoadingProgram(false);
   }
 
+  const completedWorkoutIds = useMemo(
+    () =>
+      completedSubmissions
+        .map((submission) => submission.workout_id)
+        .filter(Boolean) as string[],
+    [completedSubmissions]
+  );
+
   const completedWorkoutTitles = useMemo(
     () => completedSubmissions.map((submission) => submission.workout_title),
     [completedSubmissions]
   );
 
-  function getCompletedSubmissionId(workoutTitle: string) {
+  function isWorkoutCompleted(workout: PlanWorkout) {
+    if (completedWorkoutIds.includes(workout.id)) {
+      return true;
+    }
+
+    // Fallback for old submissions made before workout_id existed.
+    return completedWorkoutTitles.includes(workout.title);
+  }
+
+  function getCompletedSubmissionId(workout: PlanWorkout) {
+    const exactMatch = completedSubmissions.find(
+      (submission) => submission.workout_id === workout.id
+    );
+
+    if (exactMatch) {
+      return exactMatch.id;
+    }
+
+    // Fallback for old submissions made before workout_id existed.
     return completedSubmissions.find(
-      (submission) => submission.workout_title === workoutTitle
+      (submission) => submission.workout_title === workout.title
     )?.id;
   }
 
+  function isWeekCompleted(week: PlanWeek) {
+    const workouts = week.client_plan_workouts || [];
+
+    if (workouts.length === 0) {
+      return week.status === "completed";
+    }
+
+    return workouts.every((workout) => isWorkoutCompleted(workout));
+  }
+
+  const sortedAssignedWeeks = useMemo(() => {
+    return [...assignedWeeks].sort((a, b) => {
+      const aCompleted = isWeekCompleted(a);
+      const bCompleted = isWeekCompleted(b);
+
+      // Incomplete/current weeks stay on top.
+      if (aCompleted !== bCompleted) {
+        return aCompleted ? 1 : -1;
+      }
+
+      // If both weeks are completed, newer completed week shows first.
+      if (aCompleted && bCompleted) {
+        return b.week_number - a.week_number;
+      }
+
+      // If both are incomplete, normal week order.
+      return a.week_number - b.week_number;
+    });
+  }, [assignedWeeks, completedWorkoutIds, completedWorkoutTitles]);
+
   const nextAssignedWorkout = useMemo(() => {
-    const availableWorkouts = assignedWeeks
+    const availableWorkouts = sortedAssignedWeeks
       .filter((week) => week.status !== "locked")
       .flatMap((week) => week.client_plan_workouts || []);
 
     return [...availableWorkouts]
-      .sort((a, b) => a.workout_order - b.workout_order)
-      .find((workout) => !completedWorkoutTitles.includes(workout.title));
-  }, [assignedWeeks, completedWorkoutTitles]);
+      .sort((a, b) => {
+        const aCompleted = isWorkoutCompleted(a);
+        const bCompleted = isWorkoutCompleted(b);
+
+        if (aCompleted !== bCompleted) {
+          return aCompleted ? 1 : -1;
+        }
+
+        return a.workout_order - b.workout_order;
+      })
+      .find((workout) => !isWorkoutCompleted(workout));
+  }, [sortedAssignedWeeks, completedWorkoutIds, completedWorkoutTitles]);
 
   return (
     <PageShell
@@ -164,18 +231,22 @@ export default function ClientPlan() {
         </div>
       ) : (
         <div className="space-y-6">
-          {assignedWeeks.map((week) => {
-            const sortedWeekWorkouts = [...(week.client_plan_workouts || [])].sort(
-              (a, b) => {
-                const aCompleted = completedWorkoutTitles.includes(a.title);
-                const bCompleted = completedWorkoutTitles.includes(b.title);
+          {sortedAssignedWeeks.map((week) => {
+            const weekCompleted = isWeekCompleted(week);
 
-                if (!aCompleted && bCompleted) return -1;
-                if (aCompleted && !bCompleted) return 1;
+            const sortedWeekWorkouts = [
+              ...(week.client_plan_workouts || []),
+            ].sort((a, b) => {
+              const aCompleted = isWorkoutCompleted(a);
+              const bCompleted = isWorkoutCompleted(b);
 
-                return a.workout_order - b.workout_order;
+              // Completed workouts move to the bottom inside the week.
+              if (aCompleted !== bCompleted) {
+                return aCompleted ? 1 : -1;
               }
-            );
+
+              return a.workout_order - b.workout_order;
+            });
 
             return (
               <div
@@ -183,6 +254,8 @@ export default function ClientPlan() {
                 className={`rounded-3xl border p-5 ${
                   week.status === "locked"
                     ? "border-slate-200 bg-slate-50 opacity-80"
+                    : weekCompleted
+                    ? "border-emerald-100 bg-emerald-50 opacity-90"
                     : "border-sky-100 bg-sky-50"
                 }`}
               >
@@ -195,13 +268,15 @@ export default function ClientPlan() {
                     className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${
                       week.status === "locked"
                         ? "bg-red-50 text-red-600 ring-1 ring-red-100"
-                        : week.status === "completed"
+                        : weekCompleted || week.status === "completed"
                         ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
                         : "bg-blue-50 text-blue-700 ring-1 ring-blue-100"
                     }`}
                   >
                     {week.status === "locked"
                       ? "Locked / Upcoming"
+                      : weekCompleted || week.status === "completed"
+                      ? "Completed"
                       : week.status}
                   </span>
                 </div>
@@ -213,16 +288,13 @@ export default function ClientPlan() {
                     </p>
                   ) : (
                     sortedWeekWorkouts.map((workout) => {
-                      const isCompleted = completedWorkoutTitles.includes(
-                        workout.title
-                      );
-
-                      const completedSubmissionId = getCompletedSubmissionId(
-                        workout.title
-                      );
+                      const isCompleted = isWorkoutCompleted(workout);
+                      const completedSubmissionId =
+                        getCompletedSubmissionId(workout);
 
                       const isCurrentWorkout =
                         week.status !== "locked" &&
+                        !isCompleted &&
                         nextAssignedWorkout?.id === workout.id;
 
                       const isUpcoming = !isCompleted && !isCurrentWorkout;
