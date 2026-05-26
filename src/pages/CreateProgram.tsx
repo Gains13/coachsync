@@ -22,6 +22,24 @@ type WorkoutForm = {
   exercises: ExerciseForm[];
 };
 
+function blankExercise(): ExerciseForm {
+  return {
+    exerciseName: "",
+    sets: "",
+    reps: "",
+    weight: "",
+    rest: "",
+    videoLink: "",
+  };
+}
+
+function blankWorkout(): WorkoutForm {
+  return {
+    title: "",
+    exercises: [blankExercise()],
+  };
+}
+
 export default function CreateProgram() {
   const [clients, setClients] = useState<ClientProfile[]>([]);
   const [selectedClientId, setSelectedClientId] = useState("");
@@ -29,42 +47,71 @@ export default function CreateProgram() {
   const [weekStatus, setWeekStatus] = useState("unlocked");
   const [statusMessage, setStatusMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingWeek, setIsLoadingWeek] = useState(false);
 
-  const [workouts, setWorkouts] = useState<WorkoutForm[]>([
-    {
-      title: "",
-      exercises: [
-        {
-          exerciseName: "",
-          sets: "",
-          reps: "",
-          weight: "",
-          rest: "",
-          videoLink: "",
-        },
-      ],
-    },
-  ]);
+  const [workouts, setWorkouts] = useState<WorkoutForm[]>([blankWorkout()]);
 
   useEffect(() => {
-    async function loadClients() {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, client_id")
-        .eq("role", "client")
-        .order("full_name", { ascending: true });
-
-      if (error) {
-        console.error(error);
-        setStatusMessage("Could not load clients.");
-        return;
-      }
-
-      setClients(data || []);
-    }
-
     loadClients();
   }, []);
+
+  useEffect(() => {
+    if (selectedClientId) {
+      loadNextWeekNumber(selectedClientId);
+    }
+  }, [selectedClientId]);
+
+  async function loadClients() {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name, client_id")
+      .eq("role", "client")
+      .order("full_name", { ascending: true });
+
+    if (error) {
+      console.error(error);
+      setStatusMessage("Could not load clients: " + error.message);
+      return;
+    }
+
+    setClients(data || []);
+  }
+
+  async function loadNextWeekNumber(clientUserId: string) {
+    setIsLoadingWeek(true);
+    setStatusMessage("");
+
+    const { data, error } = await supabase
+      .from("client_plan_weeks")
+      .select("week_number")
+      .eq("client_user_id", clientUserId)
+      .order("week_number", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error(error);
+      setStatusMessage("Could not check the client's latest week.");
+      setIsLoadingWeek(false);
+      return;
+    }
+
+    if (data?.week_number) {
+      setWeekNumber(String(data.week_number + 1));
+    } else {
+      setWeekNumber("1");
+    }
+
+    setIsLoadingWeek(false);
+  }
+
+  function handleClientChange(value: string) {
+    setSelectedClientId(value);
+
+    if (!value) {
+      setWeekNumber("1");
+    }
+  }
 
   function updateWorkoutTitle(workoutIndex: number, value: string) {
     setWorkouts((currentWorkouts) =>
@@ -80,22 +127,7 @@ export default function CreateProgram() {
   }
 
   function addWorkout() {
-    setWorkouts((currentWorkouts) => [
-      ...currentWorkouts,
-      {
-        title: "",
-        exercises: [
-          {
-            exerciseName: "",
-            sets: "",
-            reps: "",
-            weight: "",
-            rest: "",
-            videoLink: "",
-          },
-        ],
-      },
-    ]);
+    setWorkouts((currentWorkouts) => [...currentWorkouts, blankWorkout()]);
   }
 
   function removeWorkout(workoutIndex: number) {
@@ -141,17 +173,7 @@ export default function CreateProgram() {
 
         return {
           ...workout,
-          exercises: [
-            ...workout.exercises,
-            {
-              exerciseName: "",
-              sets: "",
-              reps: "",
-              weight: "",
-              rest: "",
-              videoLink: "",
-            },
-          ],
+          exercises: [...workout.exercises, blankExercise()],
         };
       })
     );
@@ -185,8 +207,8 @@ export default function CreateProgram() {
       return;
     }
 
-    if (!weekNumber) {
-      setStatusMessage("Week number is required.");
+    if (!weekNumber || Number(weekNumber) < 1) {
+      setStatusMessage("Week number is required and must be at least 1.");
       return;
     }
 
@@ -194,9 +216,17 @@ export default function CreateProgram() {
       .map((workout) => ({
         ...workout,
         title: workout.title.trim(),
-        exercises: workout.exercises.filter(
-          (exercise) => exercise.exerciseName.trim() !== ""
-        ),
+        exercises: workout.exercises
+          .map((exercise) => ({
+            ...exercise,
+            exerciseName: exercise.exerciseName.trim(),
+            sets: exercise.sets.trim(),
+            reps: exercise.reps.trim(),
+            weight: exercise.weight.trim(),
+            rest: exercise.rest.trim(),
+            videoLink: exercise.videoLink.trim(),
+          }))
+          .filter((exercise) => exercise.exerciseName !== ""),
       }))
       .filter((workout) => workout.title !== "" && workout.exercises.length > 0);
 
@@ -208,7 +238,29 @@ export default function CreateProgram() {
     }
 
     setIsSaving(true);
-    setStatusMessage("");
+    setStatusMessage("Saving program week...");
+
+    const { data: existingWeek, error: existingWeekError } = await supabase
+      .from("client_plan_weeks")
+      .select("id")
+      .eq("client_user_id", selectedClientId)
+      .eq("week_number", Number(weekNumber))
+      .maybeSingle();
+
+    if (existingWeekError) {
+      console.error(existingWeekError);
+      setStatusMessage("Could not check for existing week.");
+      setIsSaving(false);
+      return;
+    }
+
+    if (existingWeek) {
+      setStatusMessage(
+        `This client already has Week ${weekNumber}. Choose another week number.`
+      );
+      setIsSaving(false);
+      return;
+    }
 
     const { data: weekData, error: weekError } = await supabase
       .from("client_plan_weeks")
@@ -256,12 +308,12 @@ export default function CreateProgram() {
 
       const exerciseRows = workout.exercises.map((exercise, exerciseIndex) => ({
         workout_id: workoutData.id,
-        exercise_name: exercise.exerciseName.trim(),
-        sets: exercise.sets.trim(),
-        reps: exercise.reps.trim(),
-        weight: exercise.weight.trim(),
-        rest: exercise.rest.trim(),
-        video_link: exercise.videoLink.trim(),
+        exercise_name: exercise.exerciseName,
+        sets: exercise.sets,
+        reps: exercise.reps,
+        weight: exercise.weight,
+        rest: exercise.rest,
+        video_link: exercise.videoLink,
         exercise_order: exerciseIndex + 1,
       }));
 
@@ -272,7 +324,7 @@ export default function CreateProgram() {
       if (exerciseError) {
         console.error(exerciseError);
         setStatusMessage(
-          `Workout ${workout.title} was created, but exercises failed: ` +
+          `Workout "${workout.title}" was created, but exercises failed: ` +
             exerciseError.message
         );
         setIsSaving(false);
@@ -280,59 +332,58 @@ export default function CreateProgram() {
       }
     }
 
-    setStatusMessage("Program week saved successfully.");
+    const savedWeekNumber = Number(weekNumber);
 
-    setWeekNumber("1");
+    setStatusMessage(`Week ${savedWeekNumber} saved successfully.`);
+    setWeekNumber(String(savedWeekNumber + 1));
     setWeekStatus("unlocked");
-    setWorkouts([
-      {
-        title: "",
-        exercises: [
-          {
-            exerciseName: "",
-            sets: "",
-            reps: "",
-            weight: "",
-            rest: "",
-            videoLink: "",
-          },
-        ],
-      },
-    ]);
-
+    setWorkouts([blankWorkout()]);
     setIsSaving(false);
   }
 
+  const selectedClient = clients.find((client) => client.id === selectedClientId);
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
-      <section className="mx-auto max-w-6xl px-6 py-10">
-        <div className="mb-8 overflow-hidden rounded-[2rem] border border-sky-100 bg-white shadow-sm">
-          <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-6 py-8 text-white md:px-8">
+      <section className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:py-10">
+        <div className="mb-8 overflow-hidden rounded-3xl border border-sky-100 bg-white shadow-sm sm:rounded-[2rem]">
+          <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-6 text-white sm:px-6 sm:py-8 md:px-8">
             <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-100">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
                   Program Builder
                 </p>
 
-                <h1 className="mt-3 text-3xl font-bold md:text-4xl">
+                <h1 className="mt-3 break-words text-3xl font-bold md:text-4xl">
                   Create Client Program
                 </h1>
 
-                <p className="mt-3 max-w-2xl text-blue-50">
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
                   Build one training week with multiple workouts and exercises.
                 </p>
               </div>
 
-              <Link
-                to="/trainer"
-                className="rounded-xl bg-white/15 px-4 py-2 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur hover:bg-white/25"
-              >
-                Back to Trainer
-              </Link>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                {selectedClientId && (
+                  <Link
+                    to={`/clients/${selectedClientId}`}
+                    className="w-full rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-50 sm:w-auto sm:py-2"
+                  >
+                    View Client
+                  </Link>
+                )}
+
+                <Link
+                  to="/trainer"
+                  className="w-full rounded-xl bg-white/15 px-4 py-3 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto sm:py-2"
+                >
+                  Back to Trainer
+                </Link>
+              </div>
             </div>
           </div>
 
-          <div className="grid gap-4 p-6 md:grid-cols-3 md:p-8">
+          <div className="grid gap-4 p-4 sm:p-6 md:grid-cols-3 md:p-8">
             <SummaryCard title="Step 1" value="Choose Client" />
             <SummaryCard title="Step 2" value="Build Week" />
             <SummaryCard title="Step 3" value="Save Program" />
@@ -341,7 +392,7 @@ export default function CreateProgram() {
 
         <form
           onSubmit={saveProgram}
-          className="rounded-3xl border border-sky-100 bg-white p-6 shadow-sm"
+          className="rounded-3xl border border-sky-100 bg-white p-4 shadow-sm sm:p-6"
         >
           <div className="grid gap-4 md:grid-cols-3">
             <div>
@@ -351,7 +402,7 @@ export default function CreateProgram() {
 
               <select
                 value={selectedClientId}
-                onChange={(event) => setSelectedClientId(event.target.value)}
+                onChange={(event) => handleClientChange(event.target.value)}
                 className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
               >
                 <option value="">Select client</option>
@@ -364,7 +415,7 @@ export default function CreateProgram() {
             </div>
 
             <Input
-              label="Week Number"
+              label={isLoadingWeek ? "Week Number Loading..." : "Week Number"}
               value={weekNumber}
               onChange={setWeekNumber}
               placeholder="1"
@@ -388,13 +439,25 @@ export default function CreateProgram() {
             </div>
           </div>
 
+          {selectedClient && (
+            <div className="mt-5 rounded-2xl border border-sky-100 bg-sky-50 p-4">
+              <p className="text-sm font-medium text-slate-500">
+                Selected Client
+              </p>
+              <p className="mt-1 font-semibold text-slate-900">
+                {selectedClient.full_name} — {selectedClient.client_id}
+              </p>
+            </div>
+          )}
+
           <div className="mt-8">
             <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">
                   Workouts / Sessions
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">
+
+                <p className="mt-1 text-sm leading-6 text-slate-500">
                   Add each session for this week, then add exercises inside each
                   session.
                 </p>
@@ -403,7 +466,7 @@ export default function CreateProgram() {
               <button
                 type="button"
                 onClick={addWorkout}
-                className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 sm:py-2"
               >
                 Add Workout
               </button>
@@ -413,7 +476,7 @@ export default function CreateProgram() {
               {workouts.map((workout, workoutIndex) => (
                 <div
                   key={workoutIndex}
-                  className="rounded-3xl border border-sky-100 bg-sky-50 p-5"
+                  className="rounded-3xl border border-sky-100 bg-sky-50 p-4 sm:p-5"
                 >
                   <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <h3 className="text-lg font-bold text-slate-900">
@@ -423,7 +486,7 @@ export default function CreateProgram() {
                     <button
                       type="button"
                       onClick={() => removeWorkout(workoutIndex)}
-                      className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 ring-1 ring-red-100 hover:bg-red-100"
+                      className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
                     >
                       Remove Workout
                     </button>
@@ -443,7 +506,7 @@ export default function CreateProgram() {
                       <button
                         type="button"
                         onClick={() => addExercise(workoutIndex)}
-                        className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-blue-700 ring-1 ring-sky-100 hover:bg-blue-50"
+                        className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50"
                       >
                         Add Exercise
                       </button>
@@ -455,7 +518,7 @@ export default function CreateProgram() {
                           key={exerciseIndex}
                           className="rounded-2xl border border-sky-100 bg-white p-4"
                         >
-                          <div className="mb-3 flex items-center justify-between">
+                          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <h5 className="font-semibold text-slate-900">
                               Exercise {exerciseIndex + 1}
                             </h5>
@@ -465,7 +528,7 @@ export default function CreateProgram() {
                               onClick={() =>
                                 removeExercise(workoutIndex, exerciseIndex)
                               }
-                              className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 ring-1 ring-red-100 hover:bg-red-100"
+                              className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
                             >
                               Remove
                             </button>
@@ -566,7 +629,7 @@ export default function CreateProgram() {
           </div>
 
           {statusMessage && (
-            <p className="mt-6 rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-medium text-slate-700">
+            <p className="mt-6 rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-medium leading-6 text-slate-700">
               {statusMessage}
             </p>
           )}
@@ -574,7 +637,7 @@ export default function CreateProgram() {
           <button
             type="submit"
             disabled={isSaving}
-            className="mt-6 w-full rounded-2xl bg-blue-600 px-5 py-4 font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-6 w-full rounded-2xl bg-blue-600 px-5 py-4 font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving ? "Saving Program..." : "Save Program Week"}
           </button>
@@ -586,9 +649,12 @@ export default function CreateProgram() {
 
 function SummaryCard({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5">
-      <p className="text-sm font-medium text-slate-500">{title}</p>
-      <h2 className="mt-2 text-xl font-bold text-slate-900">{value}</h2>
+    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 sm:p-5">
+      <p className="text-xs font-medium text-slate-500 sm:text-sm">{title}</p>
+
+      <h2 className="mt-2 break-words text-lg font-bold text-slate-900 sm:text-xl">
+        {value}
+      </h2>
     </div>
   );
 }
