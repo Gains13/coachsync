@@ -81,14 +81,18 @@ export default function ClientDetails() {
   const [profile, setProfile] = useState<ClientProfile | null>(null);
   const [assessment, setAssessment] = useState<ClientAssessment | null>(null);
   const [goals, setGoals] = useState<ClientGoals | null>(null);
-  const [submittedWorkouts, setSubmittedWorkouts] = useState<SubmittedWorkout[]>([]);
+  const [submittedWorkouts, setSubmittedWorkouts] = useState<
+    SubmittedWorkout[]
+  >([]);
   const [planWeeks, setPlanWeeks] = useState<PlanWeek[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
   const [debugMessage, setDebugMessage] = useState("");
 
-  const [editingWorkout, setEditingWorkout] = useState<EditingWorkout | null>(null);
-  const [editingExercise, setEditingExercise] = useState<EditingExercise | null>(null);
+  const [editingWorkout, setEditingWorkout] =
+    useState<EditingWorkout | null>(null);
+  const [editingExercise, setEditingExercise] =
+    useState<EditingExercise | null>(null);
 
   useEffect(() => {
     loadClientDetails();
@@ -119,14 +123,18 @@ export default function ClientDetails() {
     }
 
     if (!profileData) {
-      setDebugMessage(`No profile found with id: ${clientUserId}. Check Supabase profiles table.`);
+      setDebugMessage(
+        `No profile found with id: ${clientUserId}. Check Supabase profiles table.`
+      );
       setIsLoading(false);
       return;
     }
 
     const { data: assessmentData, error: assessmentError } = await supabase
       .from("client_assessments")
-      .select("starting_weight, body_fat, muscle_mass, waist, hips, chest, notes")
+      .select(
+        "starting_weight, body_fat, muscle_mass, waist, hips, chest, notes"
+      )
       .eq("client_user_id", profileData.id)
       .maybeSingle();
 
@@ -377,7 +385,9 @@ export default function ClientDetails() {
             CoachSync
           </p>
           <h1 className="mt-3 text-2xl font-bold">Loading client...</h1>
-          <p className="mt-2 text-slate-500">Pulling client details from Supabase.</p>
+          <p className="mt-2 text-slate-500">
+            Pulling client details from Supabase.
+          </p>
         </div>
       </main>
     );
@@ -419,9 +429,11 @@ export default function ClientDetails() {
                 <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-100">
                   Client Details
                 </p>
+
                 <h1 className="mt-3 text-3xl font-bold md:text-4xl">
                   {profile.full_name}
                 </h1>
+
                 <p className="mt-3 max-w-2xl text-blue-50">
                   Client ID: {profile.client_id}
                 </p>
@@ -446,9 +458,18 @@ export default function ClientDetails() {
           </div>
 
           <div className="grid gap-4 p-6 md:grid-cols-4 md:p-8">
-            <StatCard title="Submitted Workouts" value={`${submittedWorkouts.length}`} />
+            <StatCard
+              title="Submitted Workouts"
+              value={`${submittedWorkouts.length}`}
+            />
+
             <StatCard title="Assigned Weeks" value={`${planWeeks.length}`} />
-            <StatCard title="Created" value={new Date(profile.created_at).toLocaleDateString()} />
+
+            <StatCard
+              title="Created"
+              value={new Date(profile.created_at).toLocaleDateString()}
+            />
+
             <StatCard title="Status" value="Active" />
           </div>
         </div>
@@ -469,32 +490,62 @@ export default function ClientDetails() {
           <SectionCard title="Goals">
             {goals ? (
               <div className="space-y-3">
-                <InfoRow label="Main Goal" value={goals.main_goal || "Not set"} />
-                <InfoRow label="Short-Term Goal" value={goals.short_term_goal || "Not set"} />
-                <InfoRow label="Long-Term Goal" value={goals.long_term_goal || "Not set"} />
-                <InfoRow label="Coach Notes" value={goals.coach_notes || "No notes"} />
+                <InfoRow
+                  label="Main Goal"
+                  value={goals.main_goal || "Not set"}
+                />
+
+                <InfoRow
+                  label="Short-Term Goal"
+                  value={goals.short_term_goal || "Not set"}
+                />
+
+                <InfoRow
+                  label="Long-Term Goal"
+                  value={goals.long_term_goal || "Not set"}
+                />
+
+                <InfoRow
+                  label="Coach Notes"
+                  value={goals.coach_notes || "No notes"}
+                />
               </div>
             ) : (
               <p className="text-slate-500">No goals added yet.</p>
             )}
           </SectionCard>
 
-          <SectionCard title="Initial Assessment">
+          <SectionCard title="Starting Info">
             {assessment ? (
               <div className="grid gap-3 md:grid-cols-2">
-                <InfoRow label="Starting Weight" value={assessment.starting_weight || "Not set"} />
-                <InfoRow label="Body Fat" value={assessment.body_fat || "Not set"} />
-                <InfoRow label="Muscle Mass" value={assessment.muscle_mass || "Not set"} />
-                <InfoRow label="Waist" value={assessment.waist || "Not set"} />
-                <InfoRow label="Hips" value={assessment.hips || "Not set"} />
-                <InfoRow label="Chest" value={assessment.chest || "Not set"} />
+                <InfoRow
+                  label="Starting Weight"
+                  value={assessment.starting_weight || "Not set"}
+                />
+
+                <InfoRow
+                  label="Body Fat"
+                  value={assessment.body_fat || "Not set"}
+                />
+
+                <InfoRow
+                  label="Muscle Mass"
+                  value={assessment.muscle_mass || "Not set"}
+                />
+
+                <InfoRow
+                  label="Visceral Fat"
+                  value={assessment.waist || "Not set"}
+                />
+
+                <InfoRow label="BMI" value={assessment.hips || "Not set"} />
 
                 <div className="md:col-span-2">
                   <InfoRow label="Notes" value={assessment.notes || "No notes"} />
                 </div>
               </div>
             ) : (
-              <p className="text-slate-500">No assessment added yet.</p>
+              <p className="text-slate-500">No starting info added yet.</p>
             )}
           </SectionCard>
 
@@ -514,8 +565,10 @@ export default function ClientDetails() {
                     <p className="font-semibold text-slate-900">
                       {workout.workout_title}
                     </p>
+
                     <p className="mt-1 text-sm text-slate-500">
-                      Submitted: {new Date(workout.submitted_at).toLocaleString()}
+                      Submitted:{" "}
+                      {new Date(workout.submitted_at).toLocaleString()}
                     </p>
                   </Link>
                 ))}
@@ -531,6 +584,7 @@ export default function ClientDetails() {
                 <h3 className="font-semibold text-slate-900">
                   No assigned program yet
                 </h3>
+
                 <p className="mt-2 text-sm text-slate-500">
                   Click Add Program to build this client’s first week.
                 </p>
@@ -547,6 +601,7 @@ export default function ClientDetails() {
                         <h3 className="text-xl font-bold text-slate-900">
                           Week {week.week_number}
                         </h3>
+
                         <p className="mt-1 text-sm text-slate-500">
                           Status: {week.status}
                         </p>
@@ -653,6 +708,7 @@ export default function ClientDetails() {
                                     <h4 className="font-semibold text-slate-900">
                                       {workout.title}
                                     </h4>
+
                                     <p className="mt-1 text-xs text-slate-500">
                                       Order: {workout.workout_order}
                                     </p>
@@ -660,7 +716,9 @@ export default function ClientDetails() {
 
                                   <div className="flex flex-wrap gap-2">
                                     <button
-                                      onClick={() => startEditingWorkout(workout)}
+                                      onClick={() =>
+                                        startEditingWorkout(workout)
+                                      }
                                       className="rounded-xl bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 ring-1 ring-blue-100 hover:bg-blue-100"
                                     >
                                       Edit Workout
@@ -685,13 +743,17 @@ export default function ClientDetails() {
                               ) : (
                                 <div className="mt-3 space-y-3">
                                   {[...workout.client_plan_exercises]
-                                    .sort((a, b) => a.exercise_order - b.exercise_order)
+                                    .sort(
+                                      (a, b) =>
+                                        a.exercise_order - b.exercise_order
+                                    )
                                     .map((exercise) => (
                                       <div
                                         key={exercise.id}
                                         className="rounded-2xl border border-sky-100 bg-sky-50 p-4"
                                       >
-                                        {editingExercise?.id === exercise.id ? (
+                                        {editingExercise?.id ===
+                                        exercise.id ? (
                                           <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
                                             <h5 className="mb-4 font-semibold text-blue-900">
                                               Edit Exercise
@@ -700,7 +762,9 @@ export default function ClientDetails() {
                                             <div className="grid gap-4 md:grid-cols-3">
                                               <Input
                                                 label="Exercise Name"
-                                                value={editingExercise.exercise_name}
+                                                value={
+                                                  editingExercise.exercise_name
+                                                }
                                                 onChange={(value) =>
                                                   setEditingExercise({
                                                     ...editingExercise,
@@ -760,7 +824,9 @@ export default function ClientDetails() {
 
                                               <Input
                                                 label="Order"
-                                                value={editingExercise.exercise_order}
+                                                value={
+                                                  editingExercise.exercise_order
+                                                }
                                                 onChange={(value) =>
                                                   setEditingExercise({
                                                     ...editingExercise,
@@ -774,7 +840,9 @@ export default function ClientDetails() {
                                               <div className="md:col-span-3">
                                                 <Input
                                                   label="Video Link"
-                                                  value={editingExercise.video_link}
+                                                  value={
+                                                    editingExercise.video_link
+                                                  }
                                                   onChange={(value) =>
                                                     setEditingExercise({
                                                       ...editingExercise,
@@ -797,7 +865,9 @@ export default function ClientDetails() {
 
                                               <button
                                                 type="button"
-                                                onClick={() => setEditingExercise(null)}
+                                                onClick={() =>
+                                                  setEditingExercise(null)
+                                                }
                                                 className="rounded-xl border border-sky-100 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-sky-50"
                                               >
                                                 Cancel
@@ -812,9 +882,10 @@ export default function ClientDetails() {
                                               </p>
 
                                               <p className="mt-1 text-sm text-slate-500">
-                                                {exercise.sets} sets x {exercise.reps} reps •
-                                                Weight: {exercise.weight || "N/A"} • Rest:{" "}
-                                                {exercise.rest || "N/A"}
+                                                {exercise.sets} sets x{" "}
+                                                {exercise.reps} reps • Weight:{" "}
+                                                {exercise.weight || "N/A"} •
+                                                Rest: {exercise.rest || "N/A"}
                                               </p>
 
                                               {exercise.video_link && (
@@ -831,7 +902,9 @@ export default function ClientDetails() {
 
                                             <div className="flex flex-wrap gap-2">
                                               <button
-                                                onClick={() => startEditingExercise(exercise)}
+                                                onClick={() =>
+                                                  startEditingExercise(exercise)
+                                                }
                                                 className="rounded-xl bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 ring-1 ring-blue-100 hover:bg-blue-100"
                                               >
                                                 Edit Exercise
@@ -874,6 +947,7 @@ function StatCard({ title, value }: { title: string; value: string }) {
   return (
     <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5">
       <p className="text-sm font-medium text-slate-500">{title}</p>
+
       <h2 className="mt-2 break-words text-xl font-bold text-slate-900">
         {value}
       </h2>
@@ -900,6 +974,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
       <p className="text-sm font-medium text-slate-500">{label}</p>
+
       <p className="mt-1 break-words font-semibold text-slate-900">{value}</p>
     </div>
   );
