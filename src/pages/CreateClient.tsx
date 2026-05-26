@@ -21,6 +21,8 @@ export default function CreateClient() {
   const [coachNotes, setCoachNotes] = useState("");
 
   const [statusMessage, setStatusMessage] = useState("");
+  const [temporaryPassword, setTemporaryPassword] = useState("");
+  const [createdClientEmail, setCreatedClientEmail] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   async function createClientProfile(event: React.FormEvent) {
@@ -32,13 +34,16 @@ export default function CreateClient() {
     }
 
     setIsSaving(true);
-    setStatusMessage("Creating client and sending invite...");
+    setTemporaryPassword("");
+    setCreatedClientEmail("");
+    setStatusMessage("Creating client account...");
 
     const cleanEmail = email.trim().toLowerCase();
     const cleanFullName = fullName.trim();
     const cleanClientId = clientId.trim().toLowerCase();
 
     let newUserId = "";
+    let newTemporaryPassword = "";
 
     try {
       const {
@@ -47,7 +52,7 @@ export default function CreateClient() {
       } = await supabase.auth.getSession();
 
       if (sessionError || !session) {
-        setStatusMessage("You must be logged in as a trainer to invite clients.");
+        setStatusMessage("You must be logged in as a trainer to create clients.");
         setIsSaving(false);
         return;
       }
@@ -68,23 +73,35 @@ export default function CreateClient() {
       const result = await response.json();
 
       if (!response.ok) {
-        setStatusMessage("Failed to send invite: " + (result.error || "Unknown error."));
+        setStatusMessage(
+          "Failed to create client account: " +
+            (result.error || "Unknown error.")
+        );
         setIsSaving(false);
         return;
       }
 
       newUserId = result.userId;
+      newTemporaryPassword = result.temporaryPassword;
 
       if (!newUserId) {
         setStatusMessage(
-          "Invite sent, but no user ID was returned. Check api/invite-client.js response."
+          "Client account was created, but no user ID was returned. Check api/invite-client.js response."
+        );
+        setIsSaving(false);
+        return;
+      }
+
+      if (!newTemporaryPassword) {
+        setStatusMessage(
+          "Client account was created, but no temporary password was returned. Check api/invite-client.js response."
         );
         setIsSaving(false);
         return;
       }
     } catch (error) {
       console.error(error);
-      setStatusMessage("Network error sending invite. Check your connection.");
+      setStatusMessage("Network error creating client account. Check your connection.");
       setIsSaving(false);
       return;
     }
@@ -105,7 +122,8 @@ export default function CreateClient() {
     if (assessmentError) {
       console.error(assessmentError);
       setStatusMessage(
-        "Invite sent, but assessment failed: " + assessmentError.message
+        "Client account created, but assessment failed: " +
+          assessmentError.message
       );
       setIsSaving(false);
       return;
@@ -122,14 +140,17 @@ export default function CreateClient() {
     if (goalsError) {
       console.error(goalsError);
       setStatusMessage(
-        "Invite and assessment created, but goals failed: " + goalsError.message
+        "Client account and assessment created, but goals failed: " +
+          goalsError.message
       );
       setIsSaving(false);
       return;
     }
 
+    setCreatedClientEmail(cleanEmail);
+    setTemporaryPassword(newTemporaryPassword);
     setStatusMessage(
-      "Client profile created and invite email sent to " + cleanEmail
+      "Client account created successfully. Copy the login details below and send them to the client."
     );
 
     setEmail("");
@@ -152,6 +173,19 @@ export default function CreateClient() {
     setIsSaving(false);
   }
 
+  function copyLoginDetails() {
+    const message = `Hey! I created your CoachSync account.
+
+Login link: https://coachsync-rust.vercel.app
+Email: ${createdClientEmail}
+Temporary password: ${temporaryPassword}
+
+Once you log in, you’ll be able to view your plan, workouts, goals, and progress.`;
+
+    navigator.clipboard.writeText(message);
+    setStatusMessage("Login message copied. You can now send it to the client.");
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
       <section className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:py-10">
@@ -168,8 +202,9 @@ export default function CreateClient() {
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
-                  Fill out the form below. The client will receive an invite
-                  email to set up their CoachSync account.
+                  Create the client’s CoachSync login, assessment, and goals.
+                  The app will generate a temporary password for you to send
+                  manually.
                 </p>
               </div>
 
@@ -196,7 +231,7 @@ export default function CreateClient() {
           <div className="space-y-6 sm:space-y-8">
             <FormSection
               title="Client Info"
-              description="Enter the client's email and name. They will receive an invite link automatically."
+              description="Enter the client's email and name. CoachSync will create their account and generate a temporary password."
             >
               <div className="grid gap-4 md:grid-cols-3">
                 <Input
@@ -326,12 +361,50 @@ export default function CreateClient() {
             </p>
           )}
 
+          {temporaryPassword && createdClientEmail && (
+            <div className="mt-6 rounded-3xl border border-emerald-100 bg-emerald-50 p-5">
+              <h2 className="text-lg font-bold text-emerald-900">
+                Client Login Details
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-emerald-800">
+                Copy these details now. The temporary password is only shown on
+                this screen.
+              </p>
+
+              <div className="mt-4 space-y-3 rounded-2xl bg-white p-4 text-sm text-slate-700">
+                <p>
+                  <span className="font-bold">Login link:</span>{" "}
+                  https://coachsync-rust.vercel.app
+                </p>
+
+                <p>
+                  <span className="font-bold">Email:</span>{" "}
+                  {createdClientEmail}
+                </p>
+
+                <p className="break-all">
+                  <span className="font-bold">Temporary password:</span>{" "}
+                  {temporaryPassword}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={copyLoginDetails}
+                className="mt-4 w-full rounded-2xl bg-emerald-600 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-700 sm:w-auto"
+              >
+                Copy Login Message
+              </button>
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={isSaving}
             className="mt-6 w-full rounded-2xl bg-blue-600 px-5 py-4 font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSaving ? "Creating Client..." : "Create Client & Send Invite"}
+            {isSaving ? "Creating Client..." : "Create Client Account"}
           </button>
         </form>
       </section>

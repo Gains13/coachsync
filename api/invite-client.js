@@ -1,5 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 
+function createTemporaryPassword() {
+  const randomPart = Math.random().toString(36).slice(2, 10);
+  const timePart = Date.now().toString(36).slice(-4);
+  return `CoachSync-${randomPart}-${timePart}!`;
+}
+
 export default async function handler(request, response) {
   if (request.method !== "POST") {
     return response.status(405).json({
@@ -10,12 +16,11 @@ export default async function handler(request, response) {
   try {
     const supabaseUrl = process.env.SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const appUrl = process.env.VITE_APP_URL;
 
-    if (!supabaseUrl || !serviceRoleKey || !appUrl) {
+    if (!supabaseUrl || !serviceRoleKey) {
       return response.status(500).json({
         error:
-          "Missing server environment variables. Check SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and VITE_APP_URL.",
+          "Missing server environment variables. Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
       });
     }
 
@@ -62,7 +67,7 @@ export default async function handler(request, response) {
 
     if (trainerProfile.role !== "trainer") {
       return response.status(403).json({
-        error: "Only trainers can invite clients.",
+        error: "Only trainers can create clients.",
       });
     }
 
@@ -82,32 +87,43 @@ export default async function handler(request, response) {
       });
     }
 
-    const { data: inviteData, error: inviteError } =
-      await serverSupabase.auth.admin.inviteUserByEmail(email, {
-        redirectTo: `${appUrl}/client`,
-        data: {
-          full_name: fullName,
-          role: "client",
-          client_id: clientId,
-        },
-      });
-
-    if (inviteError) {
+    if (!clientId) {
       return response.status(400).json({
-        error: inviteError.message,
+        error: "Client ID is required.",
       });
     }
 
-    const invitedUserId = inviteData.user?.id;
+    const temporaryPassword = createTemporaryPassword();
 
-    if (!invitedUserId) {
+    const { data: createdUserData, error: createUserError } =
+      await serverSupabase.auth.admin.createUser({
+        email,
+        password: temporaryPassword,
+        email_confirm: true,
+        user_metadata: {
+          full_name: fullName,
+          role: "client",
+          client_id: clientId,
+          must_change_password: true,
+        },
+      });
+
+    if (createUserError) {
+      return response.status(400).json({
+        error: createUserError.message,
+      });
+    }
+
+    const createdUserId = createdUserData.user?.id;
+
+    if (!createdUserId) {
       return response.status(500).json({
-        error: "Invite was sent, but Supabase did not return a user ID.",
+        error: "Client account was created, but Supabase did not return a user ID.",
       });
     }
 
     const { error: profileError } = await serverSupabase.from("profiles").upsert({
-      id: invitedUserId,
+      id: createdUserId,
       full_name: fullName,
       client_id: clientId,
       role: "client",
@@ -116,22 +132,23 @@ export default async function handler(request, response) {
     if (profileError) {
       return response.status(500).json({
         error:
-          "Invite was sent, but profile creation failed: " +
+          "Client account was created, but profile creation failed: " +
           profileError.message,
       });
     }
 
     return response.status(200).json({
       success: true,
-      userId: invitedUserId,
-      message: `Invite sent to ${email}.`,
+      userId: createdUserId,
+      temporaryPassword,
+      message: `Client account created for ${email}.`,
     });
   } catch (error) {
     return response.status(500).json({
       error:
         error instanceof Error
           ? error.message
-          : "Something went wrong sending the invite.",
+          : "Something went wrong creating the client account.",
     });
   }
 }
