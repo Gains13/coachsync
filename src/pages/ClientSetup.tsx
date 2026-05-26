@@ -8,14 +8,6 @@ export default function ClientSetup() {
   const [clientUserId, setClientUserId] = useState("");
   const [fullName, setFullName] = useState("");
 
-  const [startingWeight, setStartingWeight] = useState("");
-  const [bodyFat, setBodyFat] = useState("");
-  const [muscleMass, setMuscleMass] = useState("");
-  const [waist, setWaist] = useState("");
-  const [hips, setHips] = useState("");
-  const [chest, setChest] = useState("");
-  const [assessmentNotes, setAssessmentNotes] = useState("");
-
   const [mainGoal, setMainGoal] = useState("");
   const [shortTermGoal, setShortTermGoal] = useState("");
   const [longTermGoal, setLongTermGoal] = useState("");
@@ -58,24 +50,6 @@ export default function ClientSetup() {
       setFullName(profile.full_name);
     }
 
-    const { data: assessment, error: assessmentError } = await supabase
-      .from("client_assessments")
-      .select(
-        "starting_weight, body_fat, muscle_mass, waist, hips, chest, notes"
-      )
-      .eq("client_user_id", user.id)
-      .maybeSingle();
-
-    if (!assessmentError && assessment) {
-      setStartingWeight(assessment.starting_weight || "");
-      setBodyFat(assessment.body_fat || "");
-      setMuscleMass(assessment.muscle_mass || "");
-      setWaist(assessment.waist || "");
-      setHips(assessment.hips || "");
-      setChest(assessment.chest || "");
-      setAssessmentNotes(assessment.notes || "");
-    }
-
     const { data: goals, error: goalsError } = await supabase
       .from("client_goals")
       .select("main_goal, short_term_goal, long_term_goal, coach_notes")
@@ -102,28 +76,6 @@ export default function ClientSetup() {
 
     setIsSaving(true);
     setStatusMessage("Saving your setup...");
-
-    const { error: assessmentError } = await supabase
-      .from("client_assessments")
-      .upsert(
-        {
-          client_user_id: clientUserId,
-          starting_weight: startingWeight.trim(),
-          body_fat: bodyFat.trim(),
-          muscle_mass: muscleMass.trim(),
-          waist: waist.trim(),
-          hips: hips.trim(),
-          chest: chest.trim(),
-          notes: assessmentNotes.trim(),
-        },
-        { onConflict: "client_user_id" }
-      );
-
-    if (assessmentError) {
-      setStatusMessage("Assessment save failed: " + assessmentError.message);
-      setIsSaving(false);
-      return;
-    }
 
     const { error: goalsError } = await supabase.from("client_goals").upsert(
       {
@@ -163,7 +115,9 @@ export default function ClientSetup() {
       .eq("id", clientUserId);
 
     if (profileError) {
-      setStatusMessage("Setup saved, but profile update failed: " + profileError.message);
+      setStatusMessage(
+        "Setup saved, but profile update failed: " + profileError.message
+      );
       setIsSaving(false);
       return;
     }
@@ -202,8 +156,8 @@ export default function ClientSetup() {
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
-                  Review your starting assessment, set your goals, and send your
-                  trainer a quick message before using your dashboard.
+                  Set your goals and send your trainer a quick message before
+                  using your dashboard.
                 </p>
               </div>
 
@@ -216,10 +170,9 @@ export default function ClientSetup() {
             </div>
           </div>
 
-          <div className="grid gap-3 p-4 sm:grid-cols-3 sm:p-6 md:p-8">
-            <SummaryCard title="Step 1" value="Assessment" />
-            <SummaryCard title="Step 2" value="Goals" />
-            <SummaryCard title="Step 3" value="Message" />
+          <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-6 md:p-8">
+            <SummaryCard title="Step 1" value="Goals" />
+            <SummaryCard title="Step 2" value="Message" />
           </div>
         </div>
 
@@ -229,64 +182,8 @@ export default function ClientSetup() {
         >
           <div className="space-y-6 sm:space-y-8">
             <FormSection
-              title="Your Starting Assessment"
-              description="Review or edit your starting information. This helps your trainer personalize your plan."
-            >
-              <div className="grid gap-4 md:grid-cols-3">
-                <Input
-                  label="Starting Weight"
-                  value={startingWeight}
-                  onChange={setStartingWeight}
-                  placeholder="180 lbs"
-                />
-
-                <Input
-                  label="Body Fat"
-                  value={bodyFat}
-                  onChange={setBodyFat}
-                  placeholder="18%"
-                />
-
-                <Input
-                  label="Muscle Mass"
-                  value={muscleMass}
-                  onChange={setMuscleMass}
-                  placeholder="140 lbs"
-                />
-
-                <Input
-                  label="Waist"
-                  value={waist}
-                  onChange={setWaist}
-                  placeholder="34 in"
-                />
-
-                <Input
-                  label="Hips"
-                  value={hips}
-                  onChange={setHips}
-                  placeholder="40 in"
-                />
-
-                <Input
-                  label="Chest"
-                  value={chest}
-                  onChange={setChest}
-                  placeholder="42 in"
-                />
-              </div>
-
-              <TextArea
-                label="Assessment Notes"
-                value={assessmentNotes}
-                onChange={setAssessmentNotes}
-                placeholder="Anything your trainer should know about movement, flexibility, pain, or limitations..."
-              />
-            </FormSection>
-
-            <FormSection
               title="Your Goals"
-              description="Set your main goal, short-term goal, and long-term goal."
+              description="Review or update your main goal, short-term goal, and long-term goal."
             >
               <div className="grid gap-4 md:grid-cols-3">
                 <Input

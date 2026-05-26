@@ -10,9 +10,8 @@ export default function CreateClient() {
   const [startingWeight, setStartingWeight] = useState("");
   const [bodyFat, setBodyFat] = useState("");
   const [muscleMass, setMuscleMass] = useState("");
-  const [waist, setWaist] = useState("");
-  const [hips, setHips] = useState("");
-  const [chest, setChest] = useState("");
+  const [visceralFat, setVisceralFat] = useState("");
+  const [bmi, setBmi] = useState("");
   const [assessmentNotes, setAssessmentNotes] = useState("");
 
   const [mainGoal, setMainGoal] = useState("");
@@ -113,9 +112,15 @@ export default function CreateClient() {
         starting_weight: startingWeight.trim(),
         body_fat: bodyFat.trim(),
         muscle_mass: muscleMass.trim(),
-        waist: waist.trim(),
-        hips: hips.trim(),
-        chest: chest.trim(),
+
+        // Keeping existing database columns so nothing breaks:
+        // waist = visceral fat
+        // hips = BMI
+        // chest = unused/blank for now
+        waist: visceralFat.trim(),
+        hips: bmi.trim(),
+        chest: "",
+
         notes: assessmentNotes.trim(),
       });
 
@@ -160,9 +165,8 @@ export default function CreateClient() {
     setStartingWeight("");
     setBodyFat("");
     setMuscleMass("");
-    setWaist("");
-    setHips("");
-    setChest("");
+    setVisceralFat("");
+    setBmi("");
     setAssessmentNotes("");
 
     setMainGoal("");
@@ -264,7 +268,7 @@ Once you log in, you’ll be able to view your plan, workouts, goals, and progre
             </FormSection>
 
             <FormSection
-              title="Initial Assessment"
+              title="Assessment"
               description="Record the client's starting measurements and baseline notes."
             >
               <div className="grid gap-4 md:grid-cols-3">
@@ -290,24 +294,17 @@ Once you log in, you’ll be able to view your plan, workouts, goals, and progre
                 />
 
                 <Input
-                  label="Waist"
-                  value={waist}
-                  onChange={setWaist}
-                  placeholder="34 in"
+                  label="Visceral Fat"
+                  value={visceralFat}
+                  onChange={setVisceralFat}
+                  placeholder="10"
                 />
 
                 <Input
-                  label="Hips"
-                  value={hips}
-                  onChange={setHips}
-                  placeholder="40 in"
-                />
-
-                <Input
-                  label="Chest"
-                  value={chest}
-                  onChange={setChest}
-                  placeholder="42 in"
+                  label="BMI"
+                  value={bmi}
+                  onChange={setBmi}
+                  placeholder="27.5"
                 />
               </div>
 
