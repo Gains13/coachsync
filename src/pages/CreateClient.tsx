@@ -37,11 +37,14 @@ export default function CreateClient() {
     let newUserId = "";
 
     try {
-      const response = await fetch("/api/invite-client", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), clientId: cleanClientId }),
-      });
+      const response = await fetch(
+  "https://vwbnhkhygqgzuzamonzs.supabase.co/functions/v1/invite-client",
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: email.trim(), clientId: cleanClientId }),
+  }
+);
 
       const result = await response.json();
 
