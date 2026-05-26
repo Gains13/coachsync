@@ -12,6 +12,7 @@ import ClientGoals from "./pages/ClientGoals";
 import ClientPastWorkouts from "./pages/ClientPastWorkouts";
 import ClientProgress from "./pages/ClientProgress";
 import ClientSetup from "./pages/ClientSetup";
+import ClientSettings from "./pages/ClientSettings";
 
 import TrainerDashboard from "./pages/TrainerDashboard";
 import Clients from "./pages/Clients";
@@ -62,6 +63,15 @@ export default function App() {
           element={
             <RequireRole allowedRole="client">
               <ClientSetup />
+            </RequireRole>
+          }
+        />
+
+        <Route
+          path="/client-settings"
+          element={
+            <RequireRole allowedRole="client">
+              <ClientSettings />
             </RequireRole>
           }
         />

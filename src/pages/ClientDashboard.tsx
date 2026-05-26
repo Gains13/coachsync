@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabaseClient";
 type ClientData = {
   full_name: string;
   client_id: string;
+  setup_complete?: boolean;
 };
 
 type GoalData = {
@@ -24,51 +25,72 @@ export default function ClientDashboard() {
 
   useEffect(() => {
     async function loadDashboard() {
-      // Get logged in user from Supabase session
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      if (!session) {
+      if (userError || !user) {
         navigate("/");
         return;
       }
 
-      const userId = session.user.id;
+      const userId = user.id;
 
-      // Pull profile
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("full_name, client_id")
+        .select("full_name, client_id, setup_complete")
         .eq("id", userId)
-        .single();
+        .maybeSingle();
+
+      if (profileError) {
+        console.error(profileError);
+        navigate("/");
+        return;
+      }
 
       if (!profileData) {
-        navigate("/");
+        setClient(null);
+        setLoading(false);
+        return;
+      }
+
+      if (profileData.setup_complete === false) {
+        navigate("/client-setup", { replace: true });
         return;
       }
 
       setClient(profileData);
 
-      // Pull goals
-      const { data: goalData } = await supabase
+      const { data: goalData, error: goalError } = await supabase
         .from("client_goals")
         .select("main_goal")
         .eq("client_user_id", userId)
-        .single();
+        .maybeSingle();
 
-      if (goalData) setGoal(goalData);
+      if (goalError) {
+        console.error(goalError);
+      }
 
-      // Pull most recent active week
-      const { data: weekData } = await supabase
+      if (goalData) {
+        setGoal(goalData);
+      }
+
+      const { data: weekData, error: weekError } = await supabase
         .from("client_plan_weeks")
         .select("week_number")
         .eq("client_user_id", userId)
         .order("week_number", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (weekData) setCurrentWeek(weekData.week_number);
+      if (weekError) {
+        console.error(weekError);
+      }
+
+      if (weekData) {
+        setCurrentWeek(weekData.week_number);
+      }
 
       setLoading(false);
     }
@@ -78,6 +100,8 @@ export default function ClientDashboard() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
+    localStorage.removeItem("coachsync-user-role");
+    localStorage.removeItem("coachsync-client-id");
     navigate("/");
   }
 
@@ -94,10 +118,12 @@ export default function ClientDashboard() {
       <main className="min-h-screen bg-sky-50 p-8 text-slate-900">
         <div className="mx-auto max-w-3xl rounded-3xl border border-sky-100 bg-white p-8 shadow-sm">
           <h1 className="text-2xl font-bold">Client profile not found</h1>
+
           <p className="mt-4 text-slate-600">
             Your account exists but no profile has been set up yet. Contact
             your trainer.
           </p>
+
           <button
             onClick={handleLogout}
             className="mt-5 inline-block rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
@@ -111,44 +137,56 @@ export default function ClientDashboard() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
-      <section className="mx-auto max-w-6xl px-6 py-10">
+      <section className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:py-10">
         <div className="mb-8 overflow-hidden rounded-[2rem] border border-sky-100 bg-white shadow-sm">
-          <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-6 py-8 text-white md:px-8">
+          <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-6 text-white sm:px-6 sm:py-8 md:px-8">
             <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-100">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
                   Client Dashboard
                 </p>
 
-                <h1 className="mt-3 text-3xl font-bold md:text-4xl">
+                <h1 className="mt-3 break-words text-3xl font-bold md:text-4xl">
                   Welcome, {client.full_name}
                 </h1>
 
-                <p className="mt-3 max-w-2xl text-blue-50">
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
                   Your assigned training plan, progress, completed workouts,
                   and goals all in one place.
                 </p>
               </div>
 
-              <button
-                onClick={handleLogout}
-                className="rounded-xl bg-white/15 px-4 py-2 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur hover:bg-white/25"
-              >
-                Log out
-              </button>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Link
+                  to="/client-settings"
+                  className="rounded-xl bg-white/15 px-4 py-3 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur hover:bg-white/25 sm:py-2"
+                >
+                  Settings
+                </Link>
+
+                <button
+                  onClick={handleLogout}
+                  className="rounded-xl bg-white/15 px-4 py-3 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur hover:bg-white/25 sm:py-2"
+                >
+                  Log out
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="grid gap-4 p-6 md:grid-cols-4 md:p-8">
+          <div className="grid gap-4 p-4 sm:p-6 md:grid-cols-4 md:p-8">
             <SummaryCard
               title="Current Week"
               value={currentWeek ? `Week ${currentWeek}` : "Not assigned"}
             />
+
             <SummaryCard title="Plan Status" value="Active" />
+
             <SummaryCard
               title="Main Goal"
               value={goal?.main_goal || "Not set"}
             />
+
             <SummaryCard title="Client" value={client.full_name} />
           </div>
         </div>
@@ -195,6 +233,13 @@ export default function ClientDashboard() {
             title="Messages"
             description="Send a message to your trainer and view replies."
             icon="💬"
+          />
+
+          <DashboardTile
+            to="/client-settings"
+            title="Settings"
+            description="Change your password and manage your account settings."
+            icon="⚙️"
           />
         </div>
       </section>
@@ -259,6 +304,7 @@ function SummaryCard({ title, value }: { title: string; value: string }) {
   return (
     <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5">
       <p className="text-sm font-medium text-slate-500">{title}</p>
+
       <h2 className="mt-2 line-clamp-2 text-xl font-bold text-slate-900">
         {value}
       </h2>
