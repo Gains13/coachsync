@@ -4,13 +4,14 @@ import type { ReactNode } from "react";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 
-import ClientDashbord from "./pages/ClientDashboard";
+import ClientDashboard from "./pages/ClientDashboard";
 import ClientPlan from "./pages/ClientPlan";
 import ClientProgram from "./pages/ClientProgram";
 import ClientAssessment from "./pages/ClientAssessment";
 import ClientGoals from "./pages/ClientGoals";
 import ClientPastWorkouts from "./pages/ClientPastWorkouts";
 import ClientProgress from "./pages/ClientProgress";
+import ClientSetup from "./pages/ClientSetup";
 
 import TrainerDashboard from "./pages/TrainerDashboard";
 import Clients from "./pages/Clients";
@@ -45,14 +46,22 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
-
         <Route path="/landing" element={<Landing />} />
 
         <Route
           path="/client"
           element={
             <RequireRole allowedRole="client">
-              <ClientDashbord />
+              <ClientDashboard />
+            </RequireRole>
+          }
+        />
+
+        <Route
+          path="/client-setup"
+          element={
+            <RequireRole allowedRole="client">
+              <ClientSetup />
             </RequireRole>
           }
         />
@@ -107,6 +116,15 @@ export default function App() {
           element={
             <RequireRole allowedRole="client">
               <ClientProgram />
+            </RequireRole>
+          }
+        />
+
+        <Route
+          path="/client-messages"
+          element={
+            <RequireRole allowedRole="client">
+              <Messages />
             </RequireRole>
           }
         />
