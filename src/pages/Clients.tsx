@@ -15,6 +15,7 @@ export default function Clients() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
+  const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
 
   useEffect(() => {
     loadClients();
@@ -39,6 +40,80 @@ export default function Clients() {
 
     setClients(data || []);
     setIsLoading(false);
+  }
+
+  async function deleteClient(clientId: string, clientName: string) {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${clientName}? This will remove their CoachSync data and Supabase login account.`
+    );
+
+    if (!confirmed) return;
+
+    const secondConfirm = window.confirm(
+      "This cannot be undone. Are you absolutely sure?"
+    );
+
+    if (!secondConfirm) return;
+
+    setDeletingClientId(clientId);
+    setStatusMessage(`Deleting ${clientName}...`);
+
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        setStatusMessage("You must be logged in as a trainer to delete clients.");
+        setDeletingClientId(null);
+        return;
+      }
+
+      const response = await fetch("/api/delete-client", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          clientUserId: clientId,
+        }),
+      });
+
+      let result: { success?: boolean; message?: string; error?: string } = {};
+
+      try {
+        result = await response.json();
+      } catch {
+        result = {};
+      }
+
+      if (!response.ok) {
+        setStatusMessage(
+          "Could not delete client: " +
+            (result.error || `Server returned ${response.status}`)
+        );
+        setDeletingClientId(null);
+        return;
+      }
+
+      setClients((currentClients) =>
+        currentClients.filter((client) => client.id !== clientId)
+      );
+
+      setStatusMessage(
+        result.message || `${clientName} was deleted successfully.`
+      );
+
+      setDeletingClientId(null);
+    } catch (error) {
+      console.error(error);
+      setStatusMessage(
+        "Something went wrong while deleting the client. Check the browser console and Vercel function logs."
+      );
+      setDeletingClientId(null);
+    }
   }
 
   const filteredClients = useMemo(() => {
@@ -86,6 +161,7 @@ export default function Clients() {
 
               <div className="flex flex-col gap-3 sm:flex-row">
                 <button
+                  type="button"
                   onClick={loadClients}
                   className="w-full rounded-xl bg-white/15 px-4 py-3 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto sm:py-2"
                 >
@@ -117,10 +193,7 @@ export default function Clients() {
               value={`${completedSetupCount}`}
             />
 
-            <StatCard
-              title="Needs Setup"
-              value={`${incompleteSetupCount}`}
-            />
+            <StatCard title="Needs Setup" value={`${incompleteSetupCount}`} />
 
             <StatCard
               title="Latest Client"
@@ -153,7 +226,7 @@ export default function Clients() {
         </div>
 
         {statusMessage && (
-          <p className="mb-6 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-medium leading-6 text-red-700">
+          <p className="mb-6 rounded-2xl border border-sky-100 bg-white p-4 text-sm font-medium leading-6 text-slate-700 shadow-sm">
             {statusMessage}
           </p>
         )}
@@ -175,79 +248,102 @@ export default function Clients() {
           />
         ) : (
           <div className="grid gap-5 md:grid-cols-2">
-            {filteredClients.map((client) => (
-              <div
-                key={client.id}
-                className="rounded-3xl border border-sky-100 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-blue-200 hover:shadow-md sm:p-6"
-              >
-                <div className="mb-5 flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-xl ring-1 ring-sky-100">
-                      👤
+            {filteredClients.map((client) => {
+              const isDeleting = deletingClientId === client.id;
+
+              return (
+                <div
+                  key={client.id}
+                  className={`rounded-3xl border border-sky-100 bg-white p-5 shadow-sm transition sm:p-6 ${
+                    isDeleting
+                      ? "opacity-60"
+                      : "hover:-translate-y-1 hover:border-blue-200 hover:shadow-md"
+                  }`}
+                >
+                  <div className="mb-5 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-xl ring-1 ring-sky-100">
+                        👤
+                      </div>
+
+                      <h2 className="break-words text-xl font-bold text-slate-900">
+                        {client.full_name}
+                      </h2>
+
+                      <p className="mt-1 break-words text-sm text-slate-500">
+                        Client ID: {client.client_id || "Not set"}
+                      </p>
                     </div>
 
-                    <h2 className="break-words text-xl font-bold text-slate-900">
-                      {client.full_name}
-                    </h2>
+                    <SetupBadge setupComplete={client.setup_complete} />
+                  </div>
 
-                    <p className="mt-1 break-words text-sm text-slate-500">
-                      Client ID: {client.client_id || "Not set"}
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <InfoBox
+                      label="Created"
+                      value={new Date(client.created_at).toLocaleDateString()}
+                    />
+
+                    <InfoBox
+                      label="Setup"
+                      value={
+                        client.setup_complete
+                          ? "Complete"
+                          : "Not completed yet"
+                      }
+                    />
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                    <p className="text-sm font-medium text-slate-500">
+                      Auth UID
+                    </p>
+
+                    <p className="mt-1 break-words text-sm font-semibold text-slate-700">
+                      {client.id}
                     </p>
                   </div>
 
-                  <SetupBadge setupComplete={client.setup_complete} />
+                  <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                    <Link
+                      to={`/clients/${client.id}`}
+                      className={`rounded-xl bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-blue-700 sm:py-2 ${
+                        isDeleting ? "pointer-events-none opacity-50" : ""
+                      }`}
+                    >
+                      Open Details
+                    </Link>
+
+                    <Link
+                      to="/create-program"
+                      className={`rounded-xl border border-sky-100 bg-sky-50 px-4 py-3 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-50 sm:py-2 ${
+                        isDeleting ? "pointer-events-none opacity-50" : ""
+                      }`}
+                    >
+                      Add Program
+                    </Link>
+
+                    <Link
+                      to="/messages"
+                      className={`rounded-xl border border-sky-100 bg-white px-4 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-sky-50 sm:py-2 ${
+                        isDeleting ? "pointer-events-none opacity-50" : ""
+                      }`}
+                    >
+                      Message
+                    </Link>
+
+                    <button
+                      type="button"
+                      disabled={isDeleting}
+                      onClick={() => deleteClient(client.id, client.full_name)}
+                      className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-center text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 sm:py-2"
+                    >
+                      {isDeleting ? "Deleting..." : "Delete Client"}
+                    </button>
+                  </div>
                 </div>
-
-                <div className="grid gap-3 md:grid-cols-2">
-                  <InfoBox
-                    label="Created"
-                    value={new Date(client.created_at).toLocaleDateString()}
-                  />
-
-                  <InfoBox
-                    label="Setup"
-                    value={
-                      client.setup_complete
-                        ? "Complete"
-                        : "Not completed yet"
-                    }
-                  />
-                </div>
-
-                <div className="mt-4 rounded-2xl border border-sky-100 bg-sky-50 p-4">
-                  <p className="text-sm font-medium text-slate-500">
-                    Auth UID
-                  </p>
-
-                  <p className="mt-1 break-words text-sm font-semibold text-slate-700">
-                    {client.id}
-                  </p>
-                </div>
-
-                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                  <Link
-                    to={`/clients/${client.id}`}
-                    className="rounded-xl bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-blue-700 sm:py-2"
-                  >
-                    Open Details
-                  </Link>
-
-                  <Link
-                    to="/create-program"
-                    className="rounded-xl border border-sky-100 bg-sky-50 px-4 py-3 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-50 sm:py-2"
-                  >
-                    Add Program
-                  </Link>
-
-                  <Link
-                    to="/messages"
-                    className="rounded-xl border border-sky-100 bg-white px-4 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-sky-50 sm:py-2"
-                  >
-                    Message
-                  </Link>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
