@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     );
 
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: "https://coachsync-rust.vercel.app/client",
+      redirectTo: "https://coachsync-rust.vercel.app",
       data: {
         role: "client",
         client_id: clientId,
