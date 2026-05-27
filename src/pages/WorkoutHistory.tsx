@@ -17,18 +17,59 @@ type WorkoutSubmission = {
   workout_submission_exercises: SubmissionExercise[];
 };
 
+type PersonalWorkoutLog = {
+  id: string;
+  client_user_id: string;
+  activity_type: string | null;
+  title: string | null;
+  duration_minutes: number | null;
+  location: string | null;
+  intensity: string | null;
+  notes: string | null;
+  logged_at: string | null;
+  created_at: string | null;
+};
+
 type ClientProfile = {
   id: string;
   full_name: string;
   client_id: string;
 };
 
+type HistoryItem =
+  | {
+      type: "program";
+      id: string;
+      clientUserId: string;
+      title: string;
+      date: string | null;
+      notes: string | null;
+      workoutId: string | null;
+      percent: number;
+      completed: number;
+      total: number;
+    }
+  | {
+      type: "personal";
+      id: string;
+      clientUserId: string;
+      title: string;
+      date: string | null;
+      notes: string | null;
+      activityType: string;
+      durationMinutes: number | null;
+      intensity: string;
+      location: string;
+    };
+
 export default function WorkoutHistory() {
   const [submissions, setSubmissions] = useState<WorkoutSubmission[]>([]);
+  const [personalLogs, setPersonalLogs] = useState<PersonalWorkoutLog[]>([]);
   const [clients, setClients] = useState<ClientProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
   const [searchText, setSearchText] = useState("");
+  const [filterMode, setFilterMode] = useState("all");
 
   useEffect(() => {
     loadWorkoutHistory();
@@ -65,11 +106,32 @@ export default function WorkoutHistory() {
       return;
     }
 
+    const { data: personalData, error: personalError } = await supabase
+      .from("personal_workout_logs")
+      .select(
+        "id, client_user_id, activity_type, title, duration_minutes, location, intensity, notes, logged_at, created_at"
+      )
+      .order("logged_at", { ascending: false });
+
+    if (personalError) {
+      console.error(personalError);
+      setStatusMessage(
+        "Program workouts loaded, but personal activities could not be loaded: " +
+          personalError.message
+      );
+    }
+
     const submissionsList = (submissionData || []) as WorkoutSubmission[];
+    const personalLogsList = (personalData || []) as PersonalWorkoutLog[];
+
     setSubmissions(submissionsList);
+    setPersonalLogs(personalLogsList);
 
     const clientIds = Array.from(
-      new Set(submissionsList.map((submission) => submission.client_user_id))
+      new Set([
+        ...submissionsList.map((submission) => submission.client_user_id),
+        ...personalLogsList.map((log) => log.client_user_id),
+      ])
     );
 
     if (clientIds.length > 0) {
@@ -120,31 +182,78 @@ export default function WorkoutHistory() {
     };
   }
 
-  const filteredSubmissions = useMemo(() => {
+  const historyItems = useMemo<HistoryItem[]>(() => {
+    const programItems: HistoryItem[] = submissions.map((submission) => {
+      const stats = getCompletionStats(submission);
+
+      return {
+        type: "program",
+        id: submission.id,
+        clientUserId: submission.client_user_id,
+        title: submission.workout_title,
+        date: submission.submitted_at,
+        notes: submission.notes,
+        workoutId: submission.workout_id,
+        percent: stats.percent,
+        completed: stats.completed,
+        total: stats.total,
+      };
+    });
+
+    const personalItems: HistoryItem[] = personalLogs.map((log) => ({
+      type: "personal",
+      id: log.id,
+      clientUserId: log.client_user_id,
+      title: log.title || "Personal Activity",
+      date: log.logged_at || log.created_at,
+      notes: log.notes,
+      activityType: log.activity_type || "Activity",
+      durationMinutes: log.duration_minutes,
+      intensity: log.intensity || "Not set",
+      location: log.location || "Not set",
+    }));
+
+    return [...programItems, ...personalItems].sort(
+      (a, b) => getDateValue(b.date) - getDateValue(a.date)
+    );
+  }, [submissions, personalLogs]);
+
+  const filteredItems = useMemo(() => {
     const search = searchText.trim().toLowerCase();
 
-    if (!search) return submissions;
+    return historyItems.filter((item) => {
+      const clientName = getClientName(item.clientUserId).toLowerCase();
+      const clientId = getClientId(item.clientUserId).toLowerCase();
+      const title = item.title.toLowerCase();
 
-    return submissions.filter((submission) => {
-      const clientName = getClientName(submission.client_user_id).toLowerCase();
-      const clientId = getClientId(submission.client_user_id).toLowerCase();
-      const workoutTitle = submission.workout_title.toLowerCase();
+      const typeText =
+        item.type === "program"
+          ? "program workout"
+          : `personal activity ${item.activityType}`.toLowerCase();
 
-      return (
+      const matchesSearch =
+        !search ||
         clientName.includes(search) ||
         clientId.includes(search) ||
-        workoutTitle.includes(search)
-      );
+        title.includes(search) ||
+        typeText.includes(search);
+
+      if (!matchesSearch) return false;
+
+      if (filterMode === "program") {
+        return item.type === "program";
+      }
+
+      if (filterMode === "personal") {
+        return item.type === "personal";
+      }
+
+      return true;
     });
-  }, [submissions, clients, searchText]);
-
-  const totalSubmissions = submissions.length;
-
-  const latestWorkout =
-    submissions.length > 0 ? submissions[0].workout_title : "None yet";
+  }, [historyItems, clients, searchText, filterMode]);
 
   const uniqueClientCount = new Set(
-    submissions.map((submission) => submission.client_user_id)
+    historyItems.map((item) => item.clientUserId)
   ).size;
 
   const averageCompletion =
@@ -155,6 +264,9 @@ export default function WorkoutHistory() {
           }, 0) / submissions.length
         )
       : 0;
+
+  const latestActivity =
+    historyItems.length > 0 ? historyItems[0].title : "None yet";
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
@@ -172,8 +284,8 @@ export default function WorkoutHistory() {
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
-                  Review submitted client workouts, completion percentage,
-                  exercise status, and workout notes.
+                  Review submitted program workouts and personal activities from
+                  your clients.
                 </p>
               </div>
 
@@ -196,39 +308,49 @@ export default function WorkoutHistory() {
             </div>
           </div>
 
-          <div className="grid gap-4 p-4 sm:p-6 md:grid-cols-4 md:p-8">
-            <SummaryCard
-              title="Submitted Workouts"
-              value={`${totalSubmissions}`}
-            />
-
+          <div className="grid gap-4 p-4 sm:p-6 md:grid-cols-5 md:p-8">
+            <SummaryCard title="Total Logs" value={`${historyItems.length}`} />
+            <SummaryCard title="Program" value={`${submissions.length}`} />
+            <SummaryCard title="Personal" value={`${personalLogs.length}`} />
             <SummaryCard title="Clients" value={`${uniqueClientCount}`} />
-
-            <SummaryCard title="Average Completion" value={`${averageCompletion}%`} />
-
-            <SummaryCard title="Latest Workout" value={latestWorkout} />
+            <SummaryCard title="Latest" value={latestActivity} />
           </div>
         </div>
 
         <div className="mb-6 rounded-3xl border border-sky-100 bg-white p-4 shadow-sm sm:p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="grid gap-4 md:grid-cols-[1fr_220px] md:items-end">
             <div>
               <h2 className="text-xl font-bold text-slate-900">
-                Search Workouts
+                Search History
               </h2>
 
               <p className="mt-1 text-sm leading-6 text-slate-500">
-                Search by client name, client ID, or workout title.
+                Search by client name, client ID, workout title, or activity
+                title.
               </p>
-            </div>
 
-            <div className="w-full md:max-w-md">
               <input
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
                 placeholder="Search workout history..."
-                className="w-full rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                className="mt-4 w-full rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
               />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-700">
+                Filter
+              </label>
+
+              <select
+                value={filterMode}
+                onChange={(event) => setFilterMode(event.target.value)}
+                className="w-full rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="all">All history</option>
+                <option value="program">Program workouts only</option>
+                <option value="personal">Personal activities only</option>
+              </select>
             </div>
           </div>
         </div>
@@ -242,38 +364,135 @@ export default function WorkoutHistory() {
         {isLoading ? (
           <EmptyState
             title="Loading workout history..."
-            description="Checking Supabase for submitted workouts."
+            description="Checking Supabase for submitted workouts and personal activities."
           />
-        ) : submissions.length === 0 ? (
+        ) : historyItems.length === 0 ? (
           <EmptyState
-            title="No workouts submitted yet"
-            description="Completed client workouts will appear here after clients submit them."
+            title="No workout history yet"
+            description="Completed client workouts and personal activities will appear here."
           />
-        ) : filteredSubmissions.length === 0 ? (
+        ) : filteredItems.length === 0 ? (
           <EmptyState
-            title="No matching workouts"
-            description="Try searching a different client name, client ID, or workout title."
+            title="No matching activity"
+            description="Try searching a different client name, client ID, workout title, or activity title."
           />
         ) : (
           <div className="grid gap-5 md:grid-cols-2">
-            {filteredSubmissions.map((submission) => {
-              const stats = getCompletionStats(submission);
-              const clientName = getClientName(submission.client_user_id);
-              const clientId = getClientId(submission.client_user_id);
+            {filteredItems.map((item) => {
+              const clientName = getClientName(item.clientUserId);
+              const clientId = getClientId(item.clientUserId);
+
+              if (item.type === "program") {
+                return (
+                  <div
+                    key={`program-${item.id}`}
+                    className="rounded-3xl border border-sky-100 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-blue-200 hover:shadow-md sm:p-6"
+                  >
+                    <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-xl ring-1 ring-sky-100">
+                          🏋️
+                        </div>
+
+                        <span className="mb-3 inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-100">
+                          Program Workout
+                        </span>
+
+                        <h2 className="break-words text-xl font-bold text-slate-900">
+                          {item.title}
+                        </h2>
+
+                        <p className="mt-1 text-sm text-slate-500">
+                          {clientName} • Client ID: {clientId}
+                        </p>
+                      </div>
+
+                      <span
+                        className={`w-fit shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
+                          item.percent === 100
+                            ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+                            : item.percent > 0
+                            ? "bg-blue-50 text-blue-700 ring-blue-100"
+                            : "bg-red-50 text-red-700 ring-red-100"
+                        }`}
+                      >
+                        {item.percent}% Complete
+                      </span>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <InfoBox
+                        label="Submitted"
+                        value={formatDate(item.date)}
+                      />
+
+                      <InfoBox
+                        label="Exercises"
+                        value={`${item.completed} / ${item.total}`}
+                      />
+                    </div>
+
+                    <div className="mt-4 h-3 rounded-full bg-sky-50">
+                      <div
+                        className="h-3 rounded-full bg-blue-600 transition-all"
+                        style={{ width: `${item.percent}%` }}
+                      />
+                    </div>
+
+                    {item.notes && (
+                      <div className="mt-4 rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                        <p className="text-sm font-medium text-slate-500">
+                          Notes
+                        </p>
+
+                        <p className="mt-1 whitespace-pre-wrap text-sm font-semibold text-slate-800">
+                          {item.notes}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                      <Link
+                        to={`/workout-history/${item.id}`}
+                        className="rounded-xl bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-blue-700 sm:py-2"
+                      >
+                        Open Workout
+                      </Link>
+
+                      <Link
+                        to={`/clients/${item.clientUserId}`}
+                        className="rounded-xl border border-sky-100 bg-sky-50 px-4 py-3 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-50 sm:py-2"
+                      >
+                        View Client
+                      </Link>
+                    </div>
+                  </div>
+                );
+              }
 
               return (
                 <div
-                  key={submission.id}
-                  className="rounded-3xl border border-sky-100 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-blue-200 hover:shadow-md sm:p-6"
+                  key={`personal-${item.id}`}
+                  className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm transition hover:-translate-y-1 hover:border-emerald-200 hover:shadow-md sm:p-6"
                 >
                   <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-xl ring-1 ring-sky-100">
-                        🏋️
+                      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-xl ring-1 ring-emerald-100">
+                        🚶
+                      </div>
+
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        <span className="inline-block rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">
+                          Personal Activity
+                        </span>
+
+                        <span className="inline-block rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-emerald-100">
+                          {item.activityType}
+                        </span>
                       </div>
 
                       <h2 className="break-words text-xl font-bold text-slate-900">
-                        {submission.workout_title}
+                        {item.title}
                       </h2>
 
                       <p className="mt-1 text-sm text-slate-500">
@@ -281,63 +500,43 @@ export default function WorkoutHistory() {
                       </p>
                     </div>
 
-                    <span
-                      className={`w-fit shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
-                        stats.percent === 100
-                          ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
-                          : stats.percent > 0
-                          ? "bg-blue-50 text-blue-700 ring-blue-100"
-                          : "bg-red-50 text-red-700 ring-red-100"
-                      }`}
-                    >
-                      {stats.percent}% Complete
+                    <span className="w-fit shrink-0 rounded-full bg-white px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">
+                      {item.durationMinutes
+                        ? `${item.durationMinutes} min`
+                        : "Duration not set"}
                     </span>
                   </div>
 
                   <div className="grid gap-3 md:grid-cols-2">
+                    <InfoBox label="Logged" value={formatDate(item.date)} />
+                    <InfoBox label="Intensity" value={item.intensity} />
+                    <InfoBox label="Location" value={item.location} />
                     <InfoBox
-                      label="Submitted"
-                      value={new Date(
-                        submission.submitted_at
-                      ).toLocaleDateString()}
-                    />
-
-                    <InfoBox
-                      label="Exercises"
-                      value={`${stats.completed} / ${stats.total}`}
+                      label="Duration"
+                      value={
+                        item.durationMinutes
+                          ? `${item.durationMinutes} minutes`
+                          : "Not set"
+                      }
                     />
                   </div>
 
-                  <div className="mt-4 h-3 rounded-full bg-sky-50">
-                    <div
-                      className="h-3 rounded-full bg-blue-600 transition-all"
-                      style={{ width: `${stats.percent}%` }}
-                    />
-                  </div>
-
-                  {submission.notes && (
-                    <div className="mt-4 rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                  {item.notes && (
+                    <div className="mt-4 rounded-2xl border border-emerald-100 bg-white p-4">
                       <p className="text-sm font-medium text-slate-500">
                         Notes
                       </p>
 
                       <p className="mt-1 whitespace-pre-wrap text-sm font-semibold text-slate-800">
-                        {submission.notes}
+                        {item.notes}
                       </p>
                     </div>
                   )}
 
-                  <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  <div className="mt-5">
                     <Link
-                      to={`/workout-history/${submission.id}`}
-                      className="rounded-xl bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-blue-700 sm:py-2"
-                    >
-                      Open Workout
-                    </Link>
-
-                    <Link
-                      to={`/clients/${submission.client_user_id}`}
-                      className="rounded-xl border border-sky-100 bg-sky-50 px-4 py-3 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-50 sm:py-2"
+                      to={`/clients/${item.clientUserId}`}
+                      className="rounded-xl border border-emerald-100 bg-white px-4 py-3 text-center text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 sm:py-2"
                     >
                       View Client
                     </Link>
@@ -350,6 +549,32 @@ export default function WorkoutHistory() {
       </section>
     </main>
   );
+}
+
+function getDateValue(value: string | null) {
+  if (!value) return 0;
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return 0;
+
+  return date.getTime();
+}
+
+function formatDate(value: string | null) {
+  if (!value) return "Date not recorded";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Date not recorded";
+  }
+
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function SummaryCard({ title, value }: { title: string; value: string }) {
@@ -366,7 +591,7 @@ function SummaryCard({ title, value }: { title: string; value: string }) {
 
 function InfoBox({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+    <div className="rounded-2xl border border-sky-100 bg-white p-4">
       <p className="text-sm font-medium text-slate-500">{label}</p>
 
       <p className="mt-1 break-words font-semibold text-slate-900">{value}</p>
