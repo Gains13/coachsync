@@ -259,7 +259,7 @@ export default function TrainerDashboard() {
     });
   }, [submissions]);
 
-  const activityItems = useMemo<ActivityItem[]>(() => {
+  const activityItems = useMemo<ActivityItem[]>((() => {
     const messageActivities: ActivityItem[] = unreadClientMessages.map(
       (message) => ({
         id: `message-${message.id}`,
@@ -321,7 +321,7 @@ export default function TrainerDashboard() {
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
       .slice(0, 10);
-  }, [
+  }) as () => ActivityItem[], [
     unreadClientMessages,
     recentWorkoutSubmissions,
     recentPersonalLogs,
@@ -351,6 +351,11 @@ export default function TrainerDashboard() {
       to: "/create-program",
       title: "Create Program",
       icon: "📋",
+    },
+    {
+      to: "/import-program",
+      title: "Import Program",
+      icon: "📥",
     },
     {
       to: "/messages",
