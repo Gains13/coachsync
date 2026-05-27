@@ -58,12 +58,16 @@ type ExistingWorkout = {
   workout_order: number;
   week_id: string;
   week_number: number;
+  source_client_user_id: string;
+  source_client_name: string;
+  source_client_id: string;
   client_plan_exercises: ExistingExercise[];
 };
 
 type PlanWeekWithWorkouts = {
   id: string;
   week_number: number;
+  client_user_id: string;
   client_plan_workouts: {
     id: string;
     title: string;
@@ -103,6 +107,8 @@ function blankWorkout(): WorkoutForm {
 export default function CreateProgram() {
   const [clients, setClients] = useState<ClientProfile[]>([]);
   const [selectedClientId, setSelectedClientId] = useState("");
+  const [copySourceClientId, setCopySourceClientId] = useState("");
+
   const [weekNumber, setWeekNumber] = useState("1");
   const [weekStatus, setWeekStatus] = useState("unlocked");
   const [statusMessage, setStatusMessage] = useState("");
@@ -136,12 +142,23 @@ export default function CreateProgram() {
   useEffect(() => {
     if (selectedClientId) {
       loadNextWeekNumber(selectedClientId);
-      loadExistingWorkouts(selectedClientId);
+      setCopySourceClientId(selectedClientId);
     } else {
+      setWeekNumber("1");
+      setCopySourceClientId("");
       setExistingWorkouts([]);
       setSelectedWorkoutToCopy("");
     }
   }, [selectedClientId]);
+
+  useEffect(() => {
+    if (copySourceClientId) {
+      loadExistingWorkouts(copySourceClientId);
+    } else {
+      setExistingWorkouts([]);
+      setSelectedWorkoutToCopy("");
+    }
+  }, [copySourceClientId]);
 
   async function loadClients() {
     const { data, error } = await supabase
@@ -173,7 +190,7 @@ export default function CreateProgram() {
 
     if (error) {
       console.error(error);
-      setStatusMessage("Could not check the client's latest week.");
+      setStatusMessage("Could not check the target client's latest week.");
       setIsLoadingWeek(false);
       return;
     }
@@ -187,7 +204,7 @@ export default function CreateProgram() {
     setIsLoadingWeek(false);
   }
 
-  async function loadExistingWorkouts(clientUserId: string) {
+  async function loadExistingWorkouts(sourceClientUserId: string) {
     setIsLoadingExistingWorkouts(true);
     setSelectedWorkoutToCopy("");
 
@@ -197,6 +214,7 @@ export default function CreateProgram() {
         `
         id,
         week_number,
+        client_user_id,
         client_plan_workouts (
           id,
           title,
@@ -214,7 +232,7 @@ export default function CreateProgram() {
         )
       `
       )
-      .eq("client_user_id", clientUserId)
+      .eq("client_user_id", sourceClientUserId)
       .order("week_number", { ascending: false });
 
     if (error) {
@@ -227,6 +245,10 @@ export default function CreateProgram() {
       return;
     }
 
+    const sourceClient = clients.find(
+      (client) => client.id === sourceClientUserId
+    );
+
     const weeks = (data || []) as PlanWeekWithWorkouts[];
 
     const flattenedWorkouts = weeks.flatMap((week) =>
@@ -234,6 +256,10 @@ export default function CreateProgram() {
         ...workout,
         week_id: week.id,
         week_number: week.week_number,
+        source_client_user_id: week.client_user_id,
+        source_client_name:
+          sourceClient?.full_name || sourceClient?.client_id || "Unknown Client",
+        source_client_id: sourceClient?.client_id || "Not set",
         client_plan_exercises: [
           ...(workout.client_plan_exercises || []),
         ].sort((a, b) => a.exercise_order - b.exercise_order),
@@ -257,6 +283,7 @@ export default function CreateProgram() {
 
     if (!value) {
       setWeekNumber("1");
+      setCopySourceClientId("");
       setExistingWorkouts([]);
       setSelectedWorkoutToCopy("");
     }
@@ -345,7 +372,7 @@ export default function CreateProgram() {
     });
 
     setStatusMessage(
-      `"${workoutToCopy.title}" copied into the form. You can now edit it before saving.`
+      `"${workoutToCopy.title}" from ${workoutToCopy.source_client_name} copied into the form. You can now edit it before saving to the target client.`
     );
   }
 
@@ -447,10 +474,7 @@ export default function CreateProgram() {
     );
   }
 
-  function handleExerciseDragEnd(
-    workoutIndex: number,
-    event: DragEndEvent
-  ) {
+  function handleExerciseDragEnd(workoutIndex: number, event: DragEndEvent) {
     const { active, over } = event;
 
     if (!over || active.id === over.id) return;
@@ -501,7 +525,7 @@ export default function CreateProgram() {
     event.preventDefault();
 
     if (!selectedClientId) {
-      setStatusMessage("Please select a client.");
+      setStatusMessage("Please select a target client.");
       return;
     }
 
@@ -538,11 +562,13 @@ export default function CreateProgram() {
     setIsSaving(true);
     setStatusMessage("Saving program week...");
 
+    const targetWeekNumber = Number(weekNumber);
+
     const { data: existingWeek, error: existingWeekError } = await supabase
       .from("client_plan_weeks")
       .select("id")
       .eq("client_user_id", selectedClientId)
-      .eq("week_number", Number(weekNumber))
+      .eq("week_number", targetWeekNumber)
       .maybeSingle();
 
     if (existingWeekError) {
@@ -552,30 +578,54 @@ export default function CreateProgram() {
       return;
     }
 
+    let weekId = existingWeek?.id || "";
+    let addingToExistingWeek = false;
+
     if (existingWeek) {
+      weekId = existingWeek.id;
+      addingToExistingWeek = true;
       setStatusMessage(
-        `This client already has Week ${weekNumber}. Choose another week number.`
+        `Week ${targetWeekNumber} already exists. Adding the workout(s) to that week...`
       );
+    } else {
+      const { data: weekData, error: weekError } = await supabase
+        .from("client_plan_weeks")
+        .insert({
+          client_user_id: selectedClientId,
+          week_number: targetWeekNumber,
+          status: weekStatus,
+        })
+        .select("id")
+        .single();
+
+      if (weekError || !weekData) {
+        console.error(weekError);
+        setStatusMessage(weekError?.message || "Could not create week.");
+        setIsSaving(false);
+        return;
+      }
+
+      weekId = weekData.id;
+    }
+
+    const { data: currentWorkoutsForWeek, error: currentWorkoutsError } =
+      await supabase
+        .from("client_plan_workouts")
+        .select("workout_order")
+        .eq("week_id", weekId)
+        .order("workout_order", { ascending: false });
+
+    if (currentWorkoutsError) {
+      console.error(currentWorkoutsError);
+      setStatusMessage("Could not check current workout order.");
       setIsSaving(false);
       return;
     }
 
-    const { data: weekData, error: weekError } = await supabase
-      .from("client_plan_weeks")
-      .insert({
-        client_user_id: selectedClientId,
-        week_number: Number(weekNumber),
-        status: weekStatus,
-      })
-      .select()
-      .single();
-
-    if (weekError || !weekData) {
-      console.error(weekError);
-      setStatusMessage(weekError?.message || "Could not create week.");
-      setIsSaving(false);
-      return;
-    }
+    const currentHighestWorkoutOrder =
+      currentWorkoutsForWeek && currentWorkoutsForWeek.length > 0
+        ? currentWorkoutsForWeek[0].workout_order || 0
+        : 0;
 
     for (
       let workoutIndex = 0;
@@ -587,9 +637,9 @@ export default function CreateProgram() {
       const { data: workoutData, error: workoutError } = await supabase
         .from("client_plan_workouts")
         .insert({
-          week_id: weekData.id,
+          week_id: weekId,
           title: workout.title,
-          workout_order: workoutIndex + 1,
+          workout_order: currentHighestWorkoutOrder + workoutIndex + 1,
         })
         .select()
         .single();
@@ -630,20 +680,28 @@ export default function CreateProgram() {
       }
     }
 
-    const savedWeekNumber = Number(weekNumber);
+    setStatusMessage(
+      addingToExistingWeek
+        ? `Added ${validWorkouts.length} workout${
+            validWorkouts.length === 1 ? "" : "s"
+          } to Week ${targetWeekNumber}.`
+        : `Week ${targetWeekNumber} saved successfully.`
+    );
 
-    setStatusMessage(`Week ${savedWeekNumber} saved successfully.`);
-    setWeekNumber(String(savedWeekNumber + 1));
+    setWeekNumber(String(targetWeekNumber + 1));
     setWeekStatus("unlocked");
     setWorkouts([blankWorkout()]);
     setIsSaving(false);
 
-    if (selectedClientId) {
-      await loadExistingWorkouts(selectedClientId);
+    if (copySourceClientId) {
+      await loadExistingWorkouts(copySourceClientId);
     }
   }
 
   const selectedClient = clients.find((client) => client.id === selectedClientId);
+  const copySourceClient = clients.find(
+    (client) => client.id === copySourceClientId
+  );
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
@@ -661,9 +719,9 @@ export default function CreateProgram() {
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
-                  Build one training week with multiple workouts, copy previous
-                  workouts, and drag exercises into the right order before
-                  saving.
+                  Build a new week for one client, copy workouts from any
+                  client, add multiple workouts to the same week, and edit
+                  everything before saving.
                 </p>
               </div>
 
@@ -673,7 +731,7 @@ export default function CreateProgram() {
                     to={`/clients/${selectedClientId}`}
                     className="w-full rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-50 sm:w-auto sm:py-2"
                   >
-                    View Client
+                    View Target Client
                   </Link>
                 )}
 
@@ -688,10 +746,10 @@ export default function CreateProgram() {
           </div>
 
           <div className="grid gap-4 p-4 sm:p-6 md:grid-cols-4 md:p-8">
-            <SummaryCard title="Step 1" value="Choose Client" />
-            <SummaryCard title="Step 2" value="Copy or Build" />
-            <SummaryCard title="Step 3" value="Drag Order" />
-            <SummaryCard title="Step 4" value="Save Program" />
+            <SummaryCard title="Step 1" value="Choose Target" />
+            <SummaryCard title="Step 2" value="Copy From Any Client" />
+            <SummaryCard title="Step 3" value="Edit + Drag" />
+            <SummaryCard title="Step 4" value="Save or Add to Week" />
           </div>
         </div>
 
@@ -702,7 +760,7 @@ export default function CreateProgram() {
           <div className="grid gap-4 md:grid-cols-3">
             <div>
               <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Client
+                Target Client
               </label>
 
               <select
@@ -710,7 +768,7 @@ export default function CreateProgram() {
                 onChange={(event) => handleClientChange(event.target.value)}
                 className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
               >
-                <option value="">Select client</option>
+                <option value="">Select target client</option>
                 {clients.map((client) => (
                   <option key={client.id} value={client.id}>
                     {client.full_name} — {client.client_id}
@@ -747,10 +805,13 @@ export default function CreateProgram() {
           {selectedClient && (
             <div className="mt-5 rounded-2xl border border-sky-100 bg-sky-50 p-4">
               <p className="text-sm font-medium text-slate-500">
-                Selected Client
+                Target Client
               </p>
+
               <p className="mt-1 font-semibold text-slate-900">
-                {selectedClient.full_name} — {selectedClient.client_id}
+                This workout/week will be saved to {selectedClient.full_name} —{" "}
+                {selectedClient.client_id}. If Week {weekNumber} already exists,
+                the workout will be added into that week.
               </p>
             </div>
           )}
@@ -764,27 +825,64 @@ export default function CreateProgram() {
                   </h2>
 
                   <p className="mt-1 text-sm leading-6 text-slate-600">
-                    Copy a workout you already created for this client, then
-                    edit the copied version below before saving.
+                    Choose any client as the source, copy one of their workouts,
+                    then edit it before saving it to the target client.
                   </p>
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => loadExistingWorkouts(selectedClientId)}
+                  onClick={() => {
+                    if (!copySourceClientId) {
+                      setStatusMessage("Choose a copy source client first.");
+                      return;
+                    }
+
+                    loadExistingWorkouts(copySourceClientId);
+                  }}
                   className="rounded-xl border border-blue-100 bg-white px-4 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-50 sm:py-2"
                 >
-                  Refresh Workouts
+                  Refresh Source Workouts
                 </button>
+              </div>
+
+              <div className="mb-4">
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  Copy From Client
+                </label>
+
+                <select
+                  value={copySourceClientId}
+                  onChange={(event) => setCopySourceClientId(event.target.value)}
+                  className="w-full rounded-xl border border-blue-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="">Select source client</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.full_name} — {client.client_id}
+                    </option>
+                  ))}
+                </select>
+
+                {copySourceClient && (
+                  <p className="mt-2 text-sm font-medium text-slate-600">
+                    Source: {copySourceClient.full_name} —{" "}
+                    {copySourceClient.client_id}
+                  </p>
+                )}
               </div>
 
               {isLoadingExistingWorkouts ? (
                 <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
-                  Loading previous workouts...
+                  Loading source workouts...
+                </p>
+              ) : !copySourceClientId ? (
+                <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
+                  Choose a source client to see workouts you can copy.
                 </p>
               ) : existingWorkouts.length === 0 ? (
                 <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
-                  No previous workouts found for this client yet.
+                  No previous workouts found for this source client yet.
                 </p>
               ) : (
                 <>
@@ -801,10 +899,11 @@ export default function CreateProgram() {
                         }
                         className="w-full rounded-xl border border-blue-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                       >
-                        <option value="">Choose previous workout</option>
+                        <option value="">Choose source workout</option>
                         {existingWorkouts.map((workout) => (
                           <option key={workout.id} value={workout.id}>
-                            Week {workout.week_number} — {workout.title} (
+                            {workout.source_client_name} — Week{" "}
+                            {workout.week_number} — {workout.title} (
                             {workout.client_plan_exercises.length} exercises)
                           </option>
                         ))}
@@ -829,7 +928,8 @@ export default function CreateProgram() {
                         className="rounded-2xl border border-blue-100 bg-white p-4 text-left transition hover:border-blue-200 hover:bg-blue-50"
                       >
                         <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
-                          Week {workout.week_number}
+                          {workout.source_client_name} • Week{" "}
+                          {workout.week_number}
                         </p>
 
                         <h3 className="mt-1 font-bold text-slate-900">
@@ -858,8 +958,9 @@ export default function CreateProgram() {
                 </h2>
 
                 <p className="mt-1 text-sm leading-6 text-slate-500">
-                  Drag exercises using the handle, or use Move Up and Move Down
-                  as backup controls.
+                  Set the week number above. If that week already exists, these
+                  workout(s) will be added into that week instead of being
+                  blocked.
                 </p>
               </div>
 
@@ -968,7 +1069,7 @@ export default function CreateProgram() {
             disabled={isSaving}
             className="mt-6 w-full rounded-2xl bg-blue-600 px-5 py-4 font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSaving ? "Saving Program..." : "Save Program Week"}
+            {isSaving ? "Saving Program..." : "Save Program Week / Add to Week"}
           </button>
         </form>
       </section>
