@@ -22,6 +22,37 @@ type WorkoutForm = {
   exercises: ExerciseForm[];
 };
 
+type ExistingExercise = {
+  id: string;
+  exercise_name: string;
+  sets: string;
+  reps: string;
+  weight: string;
+  rest: string;
+  video_link: string;
+  exercise_order: number;
+};
+
+type ExistingWorkout = {
+  id: string;
+  title: string;
+  workout_order: number;
+  week_id: string;
+  week_number: number;
+  client_plan_exercises: ExistingExercise[];
+};
+
+type PlanWeekWithWorkouts = {
+  id: string;
+  week_number: number;
+  client_plan_workouts: {
+    id: string;
+    title: string;
+    workout_order: number;
+    client_plan_exercises: ExistingExercise[];
+  }[];
+};
+
 function blankExercise(): ExerciseForm {
   return {
     exerciseName: "",
@@ -51,6 +82,13 @@ export default function CreateProgram() {
 
   const [workouts, setWorkouts] = useState<WorkoutForm[]>([blankWorkout()]);
 
+  const [existingWorkouts, setExistingWorkouts] = useState<ExistingWorkout[]>(
+    []
+  );
+  const [selectedWorkoutToCopy, setSelectedWorkoutToCopy] = useState("");
+  const [isLoadingExistingWorkouts, setIsLoadingExistingWorkouts] =
+    useState(false);
+
   useEffect(() => {
     loadClients();
   }, []);
@@ -58,6 +96,10 @@ export default function CreateProgram() {
   useEffect(() => {
     if (selectedClientId) {
       loadNextWeekNumber(selectedClientId);
+      loadExistingWorkouts(selectedClientId);
+    } else {
+      setExistingWorkouts([]);
+      setSelectedWorkoutToCopy("");
     }
   }, [selectedClientId]);
 
@@ -105,11 +147,78 @@ export default function CreateProgram() {
     setIsLoadingWeek(false);
   }
 
+  async function loadExistingWorkouts(clientUserId: string) {
+    setIsLoadingExistingWorkouts(true);
+    setSelectedWorkoutToCopy("");
+
+    const { data, error } = await supabase
+      .from("client_plan_weeks")
+      .select(
+        `
+        id,
+        week_number,
+        client_plan_workouts (
+          id,
+          title,
+          workout_order,
+          client_plan_exercises (
+            id,
+            exercise_name,
+            sets,
+            reps,
+            weight,
+            rest,
+            video_link,
+            exercise_order
+          )
+        )
+      `
+      )
+      .eq("client_user_id", clientUserId)
+      .order("week_number", { ascending: false });
+
+    if (error) {
+      console.error(error);
+      setStatusMessage(
+        "Could not load previous workouts to copy: " + error.message
+      );
+      setExistingWorkouts([]);
+      setIsLoadingExistingWorkouts(false);
+      return;
+    }
+
+    const weeks = (data || []) as PlanWeekWithWorkouts[];
+
+    const flattenedWorkouts = weeks.flatMap((week) =>
+      (week.client_plan_workouts || []).map((workout) => ({
+        ...workout,
+        week_id: week.id,
+        week_number: week.week_number,
+        client_plan_exercises: [
+          ...(workout.client_plan_exercises || []),
+        ].sort((a, b) => a.exercise_order - b.exercise_order),
+      }))
+    );
+
+    const sortedWorkouts = flattenedWorkouts.sort((a, b) => {
+      if (a.week_number !== b.week_number) {
+        return b.week_number - a.week_number;
+      }
+
+      return a.workout_order - b.workout_order;
+    });
+
+    setExistingWorkouts(sortedWorkouts);
+    setIsLoadingExistingWorkouts(false);
+  }
+
   function handleClientChange(value: string) {
     setSelectedClientId(value);
 
     if (!value) {
       setWeekNumber("1");
+      setExistingWorkouts([]);
+      setSelectedWorkoutToCopy("");
     }
   }
 
@@ -128,6 +237,124 @@ export default function CreateProgram() {
 
   function addWorkout() {
     setWorkouts((currentWorkouts) => [...currentWorkouts, blankWorkout()]);
+  }
+
+  function copySelectedWorkout() {
+    if (!selectedWorkoutToCopy) {
+      setStatusMessage("Choose a workout to copy first.");
+      return;
+    }
+
+    const workoutToCopy = existingWorkouts.find(
+      (workout) => workout.id === selectedWorkoutToCopy
+    );
+
+    if (!workoutToCopy) {
+      setStatusMessage("Could not find that workout to copy.");
+      return;
+    }
+
+    const copiedWorkout: WorkoutForm = {
+      title: `${workoutToCopy.title} Copy`,
+      exercises:
+        workoutToCopy.client_plan_exercises.length > 0
+          ? workoutToCopy.client_plan_exercises.map((exercise) => ({
+              exerciseName: exercise.exercise_name || "",
+              sets: exercise.sets || "",
+              reps: exercise.reps || "",
+              weight: exercise.weight || "",
+              rest: exercise.rest || "",
+              videoLink: exercise.video_link || "",
+            }))
+          : [blankExercise()],
+    };
+
+    setWorkouts((currentWorkouts) => {
+      const hasOnlyBlankWorkout =
+        currentWorkouts.length === 1 &&
+        currentWorkouts[0].title.trim() === "" &&
+        currentWorkouts[0].exercises.length === 1 &&
+        currentWorkouts[0].exercises[0].exerciseName.trim() === "";
+
+      if (hasOnlyBlankWorkout) {
+        return [copiedWorkout];
+      }
+
+      return [...currentWorkouts, copiedWorkout];
+    });
+
+    setStatusMessage(
+      `"${workoutToCopy.title}" copied into the form. You can now edit it before saving.`
+    );
+  }
+
+  function copyWorkoutById(workoutId: string) {
+    setSelectedWorkoutToCopy(workoutId);
+
+    const workoutToCopy = existingWorkouts.find(
+      (workout) => workout.id === workoutId
+    );
+
+    if (!workoutToCopy) {
+      setStatusMessage("Could not find that workout to copy.");
+      return;
+    }
+
+    const copiedWorkout: WorkoutForm = {
+      title: `${workoutToCopy.title} Copy`,
+      exercises:
+        workoutToCopy.client_plan_exercises.length > 0
+          ? workoutToCopy.client_plan_exercises.map((exercise) => ({
+              exerciseName: exercise.exercise_name || "",
+              sets: exercise.sets || "",
+              reps: exercise.reps || "",
+              weight: exercise.weight || "",
+              rest: exercise.rest || "",
+              videoLink: exercise.video_link || "",
+            }))
+          : [blankExercise()],
+    };
+
+    setWorkouts((currentWorkouts) => {
+      const hasOnlyBlankWorkout =
+        currentWorkouts.length === 1 &&
+        currentWorkouts[0].title.trim() === "" &&
+        currentWorkouts[0].exercises.length === 1 &&
+        currentWorkouts[0].exercises[0].exerciseName.trim() === "";
+
+      if (hasOnlyBlankWorkout) {
+        return [copiedWorkout];
+      }
+
+      return [...currentWorkouts, copiedWorkout];
+    });
+
+    setStatusMessage(
+      `"${workoutToCopy.title}" copied into the form. You can now edit it before saving.`
+    );
+  }
+
+  function duplicateWorkoutInForm(workoutIndex: number) {
+    const workoutToDuplicate = workouts[workoutIndex];
+
+    if (!workoutToDuplicate) return;
+
+    const copiedWorkout: WorkoutForm = {
+      title: workoutToDuplicate.title
+        ? `${workoutToDuplicate.title} Copy`
+        : `Workout ${workoutIndex + 1} Copy`,
+      exercises: workoutToDuplicate.exercises.map((exercise) => ({
+        ...exercise,
+      })),
+    };
+
+    setWorkouts((currentWorkouts) => [
+      ...currentWorkouts.slice(0, workoutIndex + 1),
+      copiedWorkout,
+      ...currentWorkouts.slice(workoutIndex + 1),
+    ]);
+
+    setStatusMessage("Workout duplicated in the form.");
   }
 
   function removeWorkout(workoutIndex: number) {
@@ -339,6 +566,10 @@ export default function CreateProgram() {
     setWeekStatus("unlocked");
     setWorkouts([blankWorkout()]);
     setIsSaving(false);
+
+    if (selectedClientId) {
+      await loadExistingWorkouts(selectedClientId);
+    }
   }
 
   const selectedClient = clients.find((client) => client.id === selectedClientId);
@@ -359,7 +590,8 @@ export default function CreateProgram() {
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
-                  Build one training week with multiple workouts and exercises.
+                  Build one training week with multiple workouts and copy
+                  previous workouts to save time.
                 </p>
               </div>
 
@@ -383,10 +615,11 @@ export default function CreateProgram() {
             </div>
           </div>
 
-          <div className="grid gap-4 p-4 sm:p-6 md:grid-cols-3 md:p-8">
+          <div className="grid gap-4 p-4 sm:p-6 md:grid-cols-4 md:p-8">
             <SummaryCard title="Step 1" value="Choose Client" />
-            <SummaryCard title="Step 2" value="Build Week" />
-            <SummaryCard title="Step 3" value="Save Program" />
+            <SummaryCard title="Step 2" value="Copy or Build" />
+            <SummaryCard title="Step 3" value="Edit Week" />
+            <SummaryCard title="Step 4" value="Save Program" />
           </div>
         </div>
 
@@ -450,6 +683,101 @@ export default function CreateProgram() {
             </div>
           )}
 
+          {selectedClientId && (
+            <div className="mt-6 rounded-3xl border border-blue-100 bg-blue-50 p-4 sm:p-5">
+              <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">
+                    Copy Existing Workout
+                  </h2>
+
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    Copy a workout you already created for this client, then
+                    edit the copied version below before saving.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => loadExistingWorkouts(selectedClientId)}
+                  className="rounded-xl border border-blue-100 bg-white px-4 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-50 sm:py-2"
+                >
+                  Refresh Workouts
+                </button>
+              </div>
+
+              {isLoadingExistingWorkouts ? (
+                <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
+                  Loading previous workouts...
+                </p>
+              ) : existingWorkouts.length === 0 ? (
+                <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
+                  No previous workouts found for this client yet.
+                </p>
+              ) : (
+                <>
+                  <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                        Select Workout to Copy
+                      </label>
+
+                      <select
+                        value={selectedWorkoutToCopy}
+                        onChange={(event) =>
+                          setSelectedWorkoutToCopy(event.target.value)
+                        }
+                        className="w-full rounded-xl border border-blue-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                      >
+                        <option value="">Choose previous workout</option>
+                        {existingWorkouts.map((workout) => (
+                          <option key={workout.id} value={workout.id}>
+                            Week {workout.week_number} — {workout.title} (
+                            {workout.client_plan_exercises.length} exercises)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={copySelectedWorkout}
+                      className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                    >
+                      Copy Into Form
+                    </button>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    {existingWorkouts.slice(0, 6).map((workout) => (
+                      <button
+                        key={workout.id}
+                        type="button"
+                        onClick={() => copyWorkoutById(workout.id)}
+                        className="rounded-2xl border border-blue-100 bg-white p-4 text-left transition hover:border-blue-200 hover:bg-blue-50"
+                      >
+                        <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                          Week {workout.week_number}
+                        </p>
+
+                        <h3 className="mt-1 font-bold text-slate-900">
+                          {workout.title}
+                        </h3>
+
+                        <p className="mt-1 text-sm text-slate-500">
+                          {workout.client_plan_exercises.length} exercise
+                          {workout.client_plan_exercises.length === 1
+                            ? ""
+                            : "s"}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           <div className="mt-8">
             <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
@@ -483,13 +811,23 @@ export default function CreateProgram() {
                       Workout {workoutIndex + 1}
                     </h3>
 
-                    <button
-                      type="button"
-                      onClick={() => removeWorkout(workoutIndex)}
-                      className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
-                    >
-                      Remove Workout
-                    </button>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <button
+                        type="button"
+                        onClick={() => duplicateWorkoutInForm(workoutIndex)}
+                        className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50"
+                      >
+                        Duplicate
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => removeWorkout(workoutIndex)}
+                        className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
+                      >
+                        Remove Workout
+                      </button>
+                    </div>
                   </div>
 
                   <Input
