@@ -13,13 +13,14 @@ import ClientPastWorkouts from "./pages/ClientPastWorkouts";
 import ClientProgress from "./pages/ClientProgress";
 import ClientSetup from "./pages/ClientSetup";
 import ClientSettings from "./pages/ClientSettings";
-import ClientLogActivity from "./pages/ClientLogActivity"
+import ClientLogActivity from "./pages/ClientLogActivity";
 
 import TrainerDashboard from "./pages/TrainerDashboard";
 import Clients from "./pages/Clients";
 import ClientDetails from "./pages/ClientDetails";
 import CreateClient from "./pages/CreateClient";
 import CreateProgram from "./pages/CreateProgram";
+import ImportProgram from "./pages/ImportProgram";
 import Program from "./pages/Program";
 import Messages from "./pages/Messages";
 import WorkoutTracker from "./pages/WorkoutTracker";
@@ -212,6 +213,15 @@ export default function App() {
           element={
             <RequireRole allowedRoles={["trainer"]}>
               <CreateProgram />
+            </RequireRole>
+          }
+        />
+
+        <Route
+          path="/import-program"
+          element={
+            <RequireRole allowedRoles={["trainer"]}>
+              <ImportProgram />
             </RequireRole>
           }
         />
