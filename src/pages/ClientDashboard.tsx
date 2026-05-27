@@ -199,31 +199,59 @@ export default function ClientDashboard() {
         </Link>
       )}
 
-      <section className="rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
-              Today’s Focus
-            </p>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <section className="rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+          <div className="flex h-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                Today’s Focus
+              </p>
 
-            <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
-              Ready for your next workout?
-            </h2>
+              <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+                Ready for your next workout?
+              </h2>
 
-            <p className="mt-1 text-sm leading-6 text-slate-500">
-              Open your plan to see your current workout, upcoming sessions,
-              and completed workouts.
-            </p>
+              <p className="mt-1 text-sm leading-6 text-slate-500">
+                Open your plan to see your current workout, upcoming sessions,
+                and completed workouts.
+              </p>
+            </div>
+
+            <Link
+              to="/client-plan"
+              className="w-full rounded-2xl bg-blue-600 px-5 py-3 text-center text-sm font-black text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.99] sm:w-auto"
+            >
+              Open My Plan →
+            </Link>
           </div>
+        </section>
 
-          <Link
-            to="/client-plan"
-            className="w-full rounded-2xl bg-blue-600 px-5 py-3 text-center text-sm font-black text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.99] sm:w-auto"
-          >
-            Open My Plan →
-          </Link>
-        </div>
-      </section>
+        <section className="rounded-[1.75rem] border border-emerald-100 bg-emerald-50 p-4 shadow-sm sm:rounded-3xl sm:p-6">
+          <div className="flex h-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">
+                Extra Activity
+              </p>
+
+              <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+                Did you exercise on your own?
+              </h2>
+
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Log a hike, bike ride, walk, gym session, at-home workout, or
+                any extra training you completed.
+              </p>
+            </div>
+
+            <Link
+              to="/client-log-activity"
+              className="w-full rounded-2xl bg-emerald-600 px-5 py-3 text-center text-sm font-black text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.99] sm:w-auto"
+            >
+              Log Activity →
+            </Link>
+          </div>
+        </section>
+      </div>
     </ClientLayout>
   );
 }

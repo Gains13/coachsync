@@ -34,6 +34,11 @@ export default function ClientLayout({
         icon: "📋",
       },
       {
+        to: "/client-log-activity",
+        title: "Log Activity",
+        icon: "➕",
+      },
+      {
         to: "/client-messages",
         title: "Messages",
         icon: "💬",

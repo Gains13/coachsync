@@ -13,6 +13,7 @@ import ClientPastWorkouts from "./pages/ClientPastWorkouts";
 import ClientProgress from "./pages/ClientProgress";
 import ClientSetup from "./pages/ClientSetup";
 import ClientSettings from "./pages/ClientSettings";
+import ClientLogActivity from "./pages/ClientLogActivity"
 
 import TrainerDashboard from "./pages/TrainerDashboard";
 import Clients from "./pages/Clients";
@@ -35,7 +36,9 @@ function RequireRole({
   allowedRoles: UserRole[];
   children: ReactNode;
 }) {
-  const userRole = localStorage.getItem("coachsync-user-role") as UserRole | null;
+  const userRole = localStorage.getItem("coachsync-user-role") as
+    | UserRole
+    | null;
 
   if (!userRole || !allowedRoles.includes(userRole)) {
     return <Navigate to="/" replace />;
@@ -83,6 +86,15 @@ export default function App() {
           element={
             <RequireRole allowedRoles={["client"]}>
               <ClientPlan />
+            </RequireRole>
+          }
+        />
+
+        <Route
+          path="/client-log-activity"
+          element={
+            <RequireRole allowedRoles={["client"]}>
+              <ClientLogActivity />
             </RequireRole>
           }
         />

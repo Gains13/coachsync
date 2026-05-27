@@ -17,8 +17,45 @@ type WorkoutSubmission = {
   date?: string | null;
 };
 
+type PersonalWorkoutLog = {
+  id: string;
+  client_user_id: string;
+  activity_type: string | null;
+  title: string | null;
+  duration_minutes: number | null;
+  location: string | null;
+  intensity: string | null;
+  notes: string | null;
+  logged_at: string | null;
+  created_at: string | null;
+};
+
+type CombinedWorkoutItem =
+  | {
+      type: "program";
+      id: string;
+      title: string;
+      date: string | null;
+      notes: string;
+      painReported: boolean;
+    }
+  | {
+      type: "personal";
+      id: string;
+      title: string;
+      date: string | null;
+      notes: string;
+      activityType: string;
+      durationMinutes: number | null;
+      intensity: string;
+      location: string;
+    };
+
 export default function ClientPastWorkouts() {
-  const [submissions, setSubmissions] = useState<WorkoutSubmission[]>([]);
+  const [programSubmissions, setProgramSubmissions] = useState<
+    WorkoutSubmission[]
+  >([]);
+  const [personalLogs, setPersonalLogs] = useState<PersonalWorkoutLog[]>([]);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
@@ -55,27 +92,88 @@ export default function ClientPastWorkouts() {
       setUnreadMessages(unreadCount || 0);
     }
 
-    const { data, error } = await supabase
+    const { data: programData, error: programError } = await supabase
       .from("workout_submissions")
       .select("*")
       .eq("client_user_id", user.id);
 
-    if (error) {
-      setStatusMessage("Could not load past workouts: " + error.message);
+    if (programError) {
+      setStatusMessage(
+        "Could not load program workouts: " + programError.message
+      );
       setIsLoading(false);
       return;
     }
 
-    const sortedData = ((data || []) as WorkoutSubmission[]).sort((a, b) => {
-      const dateA = getSubmissionDateValue(a);
-      const dateB = getSubmissionDateValue(b);
+    const { data: personalData, error: personalError } = await supabase
+      .from("personal_workout_logs")
+      .select("*")
+      .eq("client_user_id", user.id)
+      .order("logged_at", { ascending: false });
 
-      return dateB - dateA;
-    });
+    if (personalError) {
+      setStatusMessage(
+        "Could not load personal activity logs: " + personalError.message
+      );
+      setIsLoading(false);
+      return;
+    }
 
-    setSubmissions(sortedData);
+    setProgramSubmissions((programData || []) as WorkoutSubmission[]);
+    setPersonalLogs((personalData || []) as PersonalWorkoutLog[]);
     setIsLoading(false);
   }
+
+  const combinedItems: CombinedWorkoutItem[] = [
+    ...programSubmissions.map((submission) => {
+      const workoutTitle =
+        submission.workout_title || submission.title || "Completed Workout";
+
+      const notes =
+        submission.notes || submission.workout_notes || "No notes added";
+
+      const painReported =
+        submission.pain_reported === true || submission.pain === true;
+
+      const submissionDate =
+        submission.submitted_at ||
+        submission.completed_at ||
+        submission.date ||
+        null;
+
+      return {
+        type: "program" as const,
+        id: submission.id,
+        title: workoutTitle,
+        date: submissionDate,
+        notes,
+        painReported,
+      };
+    }),
+
+    ...personalLogs.map((log) => {
+      return {
+        type: "personal" as const,
+        id: log.id,
+        title: log.title || "Personal Activity",
+        date: log.logged_at || log.created_at,
+        notes: log.notes || "No notes added",
+        activityType: log.activity_type || "Activity",
+        durationMinutes: log.duration_minutes,
+        intensity: log.intensity || "Not set",
+        location: log.location || "Not set",
+      };
+    }),
+  ].sort((a, b) => {
+    const dateA = getDateValue(a.date);
+    const dateB = getDateValue(b.date);
+
+    return dateB - dateA;
+  });
+
+  const painReportCount = programSubmissions.filter(
+    (submission) => submission.pain_reported === true || submission.pain === true
+  ).length;
 
   return (
     <ClientLayout unreadMessages={unreadMessages}>
@@ -90,37 +188,24 @@ export default function ClientPastWorkouts() {
           </h1>
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
-            Review workouts you have completed and check your training history.
+            Review your completed program workouts and personal activities.
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-4 md:p-8">
-          <SummaryCard title="Completed" value={`${submissions.length}`} />
+          <SummaryCard title="Total Logs" value={`${combinedItems.length}`} />
 
           <SummaryCard
-            title="Latest"
-            value={
-              submissions.length > 0
-                ? formatDate(
-                    submissions[0].submitted_at ||
-                      submissions[0].completed_at ||
-                      submissions[0].date ||
-                      null
-                  )
-                : "None yet"
-            }
+            title="Program"
+            value={`${programSubmissions.length}`}
           />
+
+          <SummaryCard title="Personal" value={`${personalLogs.length}`} />
 
           <SummaryCard
             title="Pain Reports"
-            value={`${countPainReports(submissions)}`}
-            alert={countPainReports(submissions) > 0}
-          />
-
-          <SummaryCard
-            title="Messages"
-            value={`${unreadMessages}`}
-            alert={unreadMessages > 0}
+            value={`${painReportCount}`}
+            alert={painReportCount > 0}
           />
         </div>
       </section>
@@ -136,7 +221,8 @@ export default function ClientPastWorkouts() {
           </h2>
 
           <p className="mt-1 text-sm leading-6 text-slate-500">
-            Tap any workout to open the full details.
+            Program workouts and personal activities are shown together, but
+            labeled separately.
           </p>
         </div>
 
@@ -150,80 +236,128 @@ export default function ClientPastWorkouts() {
           <p className="rounded-2xl bg-sky-50 p-5 text-sm font-semibold text-slate-600">
             Loading past workouts...
           </p>
-        ) : submissions.length === 0 ? (
+        ) : combinedItems.length === 0 ? (
           <div className="rounded-2xl border border-sky-100 bg-sky-50 p-6">
             <h2 className="text-lg font-black text-slate-900">
               No completed workouts yet
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Once you complete workouts, they will appear here.
+              Once you complete assigned workouts or log personal activity, they
+              will appear here.
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {submissions.map((submission) => {
-              const workoutTitle =
-                submission.workout_title ||
-                submission.title ||
-                "Completed Workout";
+            {combinedItems.map((item) => {
+              if (item.type === "program") {
+                return (
+                  <Link
+                    key={`program-${item.id}`}
+                    to={`/workout-history/${item.id}`}
+                    className="block rounded-2xl border border-sky-100 bg-sky-50 p-4 transition hover:border-blue-200 hover:bg-white hover:shadow-sm active:scale-[0.99] sm:p-5"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <span className="w-fit rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-100">
+                            Program Workout
+                          </span>
+                        </div>
 
-              const notes =
-                submission.notes ||
-                submission.workout_notes ||
-                "No notes added";
+                        <h2 className="text-lg font-black text-slate-900">
+                          {item.title}
+                        </h2>
 
-              const painReported =
-                submission.pain_reported === true || submission.pain === true;
+                        <p className="mt-1 text-sm font-medium text-slate-500">
+                          {formatDate(item.date)}
+                        </p>
+                      </div>
 
-              const submissionDate =
-                submission.submitted_at ||
-                submission.completed_at ||
-                submission.date ||
-                null;
+                      <span
+                        className={`w-fit rounded-full px-3 py-1 text-xs font-black ${
+                          item.painReported
+                            ? "bg-red-50 text-red-700 ring-1 ring-red-100"
+                            : "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
+                        }`}
+                      >
+                        {item.painReported ? "Pain Reported" : "No Pain"}
+                      </span>
+                    </div>
 
-              return (
-                <Link
-                  key={submission.id}
-                  to={`/workout-history/${submission.id}`}
-                  className="block rounded-2xl border border-sky-100 bg-sky-50 p-4 transition hover:border-blue-200 hover:bg-white hover:shadow-sm active:scale-[0.99] sm:p-5"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <h2 className="text-lg font-black text-slate-900">
-                        {workoutTitle}
-                      </h2>
+                    <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-sky-100">
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                        Notes
+                      </p>
 
-                      <p className="mt-1 text-sm font-medium text-slate-500">
-                        {formatDate(submissionDate)}
+                      <p className="mt-1 break-words text-sm font-black leading-6 text-slate-900 sm:text-base">
+                        {item.notes}
                       </p>
                     </div>
 
-                    <span
-                      className={`w-fit rounded-full px-3 py-1 text-xs font-black ${
-                        painReported
-                          ? "bg-red-50 text-red-700 ring-1 ring-red-100"
-                          : "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
-                      }`}
-                    >
-                      {painReported ? "Pain Reported" : "No Pain"}
+                    <p className="mt-4 text-sm font-black text-blue-600">
+                      View workout details →
+                    </p>
+                  </Link>
+                );
+              }
+
+              return (
+                <div
+                  key={`personal-${item.id}`}
+                  className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 shadow-sm sm:p-5"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-200">
+                          Personal Activity
+                        </span>
+
+                        <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600 ring-1 ring-emerald-100">
+                          {item.activityType}
+                        </span>
+                      </div>
+
+                      <h2 className="text-lg font-black text-slate-900">
+                        {item.title}
+                      </h2>
+
+                      <p className="mt-1 text-sm font-medium text-slate-500">
+                        {formatDate(item.date)}
+                      </p>
+                    </div>
+
+                    <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-100">
+                      {item.durationMinutes
+                        ? `${item.durationMinutes} min`
+                        : "Duration not set"}
                     </span>
                   </div>
 
-                  <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-sky-100">
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <MiniInfo label="Intensity" value={item.intensity} />
+                    <MiniInfo label="Location" value={item.location} />
+                    <MiniInfo
+                      label="Duration"
+                      value={
+                        item.durationMinutes
+                          ? `${item.durationMinutes} minutes`
+                          : "Not set"
+                      }
+                    />
+                  </div>
+
+                  <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-emerald-100">
                     <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
                       Notes
                     </p>
 
                     <p className="mt-1 break-words text-sm font-black leading-6 text-slate-900 sm:text-base">
-                      {notes}
+                      {item.notes}
                     </p>
                   </div>
-
-                  <p className="mt-4 text-sm font-black text-blue-600">
-                    View workout details →
-                  </p>
-                </Link>
+                </div>
               );
             })}
           </div>
@@ -233,13 +367,10 @@ export default function ClientPastWorkouts() {
   );
 }
 
-function getSubmissionDateValue(submission: WorkoutSubmission) {
-  const dateValue =
-    submission.submitted_at || submission.completed_at || submission.date;
+function getDateValue(value: string | null) {
+  if (!value) return 0;
 
-  if (!dateValue) return 0;
-
-  const date = new Date(dateValue);
+  const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) return 0;
 
@@ -262,10 +393,18 @@ function formatDate(value: string | null) {
   });
 }
 
-function countPainReports(submissions: WorkoutSubmission[]) {
-  return submissions.filter(
-    (submission) => submission.pain_reported === true || submission.pain === true
-  ).length;
+function MiniInfo({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-white p-4 ring-1 ring-emerald-100">
+      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+        {label}
+      </p>
+
+      <p className="mt-1 break-words text-sm font-black text-slate-900">
+        {value}
+      </p>
+    </div>
+  );
 }
 
 function SummaryCard({
