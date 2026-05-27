@@ -36,9 +36,22 @@ type WorkoutSubmission = {
   workout_submission_exercises: SubmissionExercise[];
 };
 
+type PersonalWorkoutLog = {
+  id: string;
+  client_user_id: string;
+  activity_type: string | null;
+  title: string | null;
+  duration_minutes: number | null;
+  location: string | null;
+  intensity: string | null;
+  notes: string | null;
+  logged_at: string | null;
+  created_at: string | null;
+};
+
 type ActivityItem = {
   id: string;
-  type: "message" | "workout" | "note";
+  type: "message" | "workout" | "note" | "personal";
   title: string;
   description: string;
   clientUserId: string;
@@ -65,6 +78,7 @@ export default function TrainerDashboard() {
   const [clients, setClients] = useState<ClientProfile[]>([]);
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [submissions, setSubmissions] = useState<WorkoutSubmission[]>([]);
+  const [personalLogs, setPersonalLogs] = useState<PersonalWorkoutLog[]>([]);
   const [isLoadingActivity, setIsLoadingActivity] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
 
@@ -134,12 +148,31 @@ export default function TrainerDashboard() {
       setSubmissions((submissionsData || []) as WorkoutSubmission[]);
     }
 
+    const { data: personalData, error: personalError } = await supabase
+      .from("personal_workout_logs")
+      .select(
+        "id, client_user_id, activity_type, title, duration_minutes, location, intensity, notes, logged_at, created_at"
+      )
+      .order("logged_at", { ascending: false })
+      .limit(20);
+
+    if (personalError) {
+      console.error(personalError);
+      setStatusMessage(
+        "Some activity loaded, but personal logs could not be loaded: " +
+          personalError.message
+      );
+    } else {
+      setPersonalLogs((personalData || []) as PersonalWorkoutLog[]);
+    }
+
     const clientIds = Array.from(
       new Set([
         ...(messagesData || []).map((message) => message.client_user_id),
         ...(submissionsData || []).map(
           (submission) => submission.client_user_id
         ),
+        ...(personalData || []).map((log) => log.client_user_id),
       ])
     );
 
@@ -187,6 +220,18 @@ export default function TrainerDashboard() {
     return Math.round((completed / total) * 100);
   }
 
+  function describePersonalLog(log: PersonalWorkoutLog) {
+    const parts = [
+      log.activity_type ? `Type: ${log.activity_type}` : "",
+      log.duration_minutes ? `Duration: ${log.duration_minutes} min` : "",
+      log.intensity ? `Intensity: ${log.intensity}` : "",
+      log.location ? `Location: ${log.location}` : "",
+      log.notes ? `Notes: ${log.notes}` : "",
+    ].filter(Boolean);
+
+    return parts.length > 0 ? parts.join(" • ") : "Personal activity logged.";
+  }
+
   const unreadClientMessages = useMemo(() => {
     return messages.filter((message) => {
       const sentByTrainer = message.sender_user_id === trainerUserId;
@@ -198,6 +243,10 @@ export default function TrainerDashboard() {
   const recentWorkoutSubmissions = useMemo(() => {
     return submissions.slice(0, 5);
   }, [submissions]);
+
+  const recentPersonalLogs = useMemo(() => {
+    return personalLogs.slice(0, 5);
+  }, [personalLogs]);
 
   const exerciseNotes = useMemo(() => {
     return submissions.flatMap((submission) => {
@@ -237,6 +286,17 @@ export default function TrainerDashboard() {
       })
     );
 
+    const personalActivities: ActivityItem[] = recentPersonalLogs.map((log) => ({
+      id: `personal-${log.id}`,
+      type: "personal",
+      title: `${log.title || "Personal activity"} logged`,
+      description: describePersonalLog(log),
+      clientUserId: log.client_user_id,
+      clientName: getClientName(log.client_user_id),
+      createdAt: log.logged_at || log.created_at || new Date().toISOString(),
+      link: `/clients/${log.client_user_id}`,
+    }));
+
     const noteActivities: ActivityItem[] = exerciseNotes.map(
       ({ submission, exercise }) => ({
         id: `note-${exercise.id}`,
@@ -250,15 +310,21 @@ export default function TrainerDashboard() {
       })
     );
 
-    return [...messageActivities, ...workoutActivities, ...noteActivities]
+    return [
+      ...messageActivities,
+      ...workoutActivities,
+      ...personalActivities,
+      ...noteActivities,
+    ]
       .sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
-      .slice(0, 8);
+      .slice(0, 10);
   }, [
     unreadClientMessages,
     recentWorkoutSubmissions,
+    recentPersonalLogs,
     exerciseNotes,
     clients,
     trainerUserId,
@@ -267,7 +333,8 @@ export default function TrainerDashboard() {
   const notificationCount =
     unreadClientMessages.length +
     recentWorkoutSubmissions.length +
-    exerciseNotes.length;
+    exerciseNotes.length +
+    recentPersonalLogs.length;
 
   const sidebarItems: SidebarItem[] = [
     {
@@ -406,7 +473,7 @@ export default function TrainerDashboard() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-4 md:p-8">
+              <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 lg:grid-cols-5 lg:p-8">
                 <SummaryCard
                   title="Messages"
                   value={`${unreadClientMessages.length}`}
@@ -417,6 +484,12 @@ export default function TrainerDashboard() {
                   title="Workouts"
                   value={`${recentWorkoutSubmissions.length}`}
                   alert={recentWorkoutSubmissions.length > 0}
+                />
+
+                <SummaryCard
+                  title="Personal"
+                  value={`${recentPersonalLogs.length}`}
+                  alert={recentPersonalLogs.length > 0}
                 />
 
                 <SummaryCard
@@ -451,8 +524,8 @@ export default function TrainerDashboard() {
                   </h2>
 
                   <p className="mt-1 text-sm leading-6 text-slate-500">
-                    New messages, completed workouts, and exercise notes from
-                    your clients.
+                    New messages, program workouts, personal activity logs, and
+                    exercise notes from your clients.
                   </p>
                 </div>
 
@@ -476,8 +549,8 @@ export default function TrainerDashboard() {
                   </h3>
 
                   <p className="mt-1 text-sm leading-6 text-slate-500">
-                    Client messages, workout submissions, and exercise notes
-                    will appear here.
+                    Client messages, workout submissions, personal activity
+                    logs, and exercise notes will appear here.
                   </p>
                 </div>
               ) : (
@@ -623,8 +696,13 @@ function ActivityCard({
     },
     workout: {
       icon: "✅",
-      label: "Workout",
+      label: "Program Workout",
       badge: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+    },
+    personal: {
+      icon: "🚶",
+      label: "Personal Activity",
+      badge: "bg-teal-50 text-teal-700 ring-teal-100",
     },
     note: {
       icon: "📝",
