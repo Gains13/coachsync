@@ -301,10 +301,7 @@ export default function ClientDashboard() {
                 alert={unreadMessages > 0}
               />
 
-              <SummaryCard
-                title="Goal"
-                value={goal?.main_goal || "Not set"}
-              />
+              <SummaryCard title="Goal" value={goal?.main_goal || "Not set"} />
             </div>
           </section>
 
@@ -333,7 +330,7 @@ export default function ClientDashboard() {
             </Link>
           )}
 
-          <section className="mb-4 rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
+          <section className="rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
@@ -356,28 +353,6 @@ export default function ClientDashboard() {
               >
                 Open My Plan →
               </Link>
-            </div>
-          </section>
-
-          <section className="rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
-            <div className="mb-4">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
-                Menu
-              </p>
-
-              <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
-                Client Tools
-              </h2>
-
-              <p className="mt-1 text-sm leading-6 text-slate-500">
-                Everything you need for your training is here.
-              </p>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {menuItems.map((item) => (
-                <DashboardMenuCard key={item.to} item={item} />
-              ))}
             </div>
           </section>
         </div>
@@ -472,33 +447,6 @@ function ClientSidebar({
         </button>
       </div>
     </div>
-  );
-}
-
-function DashboardMenuCard({ item }: { item: ClientMenuItem }) {
-  return (
-    <Link
-      to={item.to}
-      className="relative block rounded-2xl border border-sky-100 bg-sky-50 p-4 shadow-sm transition hover:-translate-y-1 hover:border-blue-200 hover:bg-blue-50 hover:shadow-md active:scale-[0.99]"
-    >
-      {item.badge && item.badge > 0 ? (
-        <span className="absolute right-4 top-4 rounded-full bg-red-600 px-2 py-0.5 text-xs font-black text-white shadow-sm">
-          {item.badge}
-        </span>
-      ) : null}
-
-      <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-xl ring-1 ring-sky-100">
-        {item.icon}
-      </div>
-
-      <h3 className="text-base font-black text-slate-900">{item.title}</h3>
-
-      <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-500">
-        {item.description}
-      </p>
-
-      <p className="mt-3 text-sm font-black text-blue-600">Open →</p>
-    </Link>
   );
 }
 
