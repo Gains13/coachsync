@@ -254,38 +254,7 @@ export default function CreateProgram() {
       return;
     }
 
-    const copiedWorkout: WorkoutForm = {
-      title: `${workoutToCopy.title} Copy`,
-      exercises:
-        workoutToCopy.client_plan_exercises.length > 0
-          ? workoutToCopy.client_plan_exercises.map((exercise) => ({
-              exerciseName: exercise.exercise_name || "",
-              sets: exercise.sets || "",
-              reps: exercise.reps || "",
-              weight: exercise.weight || "",
-              rest: exercise.rest || "",
-              videoLink: exercise.video_link || "",
-            }))
-          : [blankExercise()],
-    };
-
-    setWorkouts((currentWorkouts) => {
-      const hasOnlyBlankWorkout =
-        currentWorkouts.length === 1 &&
-        currentWorkouts[0].title.trim() === "" &&
-        currentWorkouts[0].exercises.length === 1 &&
-        currentWorkouts[0].exercises[0].exerciseName.trim() === "";
-
-      if (hasOnlyBlankWorkout) {
-        return [copiedWorkout];
-      }
-
-      return [...currentWorkouts, copiedWorkout];
-    });
-
-    setStatusMessage(
-      `"${workoutToCopy.title}" copied into the form. You can now edit it before saving.`
-    );
+    copyWorkoutIntoForm(workoutToCopy);
   }
 
   function copyWorkoutById(workoutId: string) {
@@ -300,6 +269,10 @@ export default function CreateProgram() {
       return;
     }
 
+    copyWorkoutIntoForm(workoutToCopy);
+  }
+
+  function copyWorkoutIntoForm(workoutToCopy: ExistingWorkout) {
     const copiedWorkout: WorkoutForm = {
       title: `${workoutToCopy.title} Copy`,
       exercises:
@@ -401,6 +374,36 @@ export default function CreateProgram() {
         return {
           ...workout,
           exercises: [...workout.exercises, blankExercise()],
+        };
+      })
+    );
+  }
+
+  function moveExercise(
+    workoutIndex: number,
+    exerciseIndex: number,
+    direction: "up" | "down"
+  ) {
+    setWorkouts((currentWorkouts) =>
+      currentWorkouts.map((workout, currentWorkoutIndex) => {
+        if (currentWorkoutIndex !== workoutIndex) return workout;
+
+        const targetIndex =
+          direction === "up" ? exerciseIndex - 1 : exerciseIndex + 1;
+
+        if (targetIndex < 0 || targetIndex >= workout.exercises.length) {
+          return workout;
+        }
+
+        const reorderedExercises = [...workout.exercises];
+        const currentExercise = reorderedExercises[exerciseIndex];
+
+        reorderedExercises[exerciseIndex] = reorderedExercises[targetIndex];
+        reorderedExercises[targetIndex] = currentExercise;
+
+        return {
+          ...workout,
+          exercises: reorderedExercises,
         };
       })
     );
@@ -590,8 +593,8 @@ export default function CreateProgram() {
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
-                  Build one training week with multiple workouts and copy
-                  previous workouts to save time.
+                  Build one training week with multiple workouts, copy previous
+                  workouts, and reorder exercises before saving.
                 </p>
               </div>
 
@@ -618,7 +621,7 @@ export default function CreateProgram() {
           <div className="grid gap-4 p-4 sm:p-6 md:grid-cols-4 md:p-8">
             <SummaryCard title="Step 1" value="Choose Client" />
             <SummaryCard title="Step 2" value="Copy or Build" />
-            <SummaryCard title="Step 3" value="Edit Week" />
+            <SummaryCard title="Step 3" value="Edit Order" />
             <SummaryCard title="Step 4" value="Save Program" />
           </div>
         </div>
@@ -787,7 +790,7 @@ export default function CreateProgram() {
 
                 <p className="mt-1 text-sm leading-6 text-slate-500">
                   Add each session for this week, then add exercises inside each
-                  session.
+                  session. Use Move Up and Move Down to set the order.
                 </p>
               </div>
 
@@ -861,15 +864,50 @@ export default function CreateProgram() {
                               Exercise {exerciseIndex + 1}
                             </h5>
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                removeExercise(workoutIndex, exerciseIndex)
-                              }
-                              className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
-                            >
-                              Remove
-                            </button>
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  moveExercise(
+                                    workoutIndex,
+                                    exerciseIndex,
+                                    "up"
+                                  )
+                                }
+                                disabled={exerciseIndex === 0}
+                                className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                Move Up
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  moveExercise(
+                                    workoutIndex,
+                                    exerciseIndex,
+                                    "down"
+                                  )
+                                }
+                                disabled={
+                                  exerciseIndex ===
+                                  workout.exercises.length - 1
+                                }
+                                className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                Move Down
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  removeExercise(workoutIndex, exerciseIndex)
+                                }
+                                className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
+                              >
+                                Remove
+                              </button>
+                            </div>
                           </div>
 
                           <div className="grid gap-4 md:grid-cols-3">
