@@ -26,16 +26,18 @@ import WorkoutHistory from "./pages/WorkoutHistory";
 import StartWorkout from "./pages/StartWorkout";
 import CompletedWorkout from "./pages/CompletedWorkout";
 
+type UserRole = "trainer" | "client";
+
 function RequireRole({
-  allowedRole,
+  allowedRoles,
   children,
 }: {
-  allowedRole: "trainer" | "client";
+  allowedRoles: UserRole[];
   children: ReactNode;
 }) {
-  const userRole = localStorage.getItem("coachsync-user-role");
+  const userRole = localStorage.getItem("coachsync-user-role") as UserRole | null;
 
-  if (userRole !== allowedRole) {
+  if (!userRole || !allowedRoles.includes(userRole)) {
     return <Navigate to="/" replace />;
   }
 
@@ -52,7 +54,7 @@ export default function App() {
         <Route
           path="/client"
           element={
-            <RequireRole allowedRole="client">
+            <RequireRole allowedRoles={["client"]}>
               <ClientDashboard />
             </RequireRole>
           }
@@ -61,7 +63,7 @@ export default function App() {
         <Route
           path="/client-setup"
           element={
-            <RequireRole allowedRole="client">
+            <RequireRole allowedRoles={["client"]}>
               <ClientSetup />
             </RequireRole>
           }
@@ -70,7 +72,7 @@ export default function App() {
         <Route
           path="/client-settings"
           element={
-            <RequireRole allowedRole="client">
+            <RequireRole allowedRoles={["client"]}>
               <ClientSettings />
             </RequireRole>
           }
@@ -79,7 +81,7 @@ export default function App() {
         <Route
           path="/client-plan"
           element={
-            <RequireRole allowedRole="client">
+            <RequireRole allowedRoles={["client"]}>
               <ClientPlan />
             </RequireRole>
           }
@@ -88,7 +90,7 @@ export default function App() {
         <Route
           path="/client-assessment"
           element={
-            <RequireRole allowedRole="client">
+            <RequireRole allowedRoles={["client"]}>
               <ClientAssessment />
             </RequireRole>
           }
@@ -97,7 +99,7 @@ export default function App() {
         <Route
           path="/client-goals"
           element={
-            <RequireRole allowedRole="client">
+            <RequireRole allowedRoles={["client"]}>
               <ClientGoals />
             </RequireRole>
           }
@@ -106,7 +108,7 @@ export default function App() {
         <Route
           path="/client-past-workouts"
           element={
-            <RequireRole allowedRole="client">
+            <RequireRole allowedRoles={["client"]}>
               <ClientPastWorkouts />
             </RequireRole>
           }
@@ -115,7 +117,7 @@ export default function App() {
         <Route
           path="/client-progress"
           element={
-            <RequireRole allowedRole="client">
+            <RequireRole allowedRoles={["client"]}>
               <ClientProgress />
             </RequireRole>
           }
@@ -124,7 +126,7 @@ export default function App() {
         <Route
           path="/client-program"
           element={
-            <RequireRole allowedRole="client">
+            <RequireRole allowedRoles={["client"]}>
               <ClientProgram />
             </RequireRole>
           }
@@ -133,7 +135,7 @@ export default function App() {
         <Route
           path="/client-messages"
           element={
-            <RequireRole allowedRole="client">
+            <RequireRole allowedRoles={["client"]}>
               <Messages />
             </RequireRole>
           }
@@ -142,7 +144,7 @@ export default function App() {
         <Route
           path="/start-workout"
           element={
-            <RequireRole allowedRole="client">
+            <RequireRole allowedRoles={["client"]}>
               <StartWorkout />
             </RequireRole>
           }
@@ -151,7 +153,7 @@ export default function App() {
         <Route
           path="/workout-history/:submissionId"
           element={
-            <RequireRole allowedRole="client">
+            <RequireRole allowedRoles={["client", "trainer"]}>
               <CompletedWorkout />
             </RequireRole>
           }
@@ -160,7 +162,7 @@ export default function App() {
         <Route
           path="/trainer"
           element={
-            <RequireRole allowedRole="trainer">
+            <RequireRole allowedRoles={["trainer"]}>
               <TrainerDashboard />
             </RequireRole>
           }
@@ -169,7 +171,7 @@ export default function App() {
         <Route
           path="/clients"
           element={
-            <RequireRole allowedRole="trainer">
+            <RequireRole allowedRoles={["trainer"]}>
               <Clients />
             </RequireRole>
           }
@@ -178,7 +180,7 @@ export default function App() {
         <Route
           path="/clients/:clientUserId"
           element={
-            <RequireRole allowedRole="trainer">
+            <RequireRole allowedRoles={["trainer"]}>
               <ClientDetails />
             </RequireRole>
           }
@@ -187,7 +189,7 @@ export default function App() {
         <Route
           path="/create-client"
           element={
-            <RequireRole allowedRole="trainer">
+            <RequireRole allowedRoles={["trainer"]}>
               <CreateClient />
             </RequireRole>
           }
@@ -196,7 +198,7 @@ export default function App() {
         <Route
           path="/create-program"
           element={
-            <RequireRole allowedRole="trainer">
+            <RequireRole allowedRoles={["trainer"]}>
               <CreateProgram />
             </RequireRole>
           }
@@ -205,7 +207,7 @@ export default function App() {
         <Route
           path="/program"
           element={
-            <RequireRole allowedRole="trainer">
+            <RequireRole allowedRoles={["trainer"]}>
               <Program />
             </RequireRole>
           }
@@ -214,7 +216,7 @@ export default function App() {
         <Route
           path="/messages"
           element={
-            <RequireRole allowedRole="trainer">
+            <RequireRole allowedRoles={["trainer"]}>
               <Messages />
             </RequireRole>
           }
@@ -223,7 +225,7 @@ export default function App() {
         <Route
           path="/workout-tracker"
           element={
-            <RequireRole allowedRole="trainer">
+            <RequireRole allowedRoles={["trainer"]}>
               <WorkoutTracker />
             </RequireRole>
           }
@@ -232,7 +234,7 @@ export default function App() {
         <Route
           path="/workout-history"
           element={
-            <RequireRole allowedRole="trainer">
+            <RequireRole allowedRoles={["trainer"]}>
               <WorkoutHistory />
             </RequireRole>
           }

@@ -30,6 +30,19 @@ export default function CompletedWorkout() {
   const [isLoading, setIsLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
 
+  const userRole = localStorage.getItem("coachsync-user-role");
+
+  const backToPlanLink =
+    userRole === "trainer" ? "/workout-history" : "/client-plan";
+
+  const dashboardLink = userRole === "trainer" ? "/trainer" : "/client";
+
+  const backToPlanLabel =
+    userRole === "trainer" ? "Back to Workout History" : "Back to My Plan";
+
+  const dashboardLabel =
+    userRole === "trainer" ? "Trainer Dashboard" : "Dashboard";
+
   useEffect(() => {
     loadWorkout();
   }, [submissionId]);
@@ -124,17 +137,17 @@ export default function CompletedWorkout() {
 
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <Link
-              to="/client-plan"
+              to={backToPlanLink}
               className="rounded-xl bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-blue-700 sm:py-2"
             >
-              Back to My Plan
+              {backToPlanLabel}
             </Link>
 
             <Link
-              to="/client"
+              to={dashboardLink}
               className="rounded-xl border border-sky-100 bg-white px-4 py-3 text-center text-sm font-semibold text-blue-600 hover:bg-sky-50 sm:py-2"
             >
-              Dashboard
+              {dashboardLabel}
             </Link>
           </div>
         </div>
@@ -144,7 +157,10 @@ export default function CompletedWorkout() {
 
   const exercises = workout.workout_submission_exercises || [];
 
-  const completedCount = exercises.filter((exercise) => exercise.completed).length;
+  const completedCount = exercises.filter(
+    (exercise) => exercise.completed
+  ).length;
+
   const totalExercises = exercises.length;
 
   const incompleteCount = totalExercises - completedCount;
@@ -155,7 +171,10 @@ export default function CompletedWorkout() {
       : 0;
 
   const submittedDate = new Date(workout.submitted_at).toLocaleString();
-  const submittedShortDate = new Date(workout.submitted_at).toLocaleDateString();
+
+  const submittedShortDate = new Date(
+    workout.submitted_at
+  ).toLocaleDateString();
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
@@ -179,17 +198,17 @@ export default function CompletedWorkout() {
 
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Link
-                  to="/client-plan"
+                  to={backToPlanLink}
                   className="w-full rounded-xl bg-white/15 px-4 py-3 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto sm:py-2"
                 >
-                  Back to My Plan
+                  {backToPlanLabel}
                 </Link>
 
                 <Link
-                  to="/client"
+                  to={dashboardLink}
                   className="w-full rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-50 sm:w-auto sm:py-2"
                 >
-                  Dashboard
+                  {dashboardLabel}
                 </Link>
               </div>
             </div>

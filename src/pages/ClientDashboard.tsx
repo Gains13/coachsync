@@ -12,91 +12,102 @@ type GoalData = {
   main_goal: string;
 };
 
-type WeekData = {
-  week_number: number;
-};
-
 export default function ClientDashboard() {
   const navigate = useNavigate();
+
   const [client, setClient] = useState<ClientData | null>(null);
   const [goal, setGoal] = useState<GoalData | null>(null);
   const [currentWeek, setCurrentWeek] = useState<number | null>(null);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadDashboard() {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+    loadDashboard();
+  }, []);
 
-      if (userError || !user) {
-        navigate("/");
-        return;
-      }
+  async function loadDashboard() {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-      const userId = user.id;
-
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("full_name, client_id, setup_complete")
-        .eq("id", userId)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error(profileError);
-        navigate("/");
-        return;
-      }
-
-      if (!profileData) {
-        setClient(null);
-        setLoading(false);
-        return;
-      }
-
-      if (profileData.setup_complete === false) {
-        navigate("/client-setup", { replace: true });
-        return;
-      }
-
-      setClient(profileData);
-
-      const { data: goalData, error: goalError } = await supabase
-        .from("client_goals")
-        .select("main_goal")
-        .eq("client_user_id", userId)
-        .maybeSingle();
-
-      if (goalError) {
-        console.error(goalError);
-      }
-
-      if (goalData) {
-        setGoal(goalData);
-      }
-
-      const { data: weekData, error: weekError } = await supabase
-        .from("client_plan_weeks")
-        .select("week_number")
-        .eq("client_user_id", userId)
-        .order("week_number", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (weekError) {
-        console.error(weekError);
-      }
-
-      if (weekData) {
-        setCurrentWeek(weekData.week_number);
-      }
-
-      setLoading(false);
+    if (userError || !user) {
+      navigate("/");
+      return;
     }
 
-    loadDashboard();
-  }, [navigate]);
+    const userId = user.id;
+
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("full_name, client_id, setup_complete")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error(profileError);
+      navigate("/");
+      return;
+    }
+
+    if (!profileData) {
+      setClient(null);
+      setLoading(false);
+      return;
+    }
+
+    if (profileData.setup_complete === false) {
+      navigate("/client-setup", { replace: true });
+      return;
+    }
+
+    setClient(profileData);
+
+    const { data: goalData, error: goalError } = await supabase
+      .from("client_goals")
+      .select("main_goal")
+      .eq("client_user_id", userId)
+      .maybeSingle();
+
+    if (goalError) {
+      console.error(goalError);
+    }
+
+    if (goalData) {
+      setGoal(goalData);
+    }
+
+    const { data: weekData, error: weekError } = await supabase
+      .from("client_plan_weeks")
+      .select("week_number")
+      .eq("client_user_id", userId)
+      .order("week_number", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (weekError) {
+      console.error(weekError);
+    }
+
+    if (weekData) {
+      setCurrentWeek(weekData.week_number);
+    }
+
+    const { count: unreadCount, error: unreadError } = await supabase
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .eq("client_user_id", userId)
+      .eq("receiver_user_id", userId)
+      .is("read_at", null);
+
+    if (unreadError) {
+      console.error(unreadError);
+    } else {
+      setUnreadMessages(unreadCount || 0);
+    }
+
+    setLoading(false);
+  }
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -187,9 +198,37 @@ export default function ClientDashboard() {
               value={goal?.main_goal || "Not set"}
             />
 
-            <SummaryCard title="Client" value={client.full_name} />
+            <SummaryCard
+              title="Unread Messages"
+              value={unreadMessages > 0 ? `${unreadMessages}` : "0"}
+              alert={unreadMessages > 0}
+            />
           </div>
         </div>
+
+        {unreadMessages > 0 && (
+          <Link
+            to="/client-messages"
+            className="mb-6 block rounded-3xl border border-blue-200 bg-blue-50 p-5 shadow-sm transition hover:border-blue-300 hover:bg-blue-100"
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-blue-900">
+                  You have {unreadMessages} unread message
+                  {unreadMessages === 1 ? "" : "s"}
+                </h2>
+
+                <p className="mt-1 text-sm text-blue-700">
+                  Open your messages to read the latest update from your trainer.
+                </p>
+              </div>
+
+              <span className="w-fit rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white">
+                Open Messages →
+              </span>
+            </div>
+          </Link>
+        )}
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <DashboardTile
@@ -231,8 +270,15 @@ export default function ClientDashboard() {
           <DashboardTile
             to="/client-messages"
             title="Messages"
-            description="Send a message to your trainer and view replies."
+            description={
+              unreadMessages > 0
+                ? `You have ${unreadMessages} unread message${
+                    unreadMessages === 1 ? "" : "s"
+                  }.`
+                : "Send a message to your trainer and view replies."
+            }
             icon="💬"
+            badge={unreadMessages}
           />
 
           <DashboardTile
@@ -253,22 +299,30 @@ function DashboardTile({
   description,
   icon,
   highlight = false,
+  badge = 0,
 }: {
   to: string;
   title: string;
   description: string;
   icon: string;
   highlight?: boolean;
+  badge?: number;
 }) {
   return (
     <Link
       to={to}
-      className={`group block rounded-3xl border p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md ${
+      className={`group relative block rounded-3xl border p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md ${
         highlight
           ? "border-blue-200 bg-blue-600 text-white"
           : "border-sky-100 bg-white text-slate-900 hover:border-blue-200"
       }`}
     >
+      {badge > 0 && (
+        <span className="absolute right-5 top-5 rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white shadow-sm">
+          {badge} unread
+        </span>
+      )}
+
       <div
         className={`mb-5 flex h-12 w-12 items-center justify-center rounded-2xl text-xl ${
           highlight
@@ -282,7 +336,7 @@ function DashboardTile({
       <h2 className="text-xl font-bold">{title}</h2>
 
       <p
-        className={`mt-2 text-sm ${
+        className={`mt-2 text-sm leading-6 ${
           highlight ? "text-blue-50" : "text-slate-500"
         }`}
       >
@@ -300,12 +354,30 @@ function DashboardTile({
   );
 }
 
-function SummaryCard({ title, value }: { title: string; value: string }) {
+function SummaryCard({
+  title,
+  value,
+  alert = false,
+}: {
+  title: string;
+  value: string;
+  alert?: boolean;
+}) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5">
+    <div
+      className={`rounded-2xl border p-5 ${
+        alert
+          ? "border-blue-200 bg-blue-50"
+          : "border-sky-100 bg-sky-50"
+      }`}
+    >
       <p className="text-sm font-medium text-slate-500">{title}</p>
 
-      <h2 className="mt-2 line-clamp-2 text-xl font-bold text-slate-900">
+      <h2
+        className={`mt-2 line-clamp-2 text-xl font-bold ${
+          alert ? "text-blue-700" : "text-slate-900"
+        }`}
+      >
         {value}
       </h2>
     </div>
