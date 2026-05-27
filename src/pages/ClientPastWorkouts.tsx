@@ -199,9 +199,7 @@ export default function ClientPastWorkouts() {
       ...workout,
       client_historical_workout_exercises: [
         ...(workout.client_historical_workout_exercises || []),
-      ].sort(
-        (a, b) => (a.exercise_order || 0) - (b.exercise_order || 0)
-      ),
+      ].sort((a, b) => (a.exercise_order || 0) - (b.exercise_order || 0)),
     }));
 
     setHistoricalWorkouts(cleanedHistoricalWorkouts);
@@ -543,7 +541,8 @@ export default function ClientPastWorkouts() {
                           <p className="pt-1 text-sm font-black text-amber-700">
                             + {item.exerciseCount - item.previewExercises.length}{" "}
                             more exercise
-                            {item.exerciseCount - item.previewExercises.length ===
+                            {item.exerciseCount -
+                              item.previewExercises.length ===
                             1
                               ? ""
                               : "s"}
@@ -562,6 +561,13 @@ export default function ClientPastWorkouts() {
                       {item.notes}
                     </p>
                   </div>
+
+                  <Link
+                    to={`/repeat-historical-workout/${item.id}`}
+                    className="mt-4 block rounded-2xl bg-amber-500 px-4 py-3 text-center text-sm font-black text-white shadow-sm transition hover:bg-amber-600 active:scale-[0.99]"
+                  >
+                    Repeat This Workout
+                  </Link>
                 </div>
               );
             })}

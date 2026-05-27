@@ -14,6 +14,7 @@ import ClientProgress from "./pages/ClientProgress";
 import ClientSetup from "./pages/ClientSetup";
 import ClientSettings from "./pages/ClientSettings";
 import ClientLogActivity from "./pages/ClientLogActivity";
+import ClientRepeatHistoricalWorkout from "./pages/ClientRepeatHistoricalWorkout";
 
 import TrainerDashboard from "./pages/TrainerDashboard";
 import Clients from "./pages/Clients";
@@ -123,6 +124,15 @@ export default function App() {
           element={
             <RequireRole allowedRoles={["client"]}>
               <ClientPastWorkouts />
+            </RequireRole>
+          }
+        />
+
+        <Route
+          path="/repeat-historical-workout/:historicalWorkoutId"
+          element={
+            <RequireRole allowedRoles={["client"]}>
+              <ClientRepeatHistoricalWorkout />
             </RequireRole>
           }
         />
