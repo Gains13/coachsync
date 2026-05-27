@@ -1,5 +1,22 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  type DragEndEvent,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "../lib/supabaseClient";
 
 type ClientProfile = {
@@ -9,6 +26,7 @@ type ClientProfile = {
 };
 
 type ExerciseForm = {
+  formId: string;
   exerciseName: string;
   sets: string;
   reps: string;
@@ -18,6 +36,7 @@ type ExerciseForm = {
 };
 
 type WorkoutForm = {
+  formId: string;
   title: string;
   exercises: ExerciseForm[];
 };
@@ -53,8 +72,17 @@ type PlanWeekWithWorkouts = {
   }[];
 };
 
+function makeId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 function blankExercise(): ExerciseForm {
   return {
+    formId: makeId(),
     exerciseName: "",
     sets: "",
     reps: "",
@@ -66,6 +94,7 @@ function blankExercise(): ExerciseForm {
 
 function blankWorkout(): WorkoutForm {
   return {
+    formId: makeId(),
     title: "",
     exercises: [blankExercise()],
   };
@@ -88,6 +117,17 @@ export default function CreateProgram() {
   const [selectedWorkoutToCopy, setSelectedWorkoutToCopy] = useState("");
   const [isLoadingExistingWorkouts, setIsLoadingExistingWorkouts] =
     useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     loadClients();
@@ -274,10 +314,12 @@ export default function CreateProgram() {
 
   function copyWorkoutIntoForm(workoutToCopy: ExistingWorkout) {
     const copiedWorkout: WorkoutForm = {
+      formId: makeId(),
       title: `${workoutToCopy.title} Copy`,
       exercises:
         workoutToCopy.client_plan_exercises.length > 0
           ? workoutToCopy.client_plan_exercises.map((exercise) => ({
+              formId: makeId(),
               exerciseName: exercise.exercise_name || "",
               sets: exercise.sets || "",
               reps: exercise.reps || "",
@@ -313,11 +355,13 @@ export default function CreateProgram() {
     if (!workoutToDuplicate) return;
 
     const copiedWorkout: WorkoutForm = {
+      formId: makeId(),
       title: workoutToDuplicate.title
         ? `${workoutToDuplicate.title} Copy`
         : `Workout ${workoutIndex + 1} Copy`,
       exercises: workoutToDuplicate.exercises.map((exercise) => ({
         ...exercise,
+        formId: makeId(),
       })),
     };
 
@@ -395,15 +439,39 @@ export default function CreateProgram() {
           return workout;
         }
 
-        const reorderedExercises = [...workout.exercises];
-        const currentExercise = reorderedExercises[exerciseIndex];
+        return {
+          ...workout,
+          exercises: arrayMove(workout.exercises, exerciseIndex, targetIndex),
+        };
+      })
+    );
+  }
 
-        reorderedExercises[exerciseIndex] = reorderedExercises[targetIndex];
-        reorderedExercises[targetIndex] = currentExercise;
+  function handleExerciseDragEnd(
+    workoutIndex: number,
+    event: DragEndEvent
+  ) {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    setWorkouts((currentWorkouts) =>
+      currentWorkouts.map((workout, currentWorkoutIndex) => {
+        if (currentWorkoutIndex !== workoutIndex) return workout;
+
+        const oldIndex = workout.exercises.findIndex(
+          (exercise) => exercise.formId === active.id
+        );
+
+        const newIndex = workout.exercises.findIndex(
+          (exercise) => exercise.formId === over.id
+        );
+
+        if (oldIndex === -1 || newIndex === -1) return workout;
 
         return {
           ...workout,
-          exercises: reorderedExercises,
+          exercises: arrayMove(workout.exercises, oldIndex, newIndex),
         };
       })
     );
@@ -594,7 +662,8 @@ export default function CreateProgram() {
 
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
                   Build one training week with multiple workouts, copy previous
-                  workouts, and reorder exercises before saving.
+                  workouts, and drag exercises into the right order before
+                  saving.
                 </p>
               </div>
 
@@ -621,7 +690,7 @@ export default function CreateProgram() {
           <div className="grid gap-4 p-4 sm:p-6 md:grid-cols-4 md:p-8">
             <SummaryCard title="Step 1" value="Choose Client" />
             <SummaryCard title="Step 2" value="Copy or Build" />
-            <SummaryCard title="Step 3" value="Edit Order" />
+            <SummaryCard title="Step 3" value="Drag Order" />
             <SummaryCard title="Step 4" value="Save Program" />
           </div>
         </div>
@@ -789,8 +858,8 @@ export default function CreateProgram() {
                 </h2>
 
                 <p className="mt-1 text-sm leading-6 text-slate-500">
-                  Add each session for this week, then add exercises inside each
-                  session. Use Move Up and Move Down to set the order.
+                  Drag exercises using the handle, or use Move Up and Move Down
+                  as backup controls.
                 </p>
               </div>
 
@@ -806,7 +875,7 @@ export default function CreateProgram() {
             <div className="space-y-6">
               {workouts.map((workout, workoutIndex) => (
                 <div
-                  key={workoutIndex}
+                  key={workout.formId}
                   className="rounded-3xl border border-sky-100 bg-sky-50 p-4 sm:p-5"
                 >
                   <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -853,151 +922,35 @@ export default function CreateProgram() {
                       </button>
                     </div>
 
-                    <div className="space-y-4">
-                      {workout.exercises.map((exercise, exerciseIndex) => (
-                        <div
-                          key={exerciseIndex}
-                          className="rounded-2xl border border-sky-100 bg-white p-4"
-                        >
-                          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <h5 className="font-semibold text-slate-900">
-                              Exercise {exerciseIndex + 1}
-                            </h5>
-
-                            <div className="flex flex-col gap-2 sm:flex-row">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  moveExercise(
-                                    workoutIndex,
-                                    exerciseIndex,
-                                    "up"
-                                  )
-                                }
-                                disabled={exerciseIndex === 0}
-                                className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
-                              >
-                                Move Up
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  moveExercise(
-                                    workoutIndex,
-                                    exerciseIndex,
-                                    "down"
-                                  )
-                                }
-                                disabled={
-                                  exerciseIndex ===
-                                  workout.exercises.length - 1
-                                }
-                                className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
-                              >
-                                Move Down
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  removeExercise(workoutIndex, exerciseIndex)
-                                }
-                                className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="grid gap-4 md:grid-cols-3">
-                            <Input
-                              label="Exercise Name"
-                              value={exercise.exerciseName}
-                              onChange={(value) =>
-                                updateExercise(
-                                  workoutIndex,
-                                  exerciseIndex,
-                                  "exerciseName",
-                                  value
-                                )
-                              }
-                              placeholder="Bench Press"
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={(event) =>
+                        handleExerciseDragEnd(workoutIndex, event)
+                      }
+                    >
+                      <SortableContext
+                        items={workout.exercises.map(
+                          (exercise) => exercise.formId
+                        )}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="space-y-4">
+                          {workout.exercises.map((exercise, exerciseIndex) => (
+                            <SortableExerciseCard
+                              key={exercise.formId}
+                              exercise={exercise}
+                              exerciseIndex={exerciseIndex}
+                              workoutIndex={workoutIndex}
+                              totalExercises={workout.exercises.length}
+                              updateExercise={updateExercise}
+                              moveExercise={moveExercise}
+                              removeExercise={removeExercise}
                             />
-
-                            <Input
-                              label="Sets"
-                              value={exercise.sets}
-                              onChange={(value) =>
-                                updateExercise(
-                                  workoutIndex,
-                                  exerciseIndex,
-                                  "sets",
-                                  value
-                                )
-                              }
-                              placeholder="3"
-                            />
-
-                            <Input
-                              label="Reps"
-                              value={exercise.reps}
-                              onChange={(value) =>
-                                updateExercise(
-                                  workoutIndex,
-                                  exerciseIndex,
-                                  "reps",
-                                  value
-                                )
-                              }
-                              placeholder="10"
-                            />
-
-                            <Input
-                              label="Weight"
-                              value={exercise.weight}
-                              onChange={(value) =>
-                                updateExercise(
-                                  workoutIndex,
-                                  exerciseIndex,
-                                  "weight",
-                                  value
-                                )
-                              }
-                              placeholder="95 lbs"
-                            />
-
-                            <Input
-                              label="Rest"
-                              value={exercise.rest}
-                              onChange={(value) =>
-                                updateExercise(
-                                  workoutIndex,
-                                  exerciseIndex,
-                                  "rest",
-                                  value
-                                )
-                              }
-                              placeholder="60 seconds"
-                            />
-
-                            <Input
-                              label="Video Link"
-                              value={exercise.videoLink}
-                              onChange={(value) =>
-                                updateExercise(
-                                  workoutIndex,
-                                  exerciseIndex,
-                                  "videoLink",
-                                  value
-                                )
-                              }
-                              placeholder="https://youtube.com/..."
-                            />
-                          </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </SortableContext>
+                    </DndContext>
                   </div>
                 </div>
               ))}
@@ -1020,6 +973,159 @@ export default function CreateProgram() {
         </form>
       </section>
     </main>
+  );
+}
+
+function SortableExerciseCard({
+  exercise,
+  exerciseIndex,
+  workoutIndex,
+  totalExercises,
+  updateExercise,
+  moveExercise,
+  removeExercise,
+}: {
+  exercise: ExerciseForm;
+  exerciseIndex: number;
+  workoutIndex: number;
+  totalExercises: number;
+  updateExercise: (
+    workoutIndex: number,
+    exerciseIndex: number,
+    field: keyof ExerciseForm,
+    value: string
+  ) => void;
+  moveExercise: (
+    workoutIndex: number,
+    exerciseIndex: number,
+    direction: "up" | "down"
+  ) => void;
+  removeExercise: (workoutIndex: number, exerciseIndex: number) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: exercise.formId });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`rounded-2xl border border-sky-100 bg-white p-4 transition ${
+        isDragging ? "z-20 opacity-80 shadow-xl ring-2 ring-blue-200" : ""
+      }`}
+    >
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            className="cursor-grab rounded-xl bg-sky-50 px-3 py-2 text-sm font-semibold text-slate-600 ring-1 ring-sky-100 active:cursor-grabbing"
+            aria-label={`Drag Exercise ${exerciseIndex + 1}`}
+          >
+            ☰ Drag
+          </button>
+
+          <h5 className="font-semibold text-slate-900">
+            Exercise {exerciseIndex + 1}
+          </h5>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => moveExercise(workoutIndex, exerciseIndex, "up")}
+            disabled={exerciseIndex === 0}
+            className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Move Up
+          </button>
+
+          <button
+            type="button"
+            onClick={() => moveExercise(workoutIndex, exerciseIndex, "down")}
+            disabled={exerciseIndex === totalExercises - 1}
+            className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Move Down
+          </button>
+
+          <button
+            type="button"
+            onClick={() => removeExercise(workoutIndex, exerciseIndex)}
+            className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Input
+          label="Exercise Name"
+          value={exercise.exerciseName}
+          onChange={(value) =>
+            updateExercise(workoutIndex, exerciseIndex, "exerciseName", value)
+          }
+          placeholder="Bench Press"
+        />
+
+        <Input
+          label="Sets"
+          value={exercise.sets}
+          onChange={(value) =>
+            updateExercise(workoutIndex, exerciseIndex, "sets", value)
+          }
+          placeholder="3"
+        />
+
+        <Input
+          label="Reps"
+          value={exercise.reps}
+          onChange={(value) =>
+            updateExercise(workoutIndex, exerciseIndex, "reps", value)
+          }
+          placeholder="10"
+        />
+
+        <Input
+          label="Weight"
+          value={exercise.weight}
+          onChange={(value) =>
+            updateExercise(workoutIndex, exerciseIndex, "weight", value)
+          }
+          placeholder="95 lbs"
+        />
+
+        <Input
+          label="Rest"
+          value={exercise.rest}
+          onChange={(value) =>
+            updateExercise(workoutIndex, exerciseIndex, "rest", value)
+          }
+          placeholder="60 seconds"
+        />
+
+        <Input
+          label="Video Link"
+          value={exercise.videoLink}
+          onChange={(value) =>
+            updateExercise(workoutIndex, exerciseIndex, "videoLink", value)
+          }
+          placeholder="https://youtube.com/..."
+        />
+      </div>
+    </div>
   );
 }
 
