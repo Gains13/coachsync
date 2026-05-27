@@ -331,10 +331,10 @@ export default function TrainerDashboard() {
               type="button"
               aria-label="Close sidebar"
               onClick={() => setMobileSidebarOpen(false)}
-              className="absolute inset-0 bg-slate-900/40"
+              className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
             />
 
-            <aside className="relative h-full w-72 border-r border-sky-100 bg-white shadow-xl">
+            <aside className="relative h-full w-80 max-w-[86vw] border-r border-sky-100 bg-white shadow-2xl">
               <SidebarContent
                 sidebarOpen={true}
                 setSidebarOpen={setSidebarOpen}
@@ -346,89 +346,107 @@ export default function TrainerDashboard() {
         )}
 
         <section className="min-w-0 flex-1">
-          <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:py-10">
-            <div className="mb-6 flex items-center justify-between gap-3 lg:hidden">
+          <div className="sticky top-0 z-30 border-b border-sky-100 bg-white/90 px-4 py-3 shadow-sm backdrop-blur lg:hidden">
+            <div className="flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => setMobileSidebarOpen(true)}
-                className="rounded-xl border border-sky-100 bg-white px-4 py-3 text-sm font-semibold text-blue-700 shadow-sm"
+                className="inline-flex items-center gap-2 rounded-2xl border border-sky-100 bg-white px-3 py-2 text-sm font-bold text-blue-700 shadow-sm active:scale-[0.98]"
               >
-                ☰ Menu
+                <span className="text-lg">☰</span>
+                Menu
               </button>
+
+              <div className="min-w-0 text-center">
+                <p className="truncate text-sm font-black text-slate-900">
+                  CoachSync
+                </p>
+                <p className="text-[11px] font-medium text-slate-500">
+                  Trainer Portal
+                </p>
+              </div>
 
               <button
                 onClick={logoutUser}
-                className="rounded-xl border border-sky-100 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm"
+                className="rounded-2xl border border-sky-100 bg-white px-3 py-2 text-sm font-bold text-slate-700 shadow-sm active:scale-[0.98]"
               >
-                Log out
+                Logout
               </button>
             </div>
+          </div>
 
-            <div className="mb-8 overflow-hidden rounded-3xl border border-sky-100 bg-white shadow-sm sm:rounded-[2rem]">
-              <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-6 text-white sm:px-6 sm:py-8 md:px-8">
-                <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div className="mx-auto w-full max-w-7xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+            <section className="mb-4 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-8 sm:rounded-[2rem]">
+              <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-5 text-white sm:px-6 sm:py-8 md:px-8">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
                       CoachSync Trainer Dashboard
                     </p>
 
-                    <h1 className="mt-3 break-words text-3xl font-bold md:text-4xl">
+                    <h1 className="mt-2 break-words text-2xl font-black leading-tight sm:mt-3 sm:text-4xl">
                       Welcome, {displayName}
                     </h1>
 
-                    <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
-                      Review important client activity first, then use the
-                      sidebar to manage clients, programs, messages, and workout
-                      history.
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
+                      You have{" "}
+                      <span className="font-bold text-white">
+                        {notificationCount}
+                      </span>{" "}
+                      activity updates to review.
                     </p>
                   </div>
 
                   <button
                     onClick={logoutUser}
-                    className="hidden rounded-xl bg-white/15 px-4 py-3 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto sm:py-2 lg:block"
+                    className="hidden rounded-xl bg-white/15 px-4 py-3 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 lg:block"
                   >
                     Log out
                   </button>
                 </div>
               </div>
 
-              <div className="grid gap-4 p-4 sm:p-6 md:grid-cols-4 md:p-8">
+              <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-4 md:p-8">
                 <SummaryCard
-                  title="Client Messages"
+                  title="Messages"
                   value={`${unreadClientMessages.length}`}
                   alert={unreadClientMessages.length > 0}
                 />
 
                 <SummaryCard
-                  title="Recent Workouts"
+                  title="Workouts"
                   value={`${recentWorkoutSubmissions.length}`}
                   alert={recentWorkoutSubmissions.length > 0}
                 />
 
                 <SummaryCard
-                  title="Exercise Notes"
+                  title="Notes"
                   value={`${exerciseNotes.length}`}
                   alert={exerciseNotes.length > 0}
                 />
 
                 <SummaryCard
-                  title="Notifications"
+                  title="Alerts"
                   value={`${notificationCount}`}
                   alert={notificationCount > 0}
                 />
               </div>
-            </div>
+            </section>
 
             {statusMessage && (
-              <p className="mb-6 rounded-2xl border border-sky-100 bg-white p-4 text-sm font-medium leading-6 text-slate-700 shadow-sm">
+              <p className="mb-4 rounded-2xl border border-sky-100 bg-white p-4 text-sm font-medium leading-6 text-slate-700 shadow-sm sm:mb-6">
                 {statusMessage}
               </p>
             )}
 
-            <div className="rounded-3xl border border-sky-100 bg-white p-4 shadow-sm sm:p-6">
-              <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <section className="rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+              <div className="mb-4 flex flex-col gap-3 sm:mb-5 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                    Priority Activity
+                  </p>
+
+                  <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
                     Activity Center
                   </h2>
 
@@ -441,29 +459,29 @@ export default function TrainerDashboard() {
                 <button
                   type="button"
                   onClick={loadTrainerDashboardData}
-                  className="w-full rounded-xl border border-sky-100 bg-sky-50 px-4 py-3 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-50 sm:w-auto sm:py-2"
+                  className="w-full rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-center text-sm font-bold text-blue-700 transition hover:bg-blue-50 active:scale-[0.99] sm:w-auto"
                 >
-                  Refresh Activity
+                  Refresh
                 </button>
               </div>
 
               {isLoadingActivity ? (
-                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5 text-sm font-medium text-slate-600">
+                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5 text-sm font-semibold text-slate-600">
                   Loading dashboard activity...
                 </div>
               ) : activityItems.length === 0 ? (
                 <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5">
-                  <h3 className="font-bold text-slate-900">
+                  <h3 className="font-black text-slate-900">
                     No new activity yet
                   </h3>
 
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm leading-6 text-slate-500">
                     Client messages, workout submissions, and exercise notes
                     will appear here.
                   </p>
                 </div>
               ) : (
-                <div className="grid gap-4">
+                <div className="grid gap-3 sm:gap-4">
                   {activityItems.map((item) => (
                     <ActivityCard
                       key={item.id}
@@ -473,7 +491,7 @@ export default function TrainerDashboard() {
                   ))}
                 </div>
               )}
-            </div>
+            </section>
           </div>
         </section>
       </div>
@@ -500,17 +518,17 @@ function SidebarContent({
           onClick={closeMobile}
           className="flex min-w-0 items-center gap-3"
         >
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-lg font-bold text-white">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-lg font-black text-white">
             C
           </div>
 
           {sidebarOpen && (
             <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-slate-900">
+              <p className="truncate text-sm font-black text-slate-900">
                 CoachSync
               </p>
 
-              <p className="truncate text-xs text-slate-500">
+              <p className="truncate text-xs font-medium text-slate-500">
                 Trainer Portal
               </p>
             </div>
@@ -520,7 +538,7 @@ function SidebarContent({
         <button
           type="button"
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="hidden rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-sm font-bold text-blue-700 hover:bg-blue-50 lg:block"
+          className="hidden rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-sm font-black text-blue-700 hover:bg-blue-50 lg:block"
         >
           {sidebarOpen ? "‹" : "›"}
         </button>
@@ -541,7 +559,7 @@ function SidebarContent({
         <button
           type="button"
           onClick={logoutUser}
-          className={`flex w-full items-center gap-3 rounded-2xl border border-red-100 bg-red-50 p-3 text-sm font-semibold text-red-700 transition hover:bg-red-100 ${
+          className={`flex w-full items-center gap-3 rounded-2xl border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-700 transition hover:bg-red-100 ${
             sidebarOpen ? "justify-start" : "justify-center"
           }`}
         >
@@ -567,17 +585,19 @@ function SidebarLink({
     <Link
       to={item.to}
       onClick={closeMobile}
-      className={`group relative flex items-center gap-3 rounded-2xl border border-transparent p-3 text-sm font-semibold text-slate-700 transition hover:border-blue-100 hover:bg-blue-50 hover:text-blue-700 ${
+      className={`group relative flex items-center gap-3 rounded-2xl border border-transparent p-3 text-sm font-bold text-slate-700 transition hover:border-blue-100 hover:bg-blue-50 hover:text-blue-700 ${
         sidebarOpen ? "justify-start" : "justify-center"
       }`}
     >
       <span className="text-xl">{item.icon}</span>
 
-      {sidebarOpen && <span className="min-w-0 flex-1 truncate">{item.title}</span>}
+      {sidebarOpen && (
+        <span className="min-w-0 flex-1 truncate">{item.title}</span>
+      )}
 
       {item.badge && item.badge > 0 ? (
         <span
-          className={`rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white ${
+          className={`rounded-full bg-red-600 px-2 py-0.5 text-xs font-black text-white ${
             sidebarOpen ? "" : "absolute right-1 top-1"
           }`}
         >
@@ -618,28 +638,32 @@ function ActivityCard({
   return (
     <Link
       to={item.link}
-      className="block rounded-3xl border border-sky-100 bg-sky-50 p-5 transition hover:-translate-y-1 hover:border-blue-200 hover:bg-blue-50 hover:shadow-md"
+      className="block rounded-2xl border border-sky-100 bg-sky-50 p-4 transition hover:-translate-y-1 hover:border-blue-200 hover:bg-blue-50 hover:shadow-md active:scale-[0.99] sm:rounded-3xl sm:p-5"
     >
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0">
-          <div className="mb-3 flex flex-wrap items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-xl ring-1 ring-sky-100">
+          <div className="mb-3 flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-lg ring-1 ring-sky-100 sm:h-11 sm:w-11 sm:text-xl">
               {style.icon}
             </div>
 
             <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ${style.badge}`}
+              className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${style.badge}`}
             >
               {style.label}
             </span>
           </div>
 
-          <h3 className="break-words text-lg font-bold text-slate-900">
+          <h3 className="break-words text-base font-black leading-snug text-slate-900 sm:text-lg">
             {item.title}
           </h3>
 
-          <p className="mt-1 text-sm font-semibold text-slate-700">
-            {item.clientName} • Client ID: {clientId}
+          <p className="mt-1 text-sm font-bold text-slate-700">
+            {item.clientName}
+          </p>
+
+          <p className="text-xs font-medium text-slate-500">
+            Client ID: {clientId}
           </p>
 
           <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-500">
@@ -647,12 +671,12 @@ function ActivityCard({
           </p>
         </div>
 
-        <div className="shrink-0 text-sm text-slate-500">
+        <div className="shrink-0 text-xs font-medium text-slate-400 sm:text-sm sm:text-slate-500">
           {new Date(item.createdAt).toLocaleString()}
         </div>
       </div>
 
-      <p className="mt-4 text-sm font-semibold text-blue-600">Open →</p>
+      <p className="mt-3 text-sm font-black text-blue-600 sm:mt-4">Open →</p>
     </Link>
   );
 }
@@ -668,14 +692,16 @@ function SummaryCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border p-4 sm:p-5 ${
+      className={`rounded-2xl border p-4 shadow-sm ${
         alert ? "border-blue-200 bg-blue-50" : "border-sky-100 bg-sky-50"
       }`}
     >
-      <p className="text-xs font-medium text-slate-500 sm:text-sm">{title}</p>
+      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+        {title}
+      </p>
 
       <h2
-        className={`mt-2 break-words text-lg font-bold sm:text-xl ${
+        className={`mt-2 break-words text-2xl font-black leading-none sm:text-3xl ${
           alert ? "text-blue-700" : "text-slate-900"
         }`}
       >
