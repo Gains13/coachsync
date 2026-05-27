@@ -30,6 +30,29 @@ type PersonalWorkoutLog = {
   created_at: string | null;
 };
 
+type HistoricalWorkoutExercise = {
+  id: string;
+  section: string | null;
+  exercise_name: string | null;
+  sets: string | null;
+  reps: string | null;
+  weight: string | null;
+  rest: string | null;
+  raw_text: string | null;
+  exercise_order: number | null;
+};
+
+type HistoricalWorkout = {
+  id: string;
+  client_user_id: string;
+  title: string;
+  workout_date: string | null;
+  source: string | null;
+  notes: string | null;
+  created_at: string | null;
+  client_historical_workout_exercises: HistoricalWorkoutExercise[];
+};
+
 type CombinedWorkoutItem =
   | {
       type: "program";
@@ -49,6 +72,16 @@ type CombinedWorkoutItem =
       durationMinutes: number | null;
       intensity: string;
       location: string;
+    }
+  | {
+      type: "historical";
+      id: string;
+      title: string;
+      date: string | null;
+      notes: string;
+      source: string;
+      exerciseCount: number;
+      previewExercises: HistoricalWorkoutExercise[];
     };
 
 export default function ClientPastWorkouts() {
@@ -56,6 +89,10 @@ export default function ClientPastWorkouts() {
     WorkoutSubmission[]
   >([]);
   const [personalLogs, setPersonalLogs] = useState<PersonalWorkoutLog[]>([]);
+  const [historicalWorkouts, setHistoricalWorkouts] = useState<
+    HistoricalWorkout[]
+  >([]);
+
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
@@ -119,8 +156,55 @@ export default function ClientPastWorkouts() {
       return;
     }
 
+    const { data: historicalData, error: historicalError } = await supabase
+      .from("client_historical_workouts")
+      .select(
+        `
+        id,
+        client_user_id,
+        title,
+        workout_date,
+        source,
+        notes,
+        created_at,
+        client_historical_workout_exercises (
+          id,
+          section,
+          exercise_name,
+          sets,
+          reps,
+          weight,
+          rest,
+          raw_text,
+          exercise_order
+        )
+      `
+      )
+      .eq("client_user_id", user.id)
+      .order("workout_date", { ascending: false });
+
+    if (historicalError) {
+      setStatusMessage(
+        "Could not load imported past workouts: " + historicalError.message
+      );
+      setIsLoading(false);
+      return;
+    }
+
     setProgramSubmissions((programData || []) as WorkoutSubmission[]);
     setPersonalLogs((personalData || []) as PersonalWorkoutLog[]);
+
+    const cleanedHistoricalWorkouts = ((historicalData ||
+      []) as HistoricalWorkout[]).map((workout) => ({
+      ...workout,
+      client_historical_workout_exercises: [
+        ...(workout.client_historical_workout_exercises || []),
+      ].sort(
+        (a, b) => (a.exercise_order || 0) - (b.exercise_order || 0)
+      ),
+    }));
+
+    setHistoricalWorkouts(cleanedHistoricalWorkouts);
     setIsLoading(false);
   }
 
@@ -164,6 +248,22 @@ export default function ClientPastWorkouts() {
         location: log.location || "Not set",
       };
     }),
+
+    ...historicalWorkouts.map((workout) => {
+      return {
+        type: "historical" as const,
+        id: workout.id,
+        title: workout.title || "Imported Past Workout",
+        date: workout.workout_date || workout.created_at,
+        notes: workout.notes || "Imported from trainer notes.",
+        source: workout.source || "notes_import",
+        exerciseCount: workout.client_historical_workout_exercises.length,
+        previewExercises: workout.client_historical_workout_exercises.slice(
+          0,
+          5
+        ),
+      };
+    }),
   ].sort((a, b) => {
     const dateA = getDateValue(a.date);
     const dateB = getDateValue(b.date);
@@ -188,11 +288,12 @@ export default function ClientPastWorkouts() {
           </h1>
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
-            Review your completed program workouts and personal activities.
+            Review completed program workouts, personal activities, and imported
+            workouts from your trainer’s notes.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-4 md:p-8">
+        <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-5 md:p-8">
           <SummaryCard title="Total Logs" value={`${combinedItems.length}`} />
 
           <SummaryCard
@@ -201,6 +302,11 @@ export default function ClientPastWorkouts() {
           />
 
           <SummaryCard title="Personal" value={`${personalLogs.length}`} />
+
+          <SummaryCard
+            title="Imported"
+            value={`${historicalWorkouts.length}`}
+          />
 
           <SummaryCard
             title="Pain Reports"
@@ -221,8 +327,8 @@ export default function ClientPastWorkouts() {
           </h2>
 
           <p className="mt-1 text-sm leading-6 text-slate-500">
-            Program workouts and personal activities are shown together, but
-            labeled separately.
+            Program workouts, personal activities, and imported past workouts are
+            shown together, but labeled separately.
           </p>
         </div>
 
@@ -243,8 +349,8 @@ export default function ClientPastWorkouts() {
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Once you complete assigned workouts or log personal activity, they
-              will appear here.
+              Once you complete assigned workouts, log personal activity, or your
+              trainer imports past workouts, they will appear here.
             </p>
           </div>
         ) : (
@@ -302,20 +408,80 @@ export default function ClientPastWorkouts() {
                 );
               }
 
+              if (item.type === "personal") {
+                return (
+                  <div
+                    key={`personal-${item.id}`}
+                    className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 shadow-sm sm:p-5"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <span className="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-200">
+                            Personal Activity
+                          </span>
+
+                          <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600 ring-1 ring-emerald-100">
+                            {item.activityType}
+                          </span>
+                        </div>
+
+                        <h2 className="text-lg font-black text-slate-900">
+                          {item.title}
+                        </h2>
+
+                        <p className="mt-1 text-sm font-medium text-slate-500">
+                          {formatDate(item.date)}
+                        </p>
+                      </div>
+
+                      <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-100">
+                        {item.durationMinutes
+                          ? `${item.durationMinutes} min`
+                          : "Duration not set"}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <MiniInfo label="Intensity" value={item.intensity} />
+                      <MiniInfo label="Location" value={item.location} />
+                      <MiniInfo
+                        label="Duration"
+                        value={
+                          item.durationMinutes
+                            ? `${item.durationMinutes} minutes`
+                            : "Not set"
+                        }
+                      />
+                    </div>
+
+                    <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-emerald-100">
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                        Notes
+                      </p>
+
+                      <p className="mt-1 break-words text-sm font-black leading-6 text-slate-900 sm:text-base">
+                        {item.notes}
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <div
-                  key={`personal-${item.id}`}
-                  className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 shadow-sm sm:p-5"
+                  key={`historical-${item.id}`}
+                  className="rounded-2xl border border-amber-100 bg-amber-50 p-4 shadow-sm sm:p-5"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <span className="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-200">
-                          Personal Activity
+                        <span className="w-fit rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-700 ring-1 ring-amber-200">
+                          Imported Past Workout
                         </span>
 
-                        <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600 ring-1 ring-emerald-100">
-                          {item.activityType}
+                        <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600 ring-1 ring-amber-100">
+                          Trainer Notes
                         </span>
                       </div>
 
@@ -328,27 +494,66 @@ export default function ClientPastWorkouts() {
                       </p>
                     </div>
 
-                    <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-100">
-                      {item.durationMinutes
-                        ? `${item.durationMinutes} min`
-                        : "Duration not set"}
+                    <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-amber-700 ring-1 ring-amber-100">
+                      {item.exerciseCount} exercise
+                      {item.exerciseCount === 1 ? "" : "s"}
                     </span>
                   </div>
 
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                    <MiniInfo label="Intensity" value={item.intensity} />
-                    <MiniInfo label="Location" value={item.location} />
-                    <MiniInfo
-                      label="Duration"
-                      value={
-                        item.durationMinutes
-                          ? `${item.durationMinutes} minutes`
-                          : "Not set"
-                      }
-                    />
+                  <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-amber-100">
+                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                      Preview
+                    </p>
+
+                    {item.previewExercises.length === 0 ? (
+                      <p className="mt-2 text-sm font-semibold text-slate-600">
+                        No exercises listed.
+                      </p>
+                    ) : (
+                      <div className="mt-3 space-y-2">
+                        {item.previewExercises.map((exercise) => (
+                          <div
+                            key={exercise.id}
+                            className="rounded-xl bg-amber-50 p-3"
+                          >
+                            <p className="text-xs font-black uppercase tracking-wide text-amber-700">
+                              {exercise.section || "Workout"}
+                            </p>
+
+                            <p className="mt-1 text-sm font-black text-slate-900">
+                              {exercise.exercise_name || exercise.raw_text}
+                            </p>
+
+                            <p className="mt-1 text-xs font-semibold text-slate-500">
+                              {[
+                                exercise.weight,
+                                exercise.sets
+                                  ? `${exercise.sets} sets`
+                                  : "",
+                                exercise.reps,
+                                exercise.rest,
+                              ]
+                                .filter(Boolean)
+                                .join(" • ") || exercise.raw_text}
+                            </p>
+                          </div>
+                        ))}
+
+                        {item.exerciseCount > item.previewExercises.length && (
+                          <p className="pt-1 text-sm font-black text-amber-700">
+                            + {item.exerciseCount - item.previewExercises.length}{" "}
+                            more exercise
+                            {item.exerciseCount - item.previewExercises.length ===
+                            1
+                              ? ""
+                              : "s"}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-emerald-100">
+                  <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-amber-100">
                     <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
                       Notes
                     </p>
