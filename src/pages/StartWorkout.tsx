@@ -5,10 +5,22 @@ import ClientLayout from "../components/ClientLayout";
 
 const SECTION_ORDER = [
   "Warm-Up",
+  "Warmup",
+  "Warm Up",
   "Activation / Core / Balance",
+  "Core Activation",
+  "Core and Activation",
+  "Activation",
+  "Balance",
   "SAQ / Skill Development",
+  "SAQ",
+  "Skill Development",
   "Resistance Training",
+  "Resistance",
   "Cool-Down",
+  "Cooldown",
+  "Cool Down",
+  "Workout",
   "Other",
 ];
 
@@ -56,6 +68,61 @@ type WorkoutDraftRow = {
   draft_data: WorkoutDraftData | null;
   updated_at: string;
 };
+
+function normalizeSection(section: string | null | undefined) {
+  const cleaned = (section || "").trim();
+
+  if (!cleaned) return "Other";
+
+  const lower = cleaned.toLowerCase();
+
+  if (lower === "warmup" || lower === "warm up" || lower === "warm-up") {
+    return "Warm-Up";
+  }
+
+  if (
+    lower === "core activation" ||
+    lower === "core and activation" ||
+    lower === "activation" ||
+    lower === "activation/core/balance" ||
+    lower === "activation / core / balance" ||
+    lower === "core/balance"
+  ) {
+    return "Activation / Core / Balance";
+  }
+
+  if (lower === "balance") {
+    return "Activation / Core / Balance";
+  }
+
+  if (
+    lower === "saq" ||
+    lower === "skill development" ||
+    lower === "saq / skill development" ||
+    lower === "saq/skill development"
+  ) {
+    return "SAQ / Skill Development";
+  }
+
+  if (
+    lower === "resistance" ||
+    lower === "resistance training" ||
+    lower === "strength" ||
+    lower === "strength training"
+  ) {
+    return "Resistance Training";
+  }
+
+  if (
+    lower === "cooldown" ||
+    lower === "cool down" ||
+    lower === "cool-down"
+  ) {
+    return "Cool-Down";
+  }
+
+  return cleaned;
+}
 
 export default function StartWorkout() {
   const navigate = useNavigate();
@@ -194,7 +261,7 @@ export default function StartWorkout() {
     const freshLoggedExercises: LoggedExercise[] = sortedExercises.map(
       (exercise) => ({
         exerciseId: exercise.id,
-        section: exercise.section || "Resistance Training",
+        section: normalizeSection(exercise.section),
         exerciseName: exercise.exercise_name || "",
         plannedSets: exercise.sets || "",
         plannedReps: exercise.reps || "",
@@ -507,7 +574,7 @@ export default function StartWorkout() {
       : 0;
 
   const groupedExercises = useMemo(() => {
-    return SECTION_ORDER.map((section) => {
+    const knownGroups = SECTION_ORDER.map((section) => {
       const exercises = loggedExercises
         .map((exercise, originalIndex) => ({
           exercise,
@@ -519,7 +586,31 @@ export default function StartWorkout() {
         section,
         exercises,
       };
-    }).filter((group) => group.exercises.length > 0);
+    });
+
+    const customSections = Array.from(
+      new Set(
+        loggedExercises
+          .map((exercise) => exercise.section || "Other")
+          .filter((section) => !SECTION_ORDER.includes(section))
+      )
+    ).map((section) => {
+      const exercises = loggedExercises
+        .map((exercise, originalIndex) => ({
+          exercise,
+          originalIndex,
+        }))
+        .filter((item) => item.exercise.section === section);
+
+      return {
+        section,
+        exercises,
+      };
+    });
+
+    return [...knownGroups, ...customSections].filter(
+      (group) => group.exercises.length > 0
+    );
   }, [loggedExercises]);
 
   const lastSavedLabel = draftSavedAt
@@ -686,130 +777,143 @@ export default function StartWorkout() {
       </section>
 
       <section className="space-y-5 sm:space-y-6">
-        {groupedExercises.map((group) => (
-          <div
-            key={group.section}
-            className="rounded-[1.5rem] border border-sky-100 bg-sky-50 p-4 shadow-sm sm:rounded-3xl sm:p-5"
-          >
-            <div className="mb-4">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
-                Section
-              </p>
+        {groupedExercises.length === 0 ? (
+          <div className="rounded-[1.5rem] border border-red-100 bg-red-50 p-5 text-center shadow-sm sm:rounded-3xl">
+            <h2 className="text-lg font-black text-red-700">
+              No exercises are available to check off
+            </h2>
 
-              <h2 className="mt-1 text-xl font-black text-slate-900">
-                {group.section}
-              </h2>
-            </div>
+            <p className="mt-2 text-sm font-semibold leading-6 text-red-600">
+              This workout exists, but no exercise rows were loaded. Go back to
+              the trainer side and make sure this program has exercises saved.
+            </p>
+          </div>
+        ) : (
+          groupedExercises.map((group) => (
+            <div
+              key={group.section}
+              className="rounded-[1.5rem] border border-sky-100 bg-sky-50 p-4 shadow-sm sm:rounded-3xl sm:p-5"
+            >
+              <div className="mb-4">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                  Section
+                </p>
 
-            <div className="space-y-4">
-              {group.exercises.map(({ exercise, originalIndex }) => (
-                <div
-                  key={`${exercise.exerciseId}-${originalIndex}`}
-                  className={`rounded-[1.5rem] border p-4 shadow-sm transition sm:rounded-3xl sm:p-6 ${
-                    exercise.completed
-                      ? "border-emerald-200 bg-emerald-50"
-                      : "border-sky-100 bg-white"
-                  }`}
-                >
-                  <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <h3 className="text-lg font-black text-slate-900 sm:text-xl">
-                          {exercise.exerciseName}
-                        </h3>
+                <h2 className="mt-1 text-xl font-black text-slate-900">
+                  {group.section}
+                </h2>
+              </div>
 
-                        {exercise.completed && (
-                          <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700">
-                            Completed
-                          </span>
-                        )}
-                      </div>
-
-                      <p className="mt-2 text-sm leading-6 text-slate-500">
-                        {exercise.plannedSets || "N/A"} sets x{" "}
-                        {exercise.plannedReps || "N/A"} reps • Weight:{" "}
-                        {exercise.plannedWeight || "N/A"} • Rest:{" "}
-                        {exercise.plannedRest || "N/A"}
-                      </p>
-                    </div>
-
-                    {exercise.videoLink && (
-                      <a
-                        href={exercise.videoLink}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-center text-sm font-black text-white shadow-sm hover:bg-blue-700 sm:w-auto"
-                      >
-                        Watch Video
-                      </a>
-                    )}
-                  </div>
-
-                  <label
-                    className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 ${
+              <div className="space-y-4">
+                {group.exercises.map(({ exercise, originalIndex }) => (
+                  <div
+                    key={`${exercise.exerciseId}-${originalIndex}`}
+                    className={`rounded-[1.5rem] border p-4 shadow-sm transition sm:rounded-3xl sm:p-6 ${
                       exercise.completed
-                        ? "border-emerald-200 bg-white"
-                        : "border-sky-100 bg-sky-50"
+                        ? "border-emerald-200 bg-emerald-50"
+                        : "border-sky-100 bg-white"
                     }`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={exercise.completed}
-                      onChange={() => toggleCompleted(originalIndex)}
-                      className="mt-0.5 h-5 w-5 shrink-0 accent-blue-600"
-                      disabled={isSubmitting}
-                    />
+                    <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <h3 className="text-lg font-black text-slate-900 sm:text-xl">
+                            {exercise.exerciseName || "Unnamed Exercise"}
+                          </h3>
 
-                    <span className="text-sm font-black leading-6 text-slate-800 sm:text-base">
-                      I completed this exercise as prescribed
-                    </span>
-                  </label>
+                          {exercise.completed && (
+                            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700">
+                              Completed
+                            </span>
+                          )}
+                        </div>
 
-                  <div className="mt-4 grid gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="mb-2 block text-sm font-black text-slate-700">
-                        Difficulty
-                      </label>
+                        <p className="mt-2 text-sm leading-6 text-slate-500">
+                          {exercise.plannedSets || "N/A"} sets x{" "}
+                          {exercise.plannedReps || "N/A"} reps • Weight:{" "}
+                          {exercise.plannedWeight || "N/A"} • Rest:{" "}
+                          {exercise.plannedRest || "N/A"}
+                        </p>
+                      </div>
 
-                      <select
-                        value={exercise.difficulty}
-                        onChange={(event) =>
-                          updateDifficulty(originalIndex, event.target.value)
-                        }
-                        disabled={isSubmitting}
-                        className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <option value="">Select difficulty</option>
-                        <option value="Easy">Easy</option>
-                        <option value="Moderate">Moderate</option>
-                        <option value="Hard">Hard</option>
-                        <option value="Could not complete">
-                          Could not complete
-                        </option>
-                      </select>
+                      {exercise.videoLink && (
+                        <a
+                          href={exercise.videoLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-center text-sm font-black text-white shadow-sm hover:bg-blue-700 sm:w-auto"
+                        >
+                          Watch Video
+                        </a>
+                      )}
                     </div>
 
-                    <div>
-                      <label className="mb-2 block text-sm font-black text-slate-700">
-                        Notes
-                      </label>
-
+                    <label
+                      className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 ${
+                        exercise.completed
+                          ? "border-emerald-200 bg-white"
+                          : "border-sky-100 bg-sky-50"
+                      }`}
+                    >
                       <input
-                        value={exercise.notes}
-                        onChange={(event) =>
-                          updateNotes(originalIndex, event.target.value)
-                        }
+                        type="checkbox"
+                        checked={exercise.completed}
+                        onChange={() => toggleCompleted(originalIndex)}
+                        className="mt-0.5 h-5 w-5 shrink-0 accent-blue-600"
                         disabled={isSubmitting}
-                        placeholder="Optional note for your trainer"
-                        className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
                       />
+
+                      <span className="text-sm font-black leading-6 text-slate-800 sm:text-base">
+                        I completed this exercise as prescribed
+                      </span>
+                    </label>
+
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="mb-2 block text-sm font-black text-slate-700">
+                          Difficulty
+                        </label>
+
+                        <select
+                          value={exercise.difficulty}
+                          onChange={(event) =>
+                            updateDifficulty(originalIndex, event.target.value)
+                          }
+                          disabled={isSubmitting}
+                          className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <option value="">Select difficulty</option>
+                          <option value="Easy">Easy</option>
+                          <option value="Moderate">Moderate</option>
+                          <option value="Hard">Hard</option>
+                          <option value="Could not complete">
+                            Could not complete
+                          </option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm font-black text-slate-700">
+                          Notes
+                        </label>
+
+                        <input
+                          value={exercise.notes}
+                          onChange={(event) =>
+                            updateNotes(originalIndex, event.target.value)
+                          }
+                          disabled={isSubmitting}
+                          placeholder="Optional note for your trainer"
+                          className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </section>
 
       <button
