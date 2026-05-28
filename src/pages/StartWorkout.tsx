@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import ClientLayout from "../components/ClientLayout";
@@ -44,21 +44,25 @@ type LoggedExercise = {
   notes: string;
 };
 
-type SavedWorkoutDraft = {
-  workoutId: string;
-  workoutNotes: string;
+type WorkoutDraftData = {
   loggedExercises: LoggedExercise[];
-  savedAt: string;
 };
 
-function getDraftStorageKey(userId: string, workoutId: string) {
-  return `coachsync-workout-draft-${userId}-${workoutId}`;
-}
+type WorkoutDraftRow = {
+  id: string;
+  client_user_id: string;
+  workout_id: string;
+  workout_notes: string | null;
+  draft_data: WorkoutDraftData | null;
+  updated_at: string;
+};
 
 export default function StartWorkout() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const workoutId = searchParams.get("workoutId");
+
+  const saveTimerRef = useRef<number | null>(null);
 
   const [currentUserId, setCurrentUserId] = useState("");
   const [workout, setWorkout] = useState<PlanWorkout | null>(null);
@@ -66,6 +70,7 @@ export default function StartWorkout() {
   const [workoutNotes, setWorkoutNotes] = useState("");
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState("");
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -74,24 +79,38 @@ export default function StartWorkout() {
 
   useEffect(() => {
     loadWorkout();
+
+    return () => {
+      if (saveTimerRef.current) {
+        window.clearTimeout(saveTimerRef.current);
+      }
+    };
   }, [workoutId]);
 
   useEffect(() => {
-    if (!currentUserId || !workoutId || !draftLoaded || isSubmitting) return;
+    if (
+      !currentUserId ||
+      !workoutId ||
+      !draftLoaded ||
+      isSubmitting ||
+      loggedExercises.length === 0
+    ) {
+      return;
+    }
 
-    const draft: SavedWorkoutDraft = {
-      workoutId,
-      workoutNotes,
-      loggedExercises,
-      savedAt: new Date().toISOString(),
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = window.setTimeout(() => {
+      saveDraftToSupabase();
+    }, 700);
+
+    return () => {
+      if (saveTimerRef.current) {
+        window.clearTimeout(saveTimerRef.current);
+      }
     };
-
-    localStorage.setItem(
-      getDraftStorageKey(currentUserId, workoutId),
-      JSON.stringify(draft)
-    );
-
-    setDraftSavedAt(draft.savedAt);
   }, [
     currentUserId,
     workoutId,
@@ -190,37 +209,39 @@ export default function StartWorkout() {
 
     setWorkout(data as PlanWorkout);
 
-    const savedDraftRaw = localStorage.getItem(
-      getDraftStorageKey(user.id, workoutId)
-    );
+    const { data: existingDraft, error: draftError } = await supabase
+      .from("workout_drafts")
+      .select("id, client_user_id, workout_id, workout_notes, draft_data, updated_at")
+      .eq("client_user_id", user.id)
+      .eq("workout_id", workoutId)
+      .maybeSingle();
 
-    if (savedDraftRaw) {
-      try {
-        const savedDraft = JSON.parse(savedDraftRaw) as SavedWorkoutDraft;
+    if (draftError) {
+      console.error(draftError);
+      setLoggedExercises(freshLoggedExercises);
+    } else if (existingDraft) {
+      const draft = existingDraft as WorkoutDraftRow;
 
-        const restoredExercises = freshLoggedExercises.map((freshExercise) => {
-          const savedExercise = savedDraft.loggedExercises.find(
-            (exercise) => exercise.exerciseId === freshExercise.exerciseId
-          );
+      const savedExercises = draft.draft_data?.loggedExercises || [];
 
-          if (!savedExercise) return freshExercise;
+      const restoredExercises = freshLoggedExercises.map((freshExercise) => {
+        const savedExercise = savedExercises.find(
+          (exercise) => exercise.exerciseId === freshExercise.exerciseId
+        );
 
-          return {
-            ...freshExercise,
-            completed: savedExercise.completed,
-            difficulty: savedExercise.difficulty || "",
-            notes: savedExercise.notes || "",
-          };
-        });
+        if (!savedExercise) return freshExercise;
 
-        setLoggedExercises(restoredExercises);
-        setWorkoutNotes(savedDraft.workoutNotes || "");
-        setDraftSavedAt(savedDraft.savedAt || "");
-      } catch (draftError) {
-        console.error(draftError);
-        setLoggedExercises(freshLoggedExercises);
-        localStorage.removeItem(getDraftStorageKey(user.id, workoutId));
-      }
+        return {
+          ...freshExercise,
+          completed: savedExercise.completed,
+          difficulty: savedExercise.difficulty || "",
+          notes: savedExercise.notes || "",
+        };
+      });
+
+      setLoggedExercises(restoredExercises);
+      setWorkoutNotes(draft.workout_notes || "");
+      setDraftSavedAt(draft.updated_at || "");
     } else {
       setLoggedExercises(freshLoggedExercises);
     }
@@ -229,16 +250,54 @@ export default function StartWorkout() {
     setIsLoading(false);
   }
 
-  function clearSavedDraft() {
+  async function saveDraftToSupabase() {
+    if (!currentUserId || !workoutId || loggedExercises.length === 0) return;
+
+    setIsSavingDraft(true);
+
+    const now = new Date().toISOString();
+
+    const { error } = await supabase.from("workout_drafts").upsert(
+      {
+        client_user_id: currentUserId,
+        workout_id: workoutId,
+        workout_notes: workoutNotes,
+        draft_data: {
+          loggedExercises,
+        },
+        updated_at: now,
+      },
+      {
+        onConflict: "client_user_id,workout_id",
+      }
+    );
+
+    if (error) {
+      console.error(error);
+      setErrorMessage("Progress could not auto-save. Check connection.");
+      setIsSavingDraft(false);
+      return;
+    }
+
+    setDraftSavedAt(now);
+    setIsSavingDraft(false);
+  }
+
+  async function clearSavedDraft() {
     if (!currentUserId || !workoutId) return;
 
-    localStorage.removeItem(getDraftStorageKey(currentUserId, workoutId));
+    await supabase
+      .from("workout_drafts")
+      .delete()
+      .eq("client_user_id", currentUserId)
+      .eq("workout_id", workoutId);
+
     setDraftSavedAt("");
   }
 
-  function resetWorkoutProgress() {
+  async function resetWorkoutProgress() {
     const confirmed = window.confirm(
-      "This will clear your saved progress for this workout on this device. Are you sure?"
+      "This will clear your saved progress for this workout across your devices. Are you sure?"
     );
 
     if (!confirmed) return;
@@ -253,7 +312,7 @@ export default function StartWorkout() {
     );
 
     setWorkoutNotes("");
-    clearSavedDraft();
+    await clearSavedDraft();
     setSuccessMessage("");
     setErrorMessage("Saved progress was cleared.");
   }
@@ -341,7 +400,7 @@ export default function StartWorkout() {
     }
 
     if (existingSubmission) {
-      clearSavedDraft();
+      await clearSavedDraft();
       navigate(`/workout-history/${existingSubmission.id}`);
       return;
     }
@@ -396,7 +455,8 @@ export default function StartWorkout() {
       return;
     }
 
-    clearSavedDraft();
+    await clearSavedDraft();
+
     setSuccessMessage("Workout submitted successfully!");
 
     setTimeout(() => {
@@ -504,7 +564,7 @@ export default function StartWorkout() {
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
-                Your progress saves automatically on this device while you work.
+                Your progress saves automatically across devices.
               </p>
             </div>
 
@@ -545,8 +605,10 @@ export default function StartWorkout() {
 
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm font-bold text-slate-600">
-                {lastSavedLabel
-                  ? `Progress saved automatically at ${lastSavedLabel}.`
+                {isSavingDraft
+                  ? "Saving progress..."
+                  : lastSavedLabel
+                  ? `Progress saved across devices at ${lastSavedLabel}.`
                   : "Progress will save automatically as you make changes."}
               </p>
 

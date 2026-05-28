@@ -1,7 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import ClientLayout from "../components/ClientLayout";
+
+const SECTION_ORDER = [
+  "Warm-Up",
+  "Activation / Core / Balance",
+  "SAQ / Skill Development",
+  "Resistance Training",
+  "Cool-Down",
+  "Workout",
+  "Other",
+];
 
 type HistoricalExercise = {
   id: string;
@@ -25,6 +35,7 @@ type HistoricalWorkout = {
 };
 
 type LoggedExercise = {
+  exerciseId: string;
   exerciseName: string;
   section: string;
   plannedSets: string;
@@ -37,13 +48,34 @@ type LoggedExercise = {
   notes: string;
 };
 
+type HistoricalDraftData = {
+  loggedExercises: LoggedExercise[];
+};
+
+type HistoricalDraftRow = {
+  id: string;
+  client_user_id: string;
+  historical_workout_id: string;
+  workout_notes: string | null;
+  draft_data: HistoricalDraftData | null;
+  updated_at: string;
+};
+
 export default function ClientRepeatHistoricalWorkout() {
   const { historicalWorkoutId } = useParams();
   const navigate = useNavigate();
 
+  const saveTimerRef = useRef<number | null>(null);
+
+  const [currentUserId, setCurrentUserId] = useState("");
   const [workout, setWorkout] = useState<HistoricalWorkout | null>(null);
   const [loggedExercises, setLoggedExercises] = useState<LoggedExercise[]>([]);
+  const [repeatNotes, setRepeatNotes] = useState("");
   const [unreadMessages, setUnreadMessages] = useState(0);
+
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState("");
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,11 +84,52 @@ export default function ClientRepeatHistoricalWorkout() {
 
   useEffect(() => {
     loadHistoricalWorkout();
+
+    return () => {
+      if (saveTimerRef.current) {
+        window.clearTimeout(saveTimerRef.current);
+      }
+    };
   }, [historicalWorkoutId]);
+
+  useEffect(() => {
+    if (
+      !currentUserId ||
+      !historicalWorkoutId ||
+      !draftLoaded ||
+      isSubmitting ||
+      loggedExercises.length === 0
+    ) {
+      return;
+    }
+
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = window.setTimeout(() => {
+      saveDraftToSupabase();
+    }, 700);
+
+    return () => {
+      if (saveTimerRef.current) {
+        window.clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, [
+    currentUserId,
+    historicalWorkoutId,
+    repeatNotes,
+    loggedExercises,
+    draftLoaded,
+    isSubmitting,
+  ]);
 
   async function loadHistoricalWorkout() {
     setIsLoading(true);
     setErrorMessage("");
+    setSuccessMessage("");
+    setDraftLoaded(false);
 
     const {
       data: { user },
@@ -68,6 +141,8 @@ export default function ClientRepeatHistoricalWorkout() {
       setIsLoading(false);
       return;
     }
+
+    setCurrentUserId(user.id);
 
     const { count: unreadCount, error: unreadError } = await supabase
       .from("messages")
@@ -132,8 +207,9 @@ export default function ClientRepeatHistoricalWorkout() {
       client_historical_workout_exercises: sortedExercises,
     });
 
-    setLoggedExercises(
-      sortedExercises.map((exercise) => ({
+    const freshLoggedExercises: LoggedExercise[] = sortedExercises.map(
+      (exercise) => ({
+        exerciseId: exercise.id,
         section: exercise.section || "Workout",
         exerciseName:
           exercise.exercise_name || exercise.raw_text || "Imported exercise",
@@ -145,10 +221,119 @@ export default function ClientRepeatHistoricalWorkout() {
         completed: false,
         difficulty: "",
         notes: "",
+      })
+    );
+
+    const { data: existingDraft, error: draftError } = await supabase
+      .from("workout_drafts")
+      .select(
+        "id, client_user_id, historical_workout_id, workout_notes, draft_data, updated_at"
+      )
+      .eq("client_user_id", user.id)
+      .eq("historical_workout_id", historicalWorkoutId)
+      .maybeSingle();
+
+    if (draftError) {
+      console.error(draftError);
+      setLoggedExercises(freshLoggedExercises);
+    } else if (existingDraft) {
+      const draft = existingDraft as HistoricalDraftRow;
+      const savedExercises = draft.draft_data?.loggedExercises || [];
+
+      const restoredExercises = freshLoggedExercises.map((freshExercise) => {
+        const savedExercise = savedExercises.find(
+          (exercise) => exercise.exerciseId === freshExercise.exerciseId
+        );
+
+        if (!savedExercise) return freshExercise;
+
+        return {
+          ...freshExercise,
+          completed: savedExercise.completed,
+          difficulty: savedExercise.difficulty || "",
+          notes: savedExercise.notes || "",
+        };
+      });
+
+      setLoggedExercises(restoredExercises);
+      setRepeatNotes(draft.workout_notes || "");
+      setDraftSavedAt(draft.updated_at || "");
+    } else {
+      setLoggedExercises(freshLoggedExercises);
+    }
+
+    setDraftLoaded(true);
+    setIsLoading(false);
+  }
+
+  async function saveDraftToSupabase() {
+    if (!currentUserId || !historicalWorkoutId || loggedExercises.length === 0) {
+      return;
+    }
+
+    setIsSavingDraft(true);
+
+    const now = new Date().toISOString();
+
+    const { error } = await supabase.from("workout_drafts").upsert(
+      {
+        client_user_id: currentUserId,
+        workout_id: null,
+        historical_workout_id: historicalWorkoutId,
+        workout_notes: repeatNotes,
+        draft_data: {
+          loggedExercises,
+        },
+        updated_at: now,
+      },
+      {
+        onConflict: "client_user_id,historical_workout_id",
+      }
+    );
+
+    if (error) {
+      console.error(error);
+      setErrorMessage("Progress could not auto-save. Check connection.");
+      setIsSavingDraft(false);
+      return;
+    }
+
+    setDraftSavedAt(now);
+    setIsSavingDraft(false);
+  }
+
+  async function clearSavedDraft() {
+    if (!currentUserId || !historicalWorkoutId) return;
+
+    await supabase
+      .from("workout_drafts")
+      .delete()
+      .eq("client_user_id", currentUserId)
+      .eq("historical_workout_id", historicalWorkoutId);
+
+    setDraftSavedAt("");
+  }
+
+  async function resetWorkoutProgress() {
+    const confirmed = window.confirm(
+      "This will clear your saved progress for this repeated workout across your devices. Are you sure?"
+    );
+
+    if (!confirmed) return;
+
+    setLoggedExercises((currentExercises) =>
+      currentExercises.map((exercise) => ({
+        ...exercise,
+        completed: false,
+        difficulty: "",
+        notes: "",
       }))
     );
 
-    setIsLoading(false);
+    setRepeatNotes("");
+    await clearSavedDraft();
+    setSuccessMessage("");
+    setErrorMessage("Saved progress was cleared.");
   }
 
   function toggleCompleted(exerciseIndex: number) {
@@ -198,6 +383,11 @@ export default function ClientRepeatHistoricalWorkout() {
 
     if (isSubmitting) return;
 
+    if (loggedExercises.length === 0) {
+      setErrorMessage("This workout has no exercises to submit.");
+      return;
+    }
+
     setIsSubmitting(true);
     setSuccessMessage("");
     setErrorMessage("");
@@ -219,11 +409,13 @@ export default function ClientRepeatHistoricalWorkout() {
         client_user_id: user.id,
         workout_id: null,
         workout_title: `${workout.title} — Repeated`,
-        notes: `Repeated from imported past workout. Original workout date: ${
-          workout.workout_date || "not recorded"
-        }.`,
+        notes:
+          repeatNotes.trim() ||
+          `Repeated from imported past workout. Original workout date: ${
+            workout.workout_date || "not recorded"
+          }.`,
       })
-      .select()
+      .select("id")
       .single();
 
     if (submissionError || !submission) {
@@ -253,19 +445,27 @@ export default function ClientRepeatHistoricalWorkout() {
 
     if (exercisesError) {
       console.error(exercisesError);
+
+      await supabase
+        .from("workout_submissions")
+        .delete()
+        .eq("id", submission.id);
+
       setErrorMessage(
-        "Workout was created, but exercises were not saved: " +
+        "The workout did not fully save. Please try again. Details: " +
           exercisesError.message
       );
       setIsSubmitting(false);
       return;
     }
 
+    await clearSavedDraft();
+
     setSuccessMessage("Repeated workout submitted successfully!");
 
     setTimeout(() => {
-      navigate("/client-past-workouts");
-    }, 900);
+      navigate(`/workout-history/${submission.id}`);
+    }, 700);
   }
 
   const completedCount = loggedExercises.filter(
@@ -276,6 +476,53 @@ export default function ClientRepeatHistoricalWorkout() {
     loggedExercises.length > 0
       ? Math.round((completedCount / loggedExercises.length) * 100)
       : 0;
+
+  const groupedExercises = useMemo(() => {
+    const knownGroups = SECTION_ORDER.map((section) => {
+      const exercises = loggedExercises
+        .map((exercise, originalIndex) => ({
+          exercise,
+          originalIndex,
+        }))
+        .filter((item) => item.exercise.section === section);
+
+      return {
+        section,
+        exercises,
+      };
+    });
+
+    const customSections = Array.from(
+      new Set(
+        loggedExercises
+          .map((exercise) => exercise.section)
+          .filter((section) => !SECTION_ORDER.includes(section))
+      )
+    ).map((section) => {
+      const exercises = loggedExercises
+        .map((exercise, originalIndex) => ({
+          exercise,
+          originalIndex,
+        }))
+        .filter((item) => item.exercise.section === section);
+
+      return {
+        section,
+        exercises,
+      };
+    });
+
+    return [...knownGroups, ...customSections].filter(
+      (group) => group.exercises.length > 0
+    );
+  }, [loggedExercises]);
+
+  const lastSavedLabel = draftSavedAt
+    ? new Date(draftSavedAt).toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : "";
 
   if (isLoading) {
     return (
@@ -345,8 +592,8 @@ export default function ClientRepeatHistoricalWorkout() {
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-amber-50 sm:mt-3 sm:text-base">
-                Repeat this past workout, check off what you completed, and send
-                notes to your trainer.
+                Your progress saves automatically across devices while you
+                repeat this workout.
               </p>
             </div>
 
@@ -384,13 +631,32 @@ export default function ClientRepeatHistoricalWorkout() {
                 style={{ width: `${completionPercent}%` }}
               />
             </div>
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-bold text-slate-600">
+                {isSavingDraft
+                  ? "Saving progress..."
+                  : lastSavedLabel
+                  ? `Progress saved across devices at ${lastSavedLabel}.`
+                  : "Progress will save automatically as you make changes."}
+              </p>
+
+              <button
+                type="button"
+                onClick={resetWorkoutProgress}
+                disabled={isSubmitting}
+                className="rounded-xl border border-red-100 bg-white px-4 py-2 text-sm font-black text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Clear Saved Progress
+              </button>
+            </div>
           </div>
         </div>
       </section>
 
       {successMessage && (
         <div className="mb-4 rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-5 text-center text-sm font-black text-emerald-700 shadow-sm sm:mb-6 sm:rounded-3xl">
-          {successMessage} Redirecting back to past workouts...
+          {successMessage} Opening your completed workout...
         </div>
       )}
 
@@ -400,112 +666,149 @@ export default function ClientRepeatHistoricalWorkout() {
         </div>
       )}
 
-      <section className="space-y-4 sm:space-y-6">
-        {loggedExercises.map((exercise, exerciseIndex) => (
+      <section className="mb-4 rounded-[1.5rem] border border-amber-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
+        <label className="mb-2 block text-sm font-black text-slate-700">
+          Overall Notes for This Repeated Workout
+        </label>
+
+        <textarea
+          value={repeatNotes}
+          onChange={(event) => setRepeatNotes(event.target.value)}
+          disabled={isSubmitting}
+          placeholder="Optional notes about this repeated workout"
+          rows={3}
+          className="w-full rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-amber-300 focus:ring-4 focus:ring-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+        />
+      </section>
+
+      <section className="space-y-5 sm:space-y-6">
+        {groupedExercises.map((group) => (
           <div
-            key={`${exercise.exerciseName}-${exerciseIndex}`}
-            className={`rounded-[1.5rem] border p-4 shadow-sm transition sm:rounded-3xl sm:p-6 ${
-              exercise.completed
-                ? "border-emerald-200 bg-emerald-50"
-                : "border-amber-100 bg-white"
-            }`}
+            key={group.section}
+            className="rounded-[1.5rem] border border-amber-100 bg-amber-50 p-4 shadow-sm sm:rounded-3xl sm:p-5"
           >
-            <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-              <div>
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700 ring-1 ring-amber-100">
-                    {exercise.section}
-                  </span>
+            <div className="mb-4">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-600">
+                Section
+              </p>
 
-                  {exercise.completed && (
-                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700">
-                      Completed
-                    </span>
-                  )}
-                </div>
-
-                <h2 className="text-lg font-black text-slate-900 sm:text-xl">
-                  {exercise.exerciseName}
-                </h2>
-
-                <p className="mt-2 text-sm leading-6 text-slate-500">
-                  {exercise.plannedSets || "N/A"} sets x{" "}
-                  {exercise.plannedReps || "N/A"} • Weight:{" "}
-                  {exercise.plannedWeight || "N/A"} • Rest:{" "}
-                  {exercise.plannedRest || "N/A"}
-                </p>
-
-                {exercise.rawText && (
-                  <p className="mt-2 text-xs font-semibold leading-5 text-slate-400">
-                    Original: {exercise.rawText}
-                  </p>
-                )}
-              </div>
+              <h2 className="mt-1 text-xl font-black text-slate-900">
+                {group.section}
+              </h2>
             </div>
 
-            <label
-              className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 ${
-                exercise.completed
-                  ? "border-emerald-200 bg-white"
-                  : "border-amber-100 bg-amber-50"
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={exercise.completed}
-                onChange={() => toggleCompleted(exerciseIndex)}
-                className="mt-0.5 h-5 w-5 shrink-0 accent-amber-500"
-                disabled={isSubmitting}
-              />
-
-              <span className="text-sm font-black leading-6 text-slate-800 sm:text-base">
-                I completed this exercise
-              </span>
-            </label>
-
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-black text-slate-700">
-                  Difficulty
-                </label>
-
-                <select
-                  value={exercise.difficulty}
-                  onChange={(event) =>
-                    updateDifficulty(exerciseIndex, event.target.value)
-                  }
-                  disabled={isSubmitting}
-                  className="w-full rounded-2xl border border-amber-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-amber-300 focus:ring-4 focus:ring-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+            <div className="space-y-4">
+              {group.exercises.map(({ exercise, originalIndex }) => (
+                <div
+                  key={`${exercise.exerciseId}-${originalIndex}`}
+                  className={`rounded-[1.5rem] border p-4 shadow-sm transition sm:rounded-3xl sm:p-6 ${
+                    exercise.completed
+                      ? "border-emerald-200 bg-emerald-50"
+                      : "border-amber-100 bg-white"
+                  }`}
                 >
-                  <option value="">Select difficulty</option>
-                  <option value="Easy">Easy</option>
-                  <option value="Moderate">Moderate</option>
-                  <option value="Hard">Hard</option>
-                  <option value="Could not complete">Could not complete</option>
-                </select>
-              </div>
+                  <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700 ring-1 ring-amber-100">
+                          {exercise.section}
+                        </span>
 
-              <div>
-                <label className="mb-2 block text-sm font-black text-slate-700">
-                  Notes
-                </label>
+                        {exercise.completed && (
+                          <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700">
+                            Completed
+                          </span>
+                        )}
+                      </div>
 
-                <input
-                  value={exercise.notes}
-                  onChange={(event) =>
-                    updateNotes(exerciseIndex, event.target.value)
-                  }
-                  disabled={isSubmitting}
-                  placeholder="Optional note for your trainer"
-                  className="w-full rounded-2xl border border-amber-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-amber-300 focus:ring-4 focus:ring-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
-                />
-              </div>
+                      <h3 className="text-lg font-black text-slate-900 sm:text-xl">
+                        {exercise.exerciseName}
+                      </h3>
+
+                      <p className="mt-2 text-sm leading-6 text-slate-500">
+                        {exercise.plannedSets || "N/A"} sets x{" "}
+                        {exercise.plannedReps || "N/A"} • Weight:{" "}
+                        {exercise.plannedWeight || "N/A"} • Rest:{" "}
+                        {exercise.plannedRest || "N/A"}
+                      </p>
+
+                      {exercise.rawText && (
+                        <p className="mt-2 text-xs font-semibold leading-5 text-slate-400">
+                          Original: {exercise.rawText}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <label
+                    className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 ${
+                      exercise.completed
+                        ? "border-emerald-200 bg-white"
+                        : "border-amber-100 bg-amber-50"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={exercise.completed}
+                      onChange={() => toggleCompleted(originalIndex)}
+                      className="mt-0.5 h-5 w-5 shrink-0 accent-amber-500"
+                      disabled={isSubmitting}
+                    />
+
+                    <span className="text-sm font-black leading-6 text-slate-800 sm:text-base">
+                      I completed this exercise
+                    </span>
+                  </label>
+
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="mb-2 block text-sm font-black text-slate-700">
+                        Difficulty
+                      </label>
+
+                      <select
+                        value={exercise.difficulty}
+                        onChange={(event) =>
+                          updateDifficulty(originalIndex, event.target.value)
+                        }
+                        disabled={isSubmitting}
+                        className="w-full rounded-2xl border border-amber-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-amber-300 focus:ring-4 focus:ring-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <option value="">Select difficulty</option>
+                        <option value="Easy">Easy</option>
+                        <option value="Moderate">Moderate</option>
+                        <option value="Hard">Hard</option>
+                        <option value="Could not complete">
+                          Could not complete
+                        </option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-black text-slate-700">
+                        Notes
+                      </label>
+
+                      <input
+                        value={exercise.notes}
+                        onChange={(event) =>
+                          updateNotes(originalIndex, event.target.value)
+                        }
+                        disabled={isSubmitting}
+                        placeholder="Optional note for your trainer"
+                        className="w-full rounded-2xl border border-amber-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-amber-300 focus:ring-4 focus:ring-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         ))}
       </section>
 
       <button
+        type="button"
         onClick={submitRepeatedWorkout}
         disabled={isSubmitting || loggedExercises.length === 0}
         className="mt-6 w-full rounded-2xl bg-amber-500 px-5 py-4 text-sm font-black text-white shadow-sm hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60 sm:mt-8"
