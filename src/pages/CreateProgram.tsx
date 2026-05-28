@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import {
   closestCenter,
@@ -19,6 +19,15 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "../lib/supabaseClient";
 
+const WORKOUT_SECTIONS = [
+  "Warm-Up",
+  "Activation / Core / Balance",
+  "SAQ / Skill Development",
+  "Resistance Training",
+  "Cool-Down",
+  "Other",
+];
+
 type ClientProfile = {
   id: string;
   full_name: string;
@@ -27,6 +36,7 @@ type ClientProfile = {
 
 type ExerciseForm = {
   formId: string;
+  section: string;
   exerciseName: string;
   sets: string;
   reps: string;
@@ -43,6 +53,7 @@ type WorkoutForm = {
 
 type ExistingExercise = {
   id: string;
+  section: string | null;
   exercise_name: string;
   sets: string;
   reps: string;
@@ -76,6 +87,31 @@ type PlanWeekWithWorkouts = {
   }[];
 };
 
+type HistoricalExercise = {
+  id: string;
+  historical_workout_id: string;
+  section?: string | null;
+  exercise_name?: string | null;
+  sets?: string | null;
+  reps?: string | null;
+  weight?: string | null;
+  rest?: string | null;
+  notes?: string | null;
+  original_line?: string | null;
+  exercise_order?: number | null;
+  order_index?: number | null;
+};
+
+type HistoricalWorkoutTemplate = {
+  id: string;
+  client_id: string;
+  title?: string | null;
+  workout_date?: string | null;
+  notes?: string | null;
+  source?: string | null;
+  client_historical_workout_exercises: HistoricalExercise[];
+};
+
 function makeId() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
@@ -84,9 +120,10 @@ function makeId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function blankExercise(): ExerciseForm {
+function blankExercise(section = "Warm-Up"): ExerciseForm {
   return {
     formId: makeId(),
+    section,
     exerciseName: "",
     sets: "",
     reps: "",
@@ -102,6 +139,18 @@ function blankWorkout(): WorkoutForm {
     title: "",
     exercises: [blankExercise()],
   };
+}
+
+function formatDate(dateValue?: string | null) {
+  if (!dateValue) return "No date";
+
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateValue;
+  }
+
+  return date.toLocaleDateString();
 }
 
 export default function CreateProgram() {
@@ -124,6 +173,16 @@ export default function CreateProgram() {
   const [isLoadingExistingWorkouts, setIsLoadingExistingWorkouts] =
     useState(false);
 
+  const [historicalTemplates, setHistoricalTemplates] = useState<
+    HistoricalWorkoutTemplate[]
+  >([]);
+  const [selectedHistoricalClientId, setSelectedHistoricalClientId] =
+    useState("all");
+  const [selectedHistoricalTemplateId, setSelectedHistoricalTemplateId] =
+    useState("");
+  const [isLoadingHistoricalTemplates, setIsLoadingHistoricalTemplates] =
+    useState(false);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -137,6 +196,7 @@ export default function CreateProgram() {
 
   useEffect(() => {
     loadClients();
+    loadHistoricalTemplates();
   }, []);
 
   useEffect(() => {
@@ -174,6 +234,77 @@ export default function CreateProgram() {
     }
 
     setClients(data || []);
+  }
+
+  async function loadHistoricalTemplates() {
+    setIsLoadingHistoricalTemplates(true);
+
+    const { data: workoutsData, error: workoutsError } = await supabase
+      .from("client_historical_workouts")
+      .select("*")
+      .order("workout_date", { ascending: false });
+
+    if (workoutsError) {
+      console.error(workoutsError);
+      setStatusMessage(
+        "Could not load historical workout templates: " +
+          workoutsError.message
+      );
+      setHistoricalTemplates([]);
+      setIsLoadingHistoricalTemplates(false);
+      return;
+    }
+
+    const historicalWorkouts = (workoutsData ||
+      []) as HistoricalWorkoutTemplate[];
+
+    if (historicalWorkouts.length === 0) {
+      setHistoricalTemplates([]);
+      setIsLoadingHistoricalTemplates(false);
+      return;
+    }
+
+    const historicalWorkoutIds = historicalWorkouts.map((workout) => workout.id);
+
+    const { data: exercisesData, error: exercisesError } = await supabase
+      .from("client_historical_workout_exercises")
+      .select("*")
+      .in("historical_workout_id", historicalWorkoutIds);
+
+    if (exercisesError) {
+      console.error(exercisesError);
+      setStatusMessage(
+        "Historical workouts loaded, but exercises could not load: " +
+          exercisesError.message
+      );
+
+      setHistoricalTemplates(
+        historicalWorkouts.map((workout) => ({
+          ...workout,
+          client_historical_workout_exercises: [],
+        }))
+      );
+
+      setIsLoadingHistoricalTemplates(false);
+      return;
+    }
+
+    const exercises = (exercisesData || []) as HistoricalExercise[];
+
+    const templatesWithExercises = historicalWorkouts.map((workout) => ({
+      ...workout,
+      client_historical_workout_exercises: exercises
+        .filter((exercise) => exercise.historical_workout_id === workout.id)
+        .sort((a, b) => {
+          const aOrder = a.exercise_order ?? a.order_index ?? 0;
+          const bOrder = b.exercise_order ?? b.order_index ?? 0;
+
+          return aOrder - bOrder;
+        }),
+    }));
+
+    setHistoricalTemplates(templatesWithExercises);
+    setIsLoadingHistoricalTemplates(false);
   }
 
   async function loadNextWeekNumber(clientUserId: string) {
@@ -221,6 +352,7 @@ export default function CreateProgram() {
           workout_order,
           client_plan_exercises (
             id,
+            section,
             exercise_name,
             sets,
             reps,
@@ -276,6 +408,22 @@ export default function CreateProgram() {
 
     setExistingWorkouts(sortedWorkouts);
     setIsLoadingExistingWorkouts(false);
+  }
+
+  function getClientName(clientUserId: string) {
+    const client = clients.find(
+      (currentClient) => currentClient.id === clientUserId
+    );
+
+    return client?.full_name || client?.client_id || "Unknown Client";
+  }
+
+  function getClientCode(clientUserId: string) {
+    const client = clients.find(
+      (currentClient) => currentClient.id === clientUserId
+    );
+
+    return client?.client_id || "Not set";
   }
 
   function handleClientChange(value: string) {
@@ -347,6 +495,7 @@ export default function CreateProgram() {
         workoutToCopy.client_plan_exercises.length > 0
           ? workoutToCopy.client_plan_exercises.map((exercise) => ({
               formId: makeId(),
+              section: exercise.section || "Resistance Training",
               exerciseName: exercise.exercise_name || "",
               sets: exercise.sets || "",
               reps: exercise.reps || "",
@@ -357,6 +506,95 @@ export default function CreateProgram() {
           : [blankExercise()],
     };
 
+    addCopiedWorkoutToForm(copiedWorkout);
+
+    setStatusMessage(
+      `"${workoutToCopy.title}" from ${workoutToCopy.source_client_name} copied into the form. You can now edit it before saving to the target client.`
+    );
+  }
+
+  function copySelectedHistoricalTemplate() {
+    if (!selectedHistoricalTemplateId) {
+      setStatusMessage("Choose a past workout template first.");
+      return;
+    }
+
+    const template = historicalTemplates.find(
+      (workout) => workout.id === selectedHistoricalTemplateId
+    );
+
+    if (!template) {
+      setStatusMessage("Could not find that past workout template.");
+      return;
+    }
+
+    copyHistoricalTemplateIntoForm(template);
+  }
+
+  function copyHistoricalTemplateById(templateId: string) {
+    setSelectedHistoricalTemplateId(templateId);
+
+    const template = historicalTemplates.find(
+      (workout) => workout.id === templateId
+    );
+
+    if (!template) {
+      setStatusMessage("Could not find that past workout template.");
+      return;
+    }
+
+    copyHistoricalTemplateIntoForm(template);
+  }
+
+  function copyHistoricalTemplateIntoForm(template: HistoricalWorkoutTemplate) {
+    const sortedExercises = [
+      ...(template.client_historical_workout_exercises || []),
+    ].sort((a, b) => {
+      const aOrder = a.exercise_order ?? a.order_index ?? 0;
+      const bOrder = b.exercise_order ?? b.order_index ?? 0;
+
+      return aOrder - bOrder;
+    });
+
+    const copiedWorkout: WorkoutForm = {
+      formId: makeId(),
+      title: template.title
+        ? `${template.title} Template`
+        : "Past Workout Template",
+      exercises:
+        sortedExercises.length > 0
+          ? sortedExercises.map((exercise) => {
+              const section = exercise.section?.trim() || "Resistance Training";
+              const exerciseName = exercise.exercise_name?.trim();
+              const fallbackLine = exercise.original_line?.trim();
+
+              return {
+                formId: makeId(),
+                section,
+                exerciseName:
+                  exerciseName ||
+                  fallbackLine ||
+                  (section ? `${section} Exercise` : "Imported Exercise"),
+                sets: exercise.sets || "",
+                reps: exercise.reps || "",
+                weight: exercise.weight || "",
+                rest: exercise.rest || "",
+                videoLink: "",
+              };
+            })
+          : [blankExercise()],
+    };
+
+    addCopiedWorkoutToForm(copiedWorkout);
+
+    setStatusMessage(
+      `"${template.title || "Past workout"}" from ${getClientName(
+        template.client_id
+      )} copied as a template. You can edit it before saving to the target client.`
+    );
+  }
+
+  function addCopiedWorkoutToForm(copiedWorkout: WorkoutForm) {
     setWorkouts((currentWorkouts) => {
       const hasOnlyBlankWorkout =
         currentWorkouts.length === 1 &&
@@ -370,10 +608,6 @@ export default function CreateProgram() {
 
       return [...currentWorkouts, copiedWorkout];
     });
-
-    setStatusMessage(
-      `"${workoutToCopy.title}" from ${workoutToCopy.source_client_name} copied into the form. You can now edit it before saving to the target client.`
-    );
   }
 
   function duplicateWorkoutInForm(workoutIndex: number) {
@@ -437,14 +671,14 @@ export default function CreateProgram() {
     );
   }
 
-  function addExercise(workoutIndex: number) {
+  function addExercise(workoutIndex: number, section = "Resistance Training") {
     setWorkouts((currentWorkouts) =>
       currentWorkouts.map((workout, index) => {
         if (index !== workoutIndex) return workout;
 
         return {
           ...workout,
-          exercises: [...workout.exercises, blankExercise()],
+          exercises: [...workout.exercises, blankExercise(section)],
         };
       })
     );
@@ -521,7 +755,7 @@ export default function CreateProgram() {
     );
   }
 
-  async function saveProgram(event: React.FormEvent) {
+  async function saveProgram(event: FormEvent) {
     event.preventDefault();
 
     if (!selectedClientId) {
@@ -541,6 +775,7 @@ export default function CreateProgram() {
         exercises: workout.exercises
           .map((exercise) => ({
             ...exercise,
+            section: exercise.section.trim() || "Resistance Training",
             exerciseName: exercise.exerciseName.trim(),
             sets: exercise.sets.trim(),
             reps: exercise.reps.trim(),
@@ -656,6 +891,7 @@ export default function CreateProgram() {
 
       const exerciseRows = workout.exercises.map((exercise, exerciseIndex) => ({
         workout_id: workoutData.id,
+        section: exercise.section,
         exercise_name: exercise.exerciseName,
         sets: exercise.sets,
         reps: exercise.reps,
@@ -696,11 +932,23 @@ export default function CreateProgram() {
     if (copySourceClientId) {
       await loadExistingWorkouts(copySourceClientId);
     }
+
+    await loadHistoricalTemplates();
   }
 
   const selectedClient = clients.find((client) => client.id === selectedClientId);
   const copySourceClient = clients.find(
     (client) => client.id === copySourceClientId
+  );
+
+  const filteredHistoricalTemplates = historicalTemplates.filter((template) =>
+    selectedHistoricalClientId === "all"
+      ? true
+      : template.client_id === selectedHistoricalClientId
+  );
+
+  const historicalClientsWithTemplates = clients.filter((client) =>
+    historicalTemplates.some((template) => template.client_id === client.id)
   );
 
   return (
@@ -719,9 +967,8 @@ export default function CreateProgram() {
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
-                  Build a new week for one client, copy workouts from any
-                  client, add multiple workouts to the same week, and edit
-                  everything before saving.
+                  Build a section-based workout using your NASM flow: warm-up,
+                  activation, SAQ, resistance training, and cool-down.
                 </p>
               </div>
 
@@ -747,9 +994,9 @@ export default function CreateProgram() {
 
           <div className="grid gap-4 p-4 sm:p-6 md:grid-cols-4 md:p-8">
             <SummaryCard title="Step 1" value="Choose Target" />
-            <SummaryCard title="Step 2" value="Copy From Any Client" />
-            <SummaryCard title="Step 3" value="Edit + Drag" />
-            <SummaryCard title="Step 4" value="Save or Add to Week" />
+            <SummaryCard title="Step 2" value="Copy or Template" />
+            <SummaryCard title="Step 3" value="Build by Section" />
+            <SummaryCard title="Step 4" value="Save to Week" />
           </div>
         </div>
 
@@ -821,12 +1068,12 @@ export default function CreateProgram() {
               <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h2 className="text-xl font-bold text-slate-900">
-                    Copy Existing Workout
+                    Copy Existing Assigned Workout
                   </h2>
 
                   <p className="mt-1 text-sm leading-6 text-slate-600">
-                    Choose any client as the source, copy one of their workouts,
-                    then edit it before saving it to the target client.
+                    Choose any client as the source, copy one of their assigned
+                    workouts, then edit it before saving it to the target client.
                   </p>
                 </div>
 
@@ -882,7 +1129,8 @@ export default function CreateProgram() {
                 </p>
               ) : existingWorkouts.length === 0 ? (
                 <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
-                  No previous workouts found for this source client yet.
+                  No previous assigned workouts found for this source client
+                  yet.
                 </p>
               ) : (
                 <>
@@ -950,6 +1198,171 @@ export default function CreateProgram() {
             </div>
           )}
 
+          {selectedClientId && (
+            <div className="mt-6 rounded-3xl border border-amber-100 bg-amber-50 p-4 sm:p-5">
+              <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">
+                    Use Imported Past Workout as Template
+                  </h2>
+
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    Copy an imported historical workout into this program. This
+                    keeps the warm-up, activation, SAQ, resistance, and cool-down
+                    sections when available.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={loadHistoricalTemplates}
+                  className="rounded-xl border border-amber-100 bg-white px-4 py-3 text-sm font-semibold text-amber-700 transition hover:bg-amber-50 sm:py-2"
+                >
+                  Refresh Templates
+                </button>
+              </div>
+
+              <div className="mb-4 grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Filter Templates by Client
+                  </label>
+
+                  <select
+                    value={selectedHistoricalClientId}
+                    onChange={(event) => {
+                      setSelectedHistoricalClientId(event.target.value);
+                      setSelectedHistoricalTemplateId("");
+                    }}
+                    className="w-full rounded-xl border border-amber-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-amber-300 focus:ring-2 focus:ring-amber-100"
+                  >
+                    <option value="all">All clients</option>
+                    {historicalClientsWithTemplates.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.full_name} — {client.client_id}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Select Past Workout Template
+                  </label>
+
+                  <select
+                    value={selectedHistoricalTemplateId}
+                    onChange={(event) =>
+                      setSelectedHistoricalTemplateId(event.target.value)
+                    }
+                    className="w-full rounded-xl border border-amber-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-amber-300 focus:ring-2 focus:ring-amber-100"
+                  >
+                    <option value="">Choose template</option>
+                    {filteredHistoricalTemplates.map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {getClientName(template.client_id)} —{" "}
+                        {formatDate(template.workout_date)} —{" "}
+                        {template.title || "Untitled Past Workout"} (
+                        {
+                          template.client_historical_workout_exercises.length
+                        }{" "}
+                        exercises)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {isLoadingHistoricalTemplates ? (
+                <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
+                  Loading imported past workout templates...
+                </p>
+              ) : historicalTemplates.length === 0 ? (
+                <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
+                  No imported historical workouts found yet. Import past notes
+                  first, then they will appear here as templates.
+                </p>
+              ) : filteredHistoricalTemplates.length === 0 ? (
+                <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
+                  No templates found for this client.
+                </p>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={copySelectedHistoricalTemplate}
+                    className="mb-4 rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-600"
+                  >
+                    Copy Selected Template Into Form
+                  </button>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {filteredHistoricalTemplates.slice(0, 8).map((template) => (
+                      <button
+                        key={template.id}
+                        type="button"
+                        onClick={() => copyHistoricalTemplateById(template.id)}
+                        className="rounded-2xl border border-amber-100 bg-white p-4 text-left transition hover:border-amber-200 hover:bg-amber-50"
+                      >
+                        <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">
+                          {getClientName(template.client_id)} •{" "}
+                          {formatDate(template.workout_date)}
+                        </p>
+
+                        <h3 className="mt-1 font-bold text-slate-900">
+                          {template.title || "Untitled Past Workout"}
+                        </h3>
+
+                        <p className="mt-1 text-sm text-slate-500">
+                          ID: {getClientCode(template.client_id)}
+                        </p>
+
+                        <p className="mt-1 text-sm text-slate-500">
+                          {
+                            template.client_historical_workout_exercises.length
+                          }{" "}
+                          exercise
+                          {template.client_historical_workout_exercises
+                            .length === 1
+                            ? ""
+                            : "s"}
+                        </p>
+
+                        <div className="mt-3 space-y-1">
+                          {template.client_historical_workout_exercises
+                            .slice(0, 3)
+                            .map((exercise) => (
+                              <p
+                                key={exercise.id}
+                                className="line-clamp-1 text-xs text-slate-500"
+                              >
+                                {exercise.section
+                                  ? `${exercise.section}: `
+                                  : ""}
+                                {exercise.exercise_name ||
+                                  exercise.original_line ||
+                                  "Imported exercise"}
+                              </p>
+                            ))}
+
+                          {template.client_historical_workout_exercises.length >
+                            3 && (
+                            <p className="text-xs font-semibold text-amber-600">
+                              +
+                              {template.client_historical_workout_exercises
+                                .length - 3}{" "}
+                              more
+                            </p>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           <div className="mt-8">
             <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
@@ -958,9 +1371,8 @@ export default function CreateProgram() {
                 </h2>
 
                 <p className="mt-1 text-sm leading-6 text-slate-500">
-                  Set the week number above. If that week already exists, these
-                  workout(s) will be added into that week instead of being
-                  blocked.
+                  Build each workout by section. Add warm-up, activation, SAQ,
+                  resistance training, and cool-down exercises.
                 </p>
               </div>
 
@@ -1007,20 +1419,31 @@ export default function CreateProgram() {
                     label="Workout Title"
                     value={workout.title}
                     onChange={(value) => updateWorkoutTitle(workoutIndex, value)}
-                    placeholder="Push Day"
+                    placeholder="Day 1 Stabilization Endurance"
                   />
 
                   <div className="mt-5">
-                    <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                      <h4 className="font-bold text-slate-900">Exercises</h4>
+                    <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <h4 className="font-bold text-slate-900">Exercises</h4>
+                        <p className="mt-1 text-sm text-slate-500">
+                          Use the section buttons to build the workout in your
+                          coaching flow.
+                        </p>
+                      </div>
 
-                      <button
-                        type="button"
-                        onClick={() => addExercise(workoutIndex)}
-                        className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50"
-                      >
-                        Add Exercise
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        {WORKOUT_SECTIONS.map((section) => (
+                          <button
+                            key={section}
+                            type="button"
+                            onClick={() => addExercise(workoutIndex, section)}
+                            className="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50"
+                          >
+                            + {section}
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
                     <DndContext
@@ -1036,19 +1459,71 @@ export default function CreateProgram() {
                         )}
                         strategy={verticalListSortingStrategy}
                       >
-                        <div className="space-y-4">
-                          {workout.exercises.map((exercise, exerciseIndex) => (
-                            <SortableExerciseCard
-                              key={exercise.formId}
-                              exercise={exercise}
-                              exerciseIndex={exerciseIndex}
-                              workoutIndex={workoutIndex}
-                              totalExercises={workout.exercises.length}
-                              updateExercise={updateExercise}
-                              moveExercise={moveExercise}
-                              removeExercise={removeExercise}
-                            />
-                          ))}
+                        <div className="space-y-6">
+                          {WORKOUT_SECTIONS.map((section) => {
+                            const sectionExercises = workout.exercises
+                              .map((exercise, originalIndex) => ({
+                                exercise,
+                                originalIndex,
+                              }))
+                              .filter(
+                                (item) => item.exercise.section === section
+                              );
+
+                            if (sectionExercises.length === 0) return null;
+
+                            return (
+                              <div
+                                key={section}
+                                className="rounded-3xl border border-sky-100 bg-white/70 p-4"
+                              >
+                                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                  <div>
+                                    <h5 className="text-base font-bold text-slate-900">
+                                      {section}
+                                    </h5>
+
+                                    <p className="text-xs font-medium text-slate-500">
+                                      {sectionExercises.length} exercise
+                                      {sectionExercises.length === 1
+                                        ? ""
+                                        : "s"}
+                                    </p>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      addExercise(workoutIndex, section)
+                                    }
+                                    className="rounded-xl bg-sky-50 px-3 py-2 text-xs font-semibold text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50"
+                                  >
+                                    Add to {section}
+                                  </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                  {sectionExercises.map(
+                                    ({ exercise, originalIndex }) => (
+                                      <SortableExerciseCard
+                                        key={exercise.formId}
+                                        exercise={exercise}
+                                        exerciseIndex={originalIndex}
+                                        displayIndex={originalIndex + 1}
+                                        workoutIndex={workoutIndex}
+                                        totalExercises={
+                                          workout.exercises.length
+                                        }
+                                        updateExercise={updateExercise}
+                                        moveExercise={moveExercise}
+                                        removeExercise={removeExercise}
+                                      />
+                                    )
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </SortableContext>
                     </DndContext>
@@ -1080,6 +1555,7 @@ export default function CreateProgram() {
 function SortableExerciseCard({
   exercise,
   exerciseIndex,
+  displayIndex,
   workoutIndex,
   totalExercises,
   updateExercise,
@@ -1088,6 +1564,7 @@ function SortableExerciseCard({
 }: {
   exercise: ExerciseForm;
   exerciseIndex: number;
+  displayIndex: number;
   workoutIndex: number;
   totalExercises: number;
   updateExercise: (
@@ -1132,13 +1609,13 @@ function SortableExerciseCard({
             {...attributes}
             {...listeners}
             className="cursor-grab rounded-xl bg-sky-50 px-3 py-2 text-sm font-semibold text-slate-600 ring-1 ring-sky-100 active:cursor-grabbing"
-            aria-label={`Drag Exercise ${exerciseIndex + 1}`}
+            aria-label={`Drag Exercise ${displayIndex}`}
           >
             ☰ Drag
           </button>
 
           <h5 className="font-semibold text-slate-900">
-            Exercise {exerciseIndex + 1}
+            Exercise {displayIndex}
           </h5>
         </div>
 
@@ -1172,13 +1649,38 @@ function SortableExerciseCard({
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Section
+          </label>
+
+          <select
+            value={exercise.section}
+            onChange={(event) =>
+              updateExercise(
+                workoutIndex,
+                exerciseIndex,
+                "section",
+                event.target.value
+              )
+            }
+            className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+          >
+            {WORKOUT_SECTIONS.map((section) => (
+              <option key={section} value={section}>
+                {section}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <Input
           label="Exercise Name"
           value={exercise.exerciseName}
           onChange={(value) =>
             updateExercise(workoutIndex, exerciseIndex, "exerciseName", value)
           }
-          placeholder="Bench Press"
+          placeholder="Band Pull Aparts"
         />
 
         <Input
@@ -1187,16 +1689,16 @@ function SortableExerciseCard({
           onChange={(value) =>
             updateExercise(workoutIndex, exerciseIndex, "sets", value)
           }
-          placeholder="3"
+          placeholder="2"
         />
 
         <Input
-          label="Reps"
+          label="Reps / Time"
           value={exercise.reps}
           onChange={(value) =>
             updateExercise(workoutIndex, exerciseIndex, "reps", value)
           }
-          placeholder="10"
+          placeholder="10 reps or 30 sec"
         />
 
         <Input
@@ -1205,7 +1707,7 @@ function SortableExerciseCard({
           onChange={(value) =>
             updateExercise(workoutIndex, exerciseIndex, "weight", value)
           }
-          placeholder="95 lbs"
+          placeholder="None or 45 lbs"
         />
 
         <Input
@@ -1214,7 +1716,7 @@ function SortableExerciseCard({
           onChange={(value) =>
             updateExercise(workoutIndex, exerciseIndex, "rest", value)
           }
-          placeholder="60 seconds"
+          placeholder="30-60 sec"
         />
 
         <Input
