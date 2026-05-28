@@ -6,6 +6,7 @@ import ClientLayout from "../components/ClientLayout";
 type WorkoutSubmission = {
   id: string;
   client_user_id?: string;
+  workout_id?: string | null;
   workout_title?: string | null;
   title?: string | null;
   notes?: string | null;
@@ -61,6 +62,7 @@ type CombinedWorkoutItem =
       date: string | null;
       notes: string;
       painReported: boolean;
+      isRepeatedWorkout: boolean;
     }
   | {
       type: "personal";
@@ -223,6 +225,10 @@ export default function ClientPastWorkouts() {
         submission.date ||
         null;
 
+      const isRepeatedWorkout =
+        submission.workout_id === null ||
+        workoutTitle.toLowerCase().includes("repeated");
+
       return {
         type: "program" as const,
         id: submission.id,
@@ -230,6 +236,7 @@ export default function ClientPastWorkouts() {
         date: submissionDate,
         notes,
         painReported,
+        isRepeatedWorkout,
       };
     }),
 
@@ -269,6 +276,16 @@ export default function ClientPastWorkouts() {
     return dateB - dateA;
   });
 
+  const repeatedWorkoutCount = programSubmissions.filter((submission) => {
+    const workoutTitle =
+      submission.workout_title || submission.title || "Completed Workout";
+
+    return (
+      submission.workout_id === null ||
+      workoutTitle.toLowerCase().includes("repeated")
+    );
+  }).length;
+
   const painReportCount = programSubmissions.filter(
     (submission) => submission.pain_reported === true || submission.pain === true
   ).length;
@@ -286,8 +303,8 @@ export default function ClientPastWorkouts() {
           </h1>
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
-            Review completed program workouts, personal activities, and imported
-            workouts from your trainer’s notes.
+            Review completed program workouts, repeated workouts, personal
+            activities, and imported workouts from your trainer’s notes.
           </p>
         </div>
 
@@ -307,11 +324,22 @@ export default function ClientPastWorkouts() {
           />
 
           <SummaryCard
-            title="Pain Reports"
-            value={`${painReportCount}`}
-            alert={painReportCount > 0}
+            title="Repeated"
+            value={`${repeatedWorkoutCount}`}
+            alert={repeatedWorkoutCount > 0}
           />
         </div>
+
+        {painReportCount > 0 && (
+          <div className="px-4 pb-4 sm:px-6 md:px-8 md:pb-8">
+            <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
+              <p className="text-sm font-black text-red-700">
+                {painReportCount} pain report
+                {painReportCount === 1 ? "" : "s"} found in completed workouts.
+              </p>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
@@ -325,8 +353,8 @@ export default function ClientPastWorkouts() {
           </h2>
 
           <p className="mt-1 text-sm leading-6 text-slate-500">
-            Program workouts, personal activities, and imported past workouts are
-            shown together, but labeled separately.
+            Program workouts, repeated workouts, personal activities, and
+            imported past workouts are shown together, but labeled separately.
           </p>
         </div>
 
@@ -359,14 +387,32 @@ export default function ClientPastWorkouts() {
                   <Link
                     key={`program-${item.id}`}
                     to={`/workout-history/${item.id}`}
-                    className="block rounded-2xl border border-sky-100 bg-sky-50 p-4 transition hover:border-blue-200 hover:bg-white hover:shadow-sm active:scale-[0.99] sm:p-5"
+                    className={`block rounded-2xl border p-4 transition hover:bg-white hover:shadow-sm active:scale-[0.99] sm:p-5 ${
+                      item.isRepeatedWorkout
+                        ? "border-amber-100 bg-amber-50 hover:border-amber-200"
+                        : "border-sky-100 bg-sky-50 hover:border-blue-200"
+                    }`}
                   >
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <div className="mb-2 flex flex-wrap items-center gap-2">
-                          <span className="w-fit rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-100">
-                            Program Workout
+                          <span
+                            className={`w-fit rounded-full px-3 py-1 text-xs font-black ring-1 ${
+                              item.isRepeatedWorkout
+                                ? "bg-amber-100 text-amber-700 ring-amber-200"
+                                : "bg-blue-50 text-blue-700 ring-blue-100"
+                            }`}
+                          >
+                            {item.isRepeatedWorkout
+                              ? "Repeated Workout"
+                              : "Program Workout"}
                           </span>
+
+                          {item.isRepeatedWorkout && (
+                            <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600 ring-1 ring-amber-100">
+                              From Past Workout
+                            </span>
+                          )}
                         </div>
 
                         <h2 className="text-lg font-black text-slate-900">
@@ -399,7 +445,13 @@ export default function ClientPastWorkouts() {
                       </p>
                     </div>
 
-                    <p className="mt-4 text-sm font-black text-blue-600">
+                    <p
+                      className={`mt-4 text-sm font-black ${
+                        item.isRepeatedWorkout
+                          ? "text-amber-700"
+                          : "text-blue-600"
+                      }`}
+                    >
                       View workout details →
                     </p>
                   </Link>
