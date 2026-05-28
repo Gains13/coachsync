@@ -11,6 +11,7 @@ type CompletedSubmission = {
 
 type PlanExercise = {
   id: string;
+  section?: string | null;
   exercise_name: string;
   sets: string;
   reps: string;
@@ -109,6 +110,7 @@ export default function ClientPlan() {
           workout_order,
           client_plan_exercises (
             id,
+            section,
             exercise_name,
             sets,
             reps,
@@ -141,30 +143,13 @@ export default function ClientPlan() {
     [completedSubmissions]
   );
 
-  const completedWorkoutTitles = useMemo(
-    () => completedSubmissions.map((submission) => submission.workout_title),
-    [completedSubmissions]
-  );
-
   function isWorkoutCompleted(workout: PlanWorkout) {
-    if (completedWorkoutIds.includes(workout.id)) {
-      return true;
-    }
-
-    return completedWorkoutTitles.includes(workout.title);
+    return completedWorkoutIds.includes(workout.id);
   }
 
   function getCompletedSubmissionId(workout: PlanWorkout) {
-    const exactMatch = completedSubmissions.find(
-      (submission) => submission.workout_id === workout.id
-    );
-
-    if (exactMatch) {
-      return exactMatch.id;
-    }
-
     return completedSubmissions.find(
-      (submission) => submission.workout_title === workout.title
+      (submission) => submission.workout_id === workout.id
     )?.id;
   }
 
@@ -178,41 +163,45 @@ export default function ClientPlan() {
     return workouts.every((workout) => isWorkoutCompleted(workout));
   }
 
-  const sortedAssignedWeeks = useMemo(() => {
-    return [...assignedWeeks].sort((a, b) => {
-      const aCompleted = isWeekCompleted(a);
-      const bCompleted = isWeekCompleted(b);
+  const activeAssignedWeeks = useMemo(() => {
+    return assignedWeeks.filter((week) => !isWeekCompleted(week));
+  }, [assignedWeeks, completedWorkoutIds]);
 
-      if (aCompleted !== bCompleted) {
-        return aCompleted ? 1 : -1;
-      }
+  const completedWeekCount = useMemo(() => {
+    return assignedWeeks.filter((week) => isWeekCompleted(week)).length;
+  }, [assignedWeeks, completedWorkoutIds]);
 
-      if (aCompleted && bCompleted) {
-        return b.week_number - a.week_number;
-      }
+  const sortedActiveWeeks = useMemo(() => {
+    return [...activeAssignedWeeks].sort((a, b) => {
+      if (a.status === "locked" && b.status !== "locked") return 1;
+      if (a.status !== "locked" && b.status === "locked") return -1;
 
       return a.week_number - b.week_number;
     });
-  }, [assignedWeeks, completedWorkoutIds, completedWorkoutTitles]);
+  }, [activeAssignedWeeks]);
 
   const nextAssignedWorkout = useMemo(() => {
-    const availableWorkouts = sortedAssignedWeeks
+    const availableWorkouts = sortedActiveWeeks
       .filter((week) => week.status !== "locked")
-      .flatMap((week) => week.client_plan_workouts || []);
+      .flatMap((week) =>
+        [...(week.client_plan_workouts || [])]
+          .sort((a, b) => a.workout_order - b.workout_order)
+          .map((workout) => ({
+            ...workout,
+            weekStatus: week.status,
+            weekNumber: week.week_number,
+          }))
+      );
 
-    return [...availableWorkouts]
-      .sort((a, b) => {
-        const aCompleted = isWorkoutCompleted(a);
-        const bCompleted = isWorkoutCompleted(b);
+    return availableWorkouts.find((workout) => !isWorkoutCompleted(workout));
+  }, [sortedActiveWeeks, completedWorkoutIds]);
 
-        if (aCompleted !== bCompleted) {
-          return aCompleted ? 1 : -1;
-        }
-
-        return a.workout_order - b.workout_order;
-      })
-      .find((workout) => !isWorkoutCompleted(workout));
-  }, [sortedAssignedWeeks, completedWorkoutIds, completedWorkoutTitles]);
+  const activeWorkoutCount = useMemo(() => {
+    return activeAssignedWeeks.reduce(
+      (total, week) => total + (week.client_plan_workouts || []).length,
+      0
+    );
+  }, [activeAssignedWeeks]);
 
   return (
     <ClientLayout unreadMessages={unreadMessages}>
@@ -227,21 +216,15 @@ export default function ClientPlan() {
           </h1>
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
-            View your current workout, upcoming sessions, and completed
-            workouts.
+            View your current workout and upcoming sessions. Completed weeks
+            move out of this tab and stay in Past Workouts.
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-4 md:p-8">
-          <SummaryCard
-            title="Weeks"
-            value={`${assignedWeeks.length}`}
-          />
+          <SummaryCard title="Active Weeks" value={`${activeAssignedWeeks.length}`} />
 
-          <SummaryCard
-            title="Completed"
-            value={`${completedSubmissions.length}`}
-          />
+          <SummaryCard title="Completed Weeks" value={`${completedWeekCount}`} />
 
           <SummaryCard
             title="Current"
@@ -278,11 +261,26 @@ export default function ClientPlan() {
               Your trainer has not added a program for you yet.
             </p>
           </div>
+        ) : sortedActiveWeeks.length === 0 ? (
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-6">
+            <h3 className="text-lg font-black text-slate-900">
+              All assigned workouts completed
+            </h3>
+
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Great job. Your completed workouts have moved to Past Workouts.
+            </p>
+
+            <Link
+              to="/client-past-workouts"
+              className="mt-5 inline-block rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-700"
+            >
+              View Past Workouts →
+            </Link>
+          </div>
         ) : (
           <div className="space-y-5 sm:space-y-6">
-            {sortedAssignedWeeks.map((week) => {
-              const weekCompleted = isWeekCompleted(week);
-
+            {sortedActiveWeeks.map((week) => {
               const sortedWeekWorkouts = [
                 ...(week.client_plan_workouts || []),
               ].sort((a, b) => {
@@ -296,14 +294,24 @@ export default function ClientPlan() {
                 return a.workout_order - b.workout_order;
               });
 
+              const incompleteWorkouts = sortedWeekWorkouts.filter(
+                (workout) => !isWorkoutCompleted(workout)
+              );
+
+              const completedWorkouts = sortedWeekWorkouts.filter((workout) =>
+                isWorkoutCompleted(workout)
+              );
+
+              const weekIncompleteCount = incompleteWorkouts.length;
+              const weekCompletedCount = completedWorkouts.length;
+              const weekTotalCount = sortedWeekWorkouts.length;
+
               return (
                 <div
                   key={week.id}
                   className={`rounded-[1.5rem] border p-4 sm:rounded-3xl sm:p-5 ${
                     week.status === "locked"
                       ? "border-slate-200 bg-slate-50 opacity-80"
-                      : weekCompleted
-                      ? "border-emerald-100 bg-emerald-50 opacity-95"
                       : "border-sky-100 bg-sky-50"
                   }`}
                 >
@@ -316,22 +324,23 @@ export default function ClientPlan() {
                       <h3 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
                         Week {week.week_number}
                       </h3>
+
+                      <p className="mt-1 text-sm font-semibold text-slate-500">
+                        {weekCompletedCount} / {weekTotalCount} workout
+                        {weekTotalCount === 1 ? "" : "s"} completed
+                      </p>
                     </div>
 
                     <span
                       className={`w-fit rounded-full px-3 py-1 text-xs font-black ${
                         week.status === "locked"
                           ? "bg-red-50 text-red-600 ring-1 ring-red-100"
-                          : weekCompleted || week.status === "completed"
-                          ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
                           : "bg-blue-50 text-blue-700 ring-1 ring-blue-100"
                       }`}
                     >
                       {week.status === "locked"
                         ? "Locked / Upcoming"
-                        : weekCompleted || week.status === "completed"
-                        ? "Completed"
-                        : week.status}
+                        : `${weekIncompleteCount} remaining`}
                     </span>
                   </div>
 
@@ -358,7 +367,7 @@ export default function ClientPlan() {
                             <Link
                               key={workout.id}
                               to={`/workout-history/${completedSubmissionId}`}
-                              className="block rounded-2xl border border-slate-200 bg-white p-4 opacity-80 shadow-sm transition hover:border-blue-200 hover:opacity-100 hover:shadow-md active:scale-[0.99] sm:p-5"
+                              className="block rounded-2xl border border-slate-200 bg-white p-4 opacity-70 shadow-sm transition hover:border-blue-200 hover:opacity-100 hover:shadow-md active:scale-[0.99] sm:p-5"
                             >
                               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <h4 className="text-base font-black text-slate-900 sm:text-lg">
@@ -438,6 +447,14 @@ export default function ClientPlan() {
           </div>
         )}
       </section>
+
+      {!isLoadingProgram && !isLoadingCompleted && activeWorkoutCount > 0 && (
+        <p className="mt-4 text-center text-xs font-semibold text-slate-400">
+          Completed workouts will stay visible here until the whole week is done.
+          Once the week is completed, it moves out of My Plan and remains in Past
+          Workouts.
+        </p>
+      )}
     </ClientLayout>
   );
 }
@@ -462,6 +479,12 @@ function WorkoutExerciseList({ workout }: { workout: PlanWorkout }) {
           key={exercise.id}
           className="rounded-2xl border border-sky-100 bg-sky-50 p-4"
         >
+          {exercise.section && (
+            <p className="mb-1 text-xs font-black uppercase tracking-wide text-blue-600">
+              {exercise.section}
+            </p>
+          )}
+
           <p className="font-black text-slate-900">{exercise.exercise_name}</p>
 
           <p className="mt-1 text-sm leading-6 text-slate-500">
