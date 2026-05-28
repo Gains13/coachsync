@@ -211,7 +211,9 @@ export default function StartWorkout() {
 
     const { data: existingDraft, error: draftError } = await supabase
       .from("workout_drafts")
-      .select("id, client_user_id, workout_id, workout_notes, draft_data, updated_at")
+      .select(
+        "id, client_user_id, workout_id, workout_notes, draft_data, updated_at"
+      )
       .eq("client_user_id", user.id)
       .eq("workout_id", workoutId)
       .maybeSingle();
@@ -221,7 +223,6 @@ export default function StartWorkout() {
       setLoggedExercises(freshLoggedExercises);
     } else if (existingDraft) {
       const draft = existingDraft as WorkoutDraftRow;
-
       const savedExercises = draft.draft_data?.loggedExercises || [];
 
       const restoredExercises = freshLoggedExercises.map((freshExercise) => {
@@ -257,26 +258,58 @@ export default function StartWorkout() {
 
     const now = new Date().toISOString();
 
-    const { error } = await supabase.from("workout_drafts").upsert(
-      {
-        client_user_id: currentUserId,
-        workout_id: workoutId,
-        workout_notes: workoutNotes,
-        draft_data: {
-          loggedExercises,
-        },
-        updated_at: now,
-      },
-      {
-        onConflict: "client_user_id,workout_id",
-      }
-    );
+    const { data: existingDraft, error: findError } = await supabase
+      .from("workout_drafts")
+      .select("id")
+      .eq("client_user_id", currentUserId)
+      .eq("workout_id", workoutId)
+      .maybeSingle();
 
-    if (error) {
-      console.error(error);
+    if (findError) {
+      console.error(findError);
       setErrorMessage("Progress could not auto-save. Check connection.");
       setIsSavingDraft(false);
       return;
+    }
+
+    if (existingDraft) {
+      const { error: updateError } = await supabase
+        .from("workout_drafts")
+        .update({
+          workout_notes: workoutNotes,
+          draft_data: {
+            loggedExercises,
+          },
+          updated_at: now,
+        })
+        .eq("id", existingDraft.id);
+
+      if (updateError) {
+        console.error(updateError);
+        setErrorMessage("Progress could not auto-save. Check connection.");
+        setIsSavingDraft(false);
+        return;
+      }
+    } else {
+      const { error: insertError } = await supabase
+        .from("workout_drafts")
+        .insert({
+          client_user_id: currentUserId,
+          workout_id: workoutId,
+          historical_workout_id: null,
+          workout_notes: workoutNotes,
+          draft_data: {
+            loggedExercises,
+          },
+          updated_at: now,
+        });
+
+      if (insertError) {
+        console.error(insertError);
+        setErrorMessage("Progress could not auto-save. Check connection.");
+        setIsSavingDraft(false);
+        return;
+      }
     }
 
     setDraftSavedAt(now);

@@ -275,27 +275,58 @@ export default function ClientRepeatHistoricalWorkout() {
 
     const now = new Date().toISOString();
 
-    const { error } = await supabase.from("workout_drafts").upsert(
-      {
-        client_user_id: currentUserId,
-        workout_id: null,
-        historical_workout_id: historicalWorkoutId,
-        workout_notes: repeatNotes,
-        draft_data: {
-          loggedExercises,
-        },
-        updated_at: now,
-      },
-      {
-        onConflict: "client_user_id,historical_workout_id",
-      }
-    );
+    const { data: existingDraft, error: findError } = await supabase
+      .from("workout_drafts")
+      .select("id")
+      .eq("client_user_id", currentUserId)
+      .eq("historical_workout_id", historicalWorkoutId)
+      .maybeSingle();
 
-    if (error) {
-      console.error(error);
+    if (findError) {
+      console.error(findError);
       setErrorMessage("Progress could not auto-save. Check connection.");
       setIsSavingDraft(false);
       return;
+    }
+
+    if (existingDraft) {
+      const { error: updateError } = await supabase
+        .from("workout_drafts")
+        .update({
+          workout_notes: repeatNotes,
+          draft_data: {
+            loggedExercises,
+          },
+          updated_at: now,
+        })
+        .eq("id", existingDraft.id);
+
+      if (updateError) {
+        console.error(updateError);
+        setErrorMessage("Progress could not auto-save. Check connection.");
+        setIsSavingDraft(false);
+        return;
+      }
+    } else {
+      const { error: insertError } = await supabase
+        .from("workout_drafts")
+        .insert({
+          client_user_id: currentUserId,
+          workout_id: null,
+          historical_workout_id: historicalWorkoutId,
+          workout_notes: repeatNotes,
+          draft_data: {
+            loggedExercises,
+          },
+          updated_at: now,
+        });
+
+      if (insertError) {
+        console.error(insertError);
+        setErrorMessage("Progress could not auto-save. Check connection.");
+        setIsSavingDraft(false);
+        return;
+      }
     }
 
     setDraftSavedAt(now);
