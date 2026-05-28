@@ -525,9 +525,7 @@ export default function ClientPastWorkouts() {
                             <p className="mt-1 text-xs font-semibold text-slate-500">
                               {[
                                 exercise.weight,
-                                exercise.sets
-                                  ? `${exercise.sets} sets`
-                                  : "",
+                                exercise.sets ? `${exercise.sets} sets` : "",
                                 exercise.reps,
                                 exercise.rest,
                               ]
@@ -562,12 +560,21 @@ export default function ClientPastWorkouts() {
                     </p>
                   </div>
 
-                  <Link
-                    to={`/repeat-historical-workout/${item.id}`}
-                    className="mt-4 block rounded-2xl bg-amber-500 px-4 py-3 text-center text-sm font-black text-white shadow-sm transition hover:bg-amber-600 active:scale-[0.99]"
-                  >
-                    Repeat This Workout
-                  </Link>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <Link
+                      to={`/client-historical-workout/${item.id}`}
+                      className="block rounded-2xl border border-amber-100 bg-white px-4 py-3 text-center text-sm font-black text-amber-700 shadow-sm transition hover:bg-amber-50 active:scale-[0.99]"
+                    >
+                      View Details
+                    </Link>
+
+                    <Link
+                      to={`/repeat-historical-workout/${item.id}`}
+                      className="block rounded-2xl bg-amber-500 px-4 py-3 text-center text-sm font-black text-white shadow-sm transition hover:bg-amber-600 active:scale-[0.99]"
+                    >
+                      Repeat This Workout
+                    </Link>
+                  </div>
                 </div>
               );
             })}
