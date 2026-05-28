@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 
 export default function ClientSetup() {
@@ -17,6 +17,7 @@ export default function ClientSetup() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
   useEffect(() => {
@@ -64,6 +65,40 @@ export default function ClientSetup() {
     }
 
     setIsLoading(false);
+  }
+
+  async function handleSkipToDashboard() {
+    setIsSkipping(true);
+    setStatusMessage("Skipping setup and opening your dashboard...");
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setStatusMessage("Could not find your account. Please log in again.");
+      setIsSkipping(false);
+      return;
+    }
+
+    localStorage.setItem(`coachsync-setup-skipped-${user.id}`, "true");
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ setup_complete: true })
+      .eq("id", user.id);
+
+    if (profileError) {
+      setStatusMessage(
+        "Could not skip setup: " + profileError.message
+      );
+      setIsSkipping(false);
+      return;
+    }
+
+    setIsSkipping(false);
+    navigate("/client", { replace: true });
   }
 
   async function handleSubmit(event: React.FormEvent) {
@@ -122,11 +157,13 @@ export default function ClientSetup() {
       return;
     }
 
+    localStorage.setItem(`coachsync-setup-skipped-${clientUserId}`, "true");
+
     setStatusMessage("Setup complete. Taking you to your dashboard...");
     setIsSaving(false);
 
     setTimeout(() => {
-      navigate("/client");
+      navigate("/client", { replace: true });
     }, 900);
   }
 
@@ -161,12 +198,14 @@ export default function ClientSetup() {
                 </p>
               </div>
 
-              <Link
-                to="/client"
-                className="w-full rounded-xl bg-white/15 px-4 py-3 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto sm:py-2"
+              <button
+                type="button"
+                onClick={handleSkipToDashboard}
+                disabled={isSkipping}
+                className="w-full rounded-xl bg-white/15 px-4 py-3 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:py-2"
               >
-                Skip to Dashboard
-              </Link>
+                {isSkipping ? "Skipping..." : "Skip to Dashboard"}
+              </button>
             </div>
           </div>
 
@@ -237,7 +276,7 @@ export default function ClientSetup() {
 
           <button
             type="submit"
-            disabled={isSaving}
+            disabled={isSaving || isSkipping}
             className="mt-6 w-full rounded-2xl bg-blue-600 px-5 py-4 font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving ? "Saving Setup..." : "Save Setup"}
