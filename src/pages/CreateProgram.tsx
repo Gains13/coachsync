@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import {
   closestCenter,
@@ -48,7 +48,22 @@ type ExerciseForm = {
 type WorkoutForm = {
   formId: string;
   title: string;
+  trainerNotes: string;
   exercises: ExerciseForm[];
+};
+
+type ProgramDraftData = {
+  workouts: WorkoutForm[];
+};
+
+type ProgramDraftRow = {
+  id: string;
+  trainer_user_id: string;
+  target_client_user_id: string;
+  week_number: number;
+  week_status: string | null;
+  draft_data: ProgramDraftData | null;
+  updated_at: string;
 };
 
 type ExistingExercise = {
@@ -66,6 +81,7 @@ type ExistingExercise = {
 type ExistingWorkout = {
   id: string;
   title: string;
+  trainer_notes?: string | null;
   workout_order: number;
   week_id: string;
   week_number: number;
@@ -82,6 +98,7 @@ type PlanWeekWithWorkouts = {
   client_plan_workouts: {
     id: string;
     title: string;
+    trainer_notes?: string | null;
     workout_order: number;
     client_plan_exercises: ExistingExercise[];
   }[];
@@ -137,6 +154,7 @@ function blankWorkout(): WorkoutForm {
   return {
     formId: makeId(),
     title: "",
+    trainerNotes: "",
     exercises: [blankExercise()],
   };
 }
@@ -154,6 +172,9 @@ function formatDate(dateValue?: string | null) {
 }
 
 export default function CreateProgram() {
+  const saveDraftTimerRef = useRef<number | null>(null);
+
+  const [currentTrainerUserId, setCurrentTrainerUserId] = useState("");
   const [clients, setClients] = useState<ClientProfile[]>([]);
   const [selectedClientId, setSelectedClientId] = useState("");
   const [copySourceClientId, setCopySourceClientId] = useState("");
@@ -163,6 +184,9 @@ export default function CreateProgram() {
   const [statusMessage, setStatusMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingWeek, setIsLoadingWeek] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState("");
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
 
   const [workouts, setWorkouts] = useState<WorkoutForm[]>([blankWorkout()]);
 
@@ -195,8 +219,15 @@ export default function CreateProgram() {
   );
 
   useEffect(() => {
+    loadTrainerUser();
     loadClients();
     loadHistoricalTemplates();
+
+    return () => {
+      if (saveDraftTimerRef.current) {
+        window.clearTimeout(saveDraftTimerRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -219,6 +250,66 @@ export default function CreateProgram() {
       setSelectedWorkoutToCopy("");
     }
   }, [copySourceClientId]);
+
+  useEffect(() => {
+    if (!currentTrainerUserId || !selectedClientId || !weekNumber) {
+      setDraftLoaded(false);
+      setDraftSavedAt("");
+      return;
+    }
+
+    loadProgramDraft();
+  }, [currentTrainerUserId, selectedClientId, weekNumber]);
+
+  useEffect(() => {
+    if (
+      !currentTrainerUserId ||
+      !selectedClientId ||
+      !weekNumber ||
+      !draftLoaded ||
+      isSaving ||
+      !hasMeaningfulDraftContent()
+    ) {
+      return;
+    }
+
+    if (saveDraftTimerRef.current) {
+      window.clearTimeout(saveDraftTimerRef.current);
+    }
+
+    saveDraftTimerRef.current = window.setTimeout(() => {
+      saveDraftToSupabase();
+    }, 800);
+
+    return () => {
+      if (saveDraftTimerRef.current) {
+        window.clearTimeout(saveDraftTimerRef.current);
+      }
+    };
+  }, [
+    currentTrainerUserId,
+    selectedClientId,
+    weekNumber,
+    weekStatus,
+    workouts,
+    draftLoaded,
+    isSaving,
+  ]);
+
+  async function loadTrainerUser() {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
+    if (error || !user) {
+      console.error(error);
+      setStatusMessage("You must be logged in as a trainer to create programs.");
+      return;
+    }
+
+    setCurrentTrainerUserId(user.id);
+  }
 
   async function loadClients() {
     const { data, error } = await supabase
@@ -349,6 +440,7 @@ export default function CreateProgram() {
         client_plan_workouts (
           id,
           title,
+          trainer_notes,
           workout_order,
           client_plan_exercises (
             id,
@@ -428,6 +520,8 @@ export default function CreateProgram() {
 
   function handleClientChange(value: string) {
     setSelectedClientId(value);
+    setDraftLoaded(false);
+    setDraftSavedAt("");
 
     if (!value) {
       setWeekNumber("1");
@@ -445,6 +539,19 @@ export default function CreateProgram() {
         return {
           ...workout,
           title: value,
+        };
+      })
+    );
+  }
+
+  function updateWorkoutTrainerNotes(workoutIndex: number, value: string) {
+    setWorkouts((currentWorkouts) =>
+      currentWorkouts.map((workout, index) => {
+        if (index !== workoutIndex) return workout;
+
+        return {
+          ...workout,
+          trainerNotes: value,
         };
       })
     );
@@ -491,6 +598,7 @@ export default function CreateProgram() {
     const copiedWorkout: WorkoutForm = {
       formId: makeId(),
       title: `${workoutToCopy.title} Copy`,
+      trainerNotes: workoutToCopy.trainer_notes || "",
       exercises:
         workoutToCopy.client_plan_exercises.length > 0
           ? workoutToCopy.client_plan_exercises.map((exercise) => ({
@@ -561,6 +669,7 @@ export default function CreateProgram() {
       title: template.title
         ? `${template.title} Template`
         : "Past Workout Template",
+      trainerNotes: template.notes || "",
       exercises:
         sortedExercises.length > 0
           ? sortedExercises.map((exercise) => {
@@ -599,6 +708,7 @@ export default function CreateProgram() {
       const hasOnlyBlankWorkout =
         currentWorkouts.length === 1 &&
         currentWorkouts[0].title.trim() === "" &&
+        currentWorkouts[0].trainerNotes.trim() === "" &&
         currentWorkouts[0].exercises.length === 1 &&
         currentWorkouts[0].exercises[0].exerciseName.trim() === "";
 
@@ -615,16 +725,17 @@ export default function CreateProgram() {
 
     if (!workoutToDuplicate) return;
 
-    const copiedWorkout: WorkoutForm = {
+  const copiedWorkout: WorkoutForm = {
+    formId: makeId(),
+    title: workoutToDuplicate.title
+      ? `${workoutToDuplicate.title} Copy`
+      : `Workout ${workoutIndex + 1} Copy`,
+    trainerNotes: workoutToDuplicate.trainerNotes || "",
+    exercises: workoutToDuplicate.exercises.map((exercise) => ({
+      ...exercise,
       formId: makeId(),
-      title: workoutToDuplicate.title
-        ? `${workoutToDuplicate.title} Copy`
-        : `Workout ${workoutIndex + 1} Copy`,
-      exercises: workoutToDuplicate.exercises.map((exercise) => ({
-        ...exercise,
-        formId: makeId(),
-      })),
-    };
+    })),
+  };
 
     setWorkouts((currentWorkouts) => [
       ...currentWorkouts.slice(0, workoutIndex + 1),
@@ -755,6 +866,201 @@ export default function CreateProgram() {
     );
   }
 
+  function hasMeaningfulDraftContent() {
+    if (!selectedClientId || !weekNumber) return false;
+
+    return workouts.some((workout) => {
+      const hasWorkoutText =
+        workout.title.trim() !== "" || workout.trainerNotes.trim() !== "";
+
+      const hasExerciseText = workout.exercises.some(
+        (exercise) =>
+          exercise.exerciseName.trim() !== "" ||
+          exercise.sets.trim() !== "" ||
+          exercise.reps.trim() !== "" ||
+          exercise.weight.trim() !== "" ||
+          exercise.rest.trim() !== "" ||
+          exercise.videoLink.trim() !== ""
+      );
+
+      return hasWorkoutText || hasExerciseText;
+    });
+  }
+
+  async function loadProgramDraft() {
+    if (!currentTrainerUserId || !selectedClientId || !weekNumber) return;
+
+    setDraftLoaded(false);
+
+    const targetWeekNumber = Number(weekNumber);
+
+    if (!targetWeekNumber || targetWeekNumber < 1) {
+      setDraftLoaded(true);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("trainer_program_drafts")
+      .select(
+        "id, trainer_user_id, target_client_user_id, week_number, week_status, draft_data, updated_at"
+      )
+      .eq("trainer_user_id", currentTrainerUserId)
+      .eq("target_client_user_id", selectedClientId)
+      .eq("week_number", targetWeekNumber)
+      .maybeSingle();
+
+    if (error) {
+      console.error(error);
+      setStatusMessage("Could not load saved program draft: " + error.message);
+      setDraftLoaded(true);
+      return;
+    }
+
+    if (data) {
+      const draft = data as ProgramDraftRow;
+      const draftWorkouts = draft.draft_data?.workouts || [];
+
+      if (draft.week_status) {
+        setWeekStatus(draft.week_status);
+      }
+
+      if (draftWorkouts.length > 0) {
+        setWorkouts(
+          draftWorkouts.map((workout) => ({
+            formId: workout.formId || makeId(),
+            title: workout.title || "",
+            trainerNotes: workout.trainerNotes || "",
+            exercises:
+              workout.exercises && workout.exercises.length > 0
+                ? workout.exercises.map((exercise) => ({
+                    formId: exercise.formId || makeId(),
+                    section: exercise.section || "Resistance Training",
+                    exerciseName: exercise.exerciseName || "",
+                    sets: exercise.sets || "",
+                    reps: exercise.reps || "",
+                    weight: exercise.weight || "",
+                    rest: exercise.rest || "",
+                    videoLink: exercise.videoLink || "",
+                  }))
+                : [blankExercise()],
+          }))
+        );
+      }
+
+      setDraftSavedAt(draft.updated_at || "");
+      setStatusMessage("Saved draft restored. You can continue editing.");
+    } else {
+      setDraftSavedAt("");
+    }
+
+    setDraftLoaded(true);
+  }
+
+  async function saveDraftToSupabase() {
+    if (!currentTrainerUserId || !selectedClientId || !weekNumber) return;
+
+    const targetWeekNumber = Number(weekNumber);
+
+    if (!targetWeekNumber || targetWeekNumber < 1) return;
+
+    setIsSavingDraft(true);
+
+    const now = new Date().toISOString();
+
+    const draftPayload = {
+      trainer_user_id: currentTrainerUserId,
+      target_client_user_id: selectedClientId,
+      week_number: targetWeekNumber,
+      week_status: weekStatus,
+      draft_data: {
+        workouts,
+      },
+      updated_at: now,
+    };
+
+    const { data: existingDraft, error: findError } = await supabase
+      .from("trainer_program_drafts")
+      .select("id")
+      .eq("trainer_user_id", currentTrainerUserId)
+      .eq("target_client_user_id", selectedClientId)
+      .eq("week_number", targetWeekNumber)
+      .maybeSingle();
+
+    if (findError) {
+      console.error(findError);
+      setStatusMessage("Program draft could not auto-save: " + findError.message);
+      setIsSavingDraft(false);
+      return;
+    }
+
+    if (existingDraft) {
+      const { error: updateError } = await supabase
+        .from("trainer_program_drafts")
+        .update({
+          week_status: draftPayload.week_status,
+          draft_data: draftPayload.draft_data,
+          updated_at: draftPayload.updated_at,
+        })
+        .eq("id", existingDraft.id);
+
+      if (updateError) {
+        console.error(updateError);
+        setStatusMessage(
+          "Program draft could not auto-save: " + updateError.message
+        );
+        setIsSavingDraft(false);
+        return;
+      }
+    } else {
+      const { error: insertError } = await supabase
+        .from("trainer_program_drafts")
+        .insert(draftPayload);
+
+      if (insertError) {
+        console.error(insertError);
+        setStatusMessage(
+          "Program draft could not auto-save: " + insertError.message
+        );
+        setIsSavingDraft(false);
+        return;
+      }
+    }
+
+    setDraftSavedAt(now);
+    setIsSavingDraft(false);
+  }
+
+  async function clearProgramDraft(weekToClear = weekNumber) {
+    if (!currentTrainerUserId || !selectedClientId || !weekToClear) return;
+
+    const targetWeekNumber = Number(weekToClear);
+
+    if (!targetWeekNumber || targetWeekNumber < 1) return;
+
+    await supabase
+      .from("trainer_program_drafts")
+      .delete()
+      .eq("trainer_user_id", currentTrainerUserId)
+      .eq("target_client_user_id", selectedClientId)
+      .eq("week_number", targetWeekNumber);
+
+    setDraftSavedAt("");
+  }
+
+  async function resetProgramDraft() {
+    const confirmed = window.confirm(
+      "This will clear the saved draft for this client and week. Are you sure?"
+    );
+
+    if (!confirmed) return;
+
+    await clearProgramDraft();
+
+    setWorkouts([blankWorkout()]);
+    setWeekStatus("unlocked");
+    setStatusMessage("Saved draft cleared for this client/week.");
+  }
+
   async function saveProgram(event: FormEvent) {
     event.preventDefault();
 
@@ -772,6 +1078,7 @@ export default function CreateProgram() {
       .map((workout) => ({
         ...workout,
         title: workout.title.trim(),
+        trainerNotes: workout.trainerNotes.trim(),
         exercises: workout.exercises
           .map((exercise) => ({
             ...exercise,
@@ -874,6 +1181,7 @@ export default function CreateProgram() {
         .insert({
           week_id: weekId,
           title: workout.title,
+          trainer_notes: workout.trainerNotes,
           workout_order: currentHighestWorkoutOrder + workoutIndex + 1,
         })
         .select()
@@ -915,6 +1223,8 @@ export default function CreateProgram() {
         return;
       }
     }
+
+    await clearProgramDraft(String(targetWeekNumber));
 
     setStatusMessage(
       addingToExistingWeek
@@ -996,7 +1306,7 @@ export default function CreateProgram() {
             <SummaryCard title="Step 1" value="Choose Target" />
             <SummaryCard title="Step 2" value="Copy or Template" />
             <SummaryCard title="Step 3" value="Build by Section" />
-            <SummaryCard title="Step 4" value="Save to Week" />
+            <SummaryCard title="Step 4" value="Autosave + Save" />
           </div>
         </div>
 
@@ -1060,6 +1370,38 @@ export default function CreateProgram() {
                 {selectedClient.client_id}. If Week {weekNumber} already exists,
                 the workout will be added into that week.
               </p>
+            </div>
+          )}
+
+          {selectedClientId && (
+            <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-bold text-emerald-700">
+                    Draft Autosave
+                  </p>
+
+                  <p className="mt-1 text-sm font-semibold text-slate-700">
+                    {isSavingDraft
+                      ? "Saving program draft..."
+                      : draftSavedAt
+                      ? `Draft saved at ${new Date(draftSavedAt).toLocaleTimeString([], {
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}.`
+                      : "Start typing and this program draft will save automatically."}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={resetProgramDraft}
+                  disabled={isSaving || isSavingDraft}
+                  className="rounded-xl border border-red-100 bg-white px-4 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Clear Draft
+                </button>
+              </div>
             </div>
           )}
 
@@ -1421,6 +1763,22 @@ export default function CreateProgram() {
                     onChange={(value) => updateWorkoutTitle(workoutIndex, value)}
                     placeholder="Day 1 Stabilization Endurance"
                   />
+
+                  <div className="mt-4">
+                    <label className="mb-2 block text-sm font-semibold text-slate-700">
+                      Trainer Notes
+                    </label>
+
+                    <textarea
+                      value={workout.trainerNotes}
+                      onChange={(event) =>
+                        updateWorkoutTrainerNotes(workoutIndex, event.target.value)
+                      }
+                      placeholder="Example: Focus on controlled tempo, neutral spine, breathing, and pain-free range of motion."
+                      rows={3}
+                      className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
 
                   <div className="mt-5">
                     <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
