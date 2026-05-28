@@ -43,12 +43,12 @@ type ExerciseForm = {
   weight: string;
   rest: string;
   videoLink: string;
+  trainerNotes: string;
 };
 
 type WorkoutForm = {
   formId: string;
   title: string;
-  trainerNotes: string;
   exercises: ExerciseForm[];
 };
 
@@ -75,6 +75,7 @@ type ExistingExercise = {
   weight: string;
   rest: string;
   video_link: string;
+  trainer_notes?: string | null;
   exercise_order: number;
 };
 
@@ -147,6 +148,7 @@ function blankExercise(section = "Warm-Up"): ExerciseForm {
     weight: "",
     rest: "",
     videoLink: "",
+    trainerNotes: "",
   };
 }
 
@@ -154,7 +156,6 @@ function blankWorkout(): WorkoutForm {
   return {
     formId: makeId(),
     title: "",
-    trainerNotes: "",
     exercises: [blankExercise()],
   };
 }
@@ -451,6 +452,7 @@ export default function CreateProgram() {
             weight,
             rest,
             video_link,
+            trainer_notes,
             exercise_order
           )
         )
@@ -544,19 +546,6 @@ export default function CreateProgram() {
     );
   }
 
-  function updateWorkoutTrainerNotes(workoutIndex: number, value: string) {
-    setWorkouts((currentWorkouts) =>
-      currentWorkouts.map((workout, index) => {
-        if (index !== workoutIndex) return workout;
-
-        return {
-          ...workout,
-          trainerNotes: value,
-        };
-      })
-    );
-  }
-
   function addWorkout() {
     setWorkouts((currentWorkouts) => [...currentWorkouts, blankWorkout()]);
   }
@@ -598,7 +587,6 @@ export default function CreateProgram() {
     const copiedWorkout: WorkoutForm = {
       formId: makeId(),
       title: `${workoutToCopy.title} Copy`,
-      trainerNotes: workoutToCopy.trainer_notes || "",
       exercises:
         workoutToCopy.client_plan_exercises.length > 0
           ? workoutToCopy.client_plan_exercises.map((exercise) => ({
@@ -610,6 +598,7 @@ export default function CreateProgram() {
               weight: exercise.weight || "",
               rest: exercise.rest || "",
               videoLink: exercise.video_link || "",
+              trainerNotes: exercise.trainer_notes || "",
             }))
           : [blankExercise()],
     };
@@ -669,7 +658,6 @@ export default function CreateProgram() {
       title: template.title
         ? `${template.title} Template`
         : "Past Workout Template",
-      trainerNotes: template.notes || "",
       exercises:
         sortedExercises.length > 0
           ? sortedExercises.map((exercise) => {
@@ -689,6 +677,7 @@ export default function CreateProgram() {
                 weight: exercise.weight || "",
                 rest: exercise.rest || "",
                 videoLink: "",
+                trainerNotes: exercise.notes || exercise.original_line || "",
               };
             })
           : [blankExercise()],
@@ -708,7 +697,6 @@ export default function CreateProgram() {
       const hasOnlyBlankWorkout =
         currentWorkouts.length === 1 &&
         currentWorkouts[0].title.trim() === "" &&
-        currentWorkouts[0].trainerNotes.trim() === "" &&
         currentWorkouts[0].exercises.length === 1 &&
         currentWorkouts[0].exercises[0].exerciseName.trim() === "";
 
@@ -725,17 +713,16 @@ export default function CreateProgram() {
 
     if (!workoutToDuplicate) return;
 
-  const copiedWorkout: WorkoutForm = {
-    formId: makeId(),
-    title: workoutToDuplicate.title
-      ? `${workoutToDuplicate.title} Copy`
-      : `Workout ${workoutIndex + 1} Copy`,
-    trainerNotes: workoutToDuplicate.trainerNotes || "",
-    exercises: workoutToDuplicate.exercises.map((exercise) => ({
-      ...exercise,
+    const copiedWorkout: WorkoutForm = {
       formId: makeId(),
-    })),
-  };
+      title: workoutToDuplicate.title
+        ? `${workoutToDuplicate.title} Copy`
+        : `Workout ${workoutIndex + 1} Copy`,
+      exercises: workoutToDuplicate.exercises.map((exercise) => ({
+        ...exercise,
+        formId: makeId(),
+      })),
+    };
 
     setWorkouts((currentWorkouts) => [
       ...currentWorkouts.slice(0, workoutIndex + 1),
@@ -870,8 +857,7 @@ export default function CreateProgram() {
     if (!selectedClientId || !weekNumber) return false;
 
     return workouts.some((workout) => {
-      const hasWorkoutText =
-        workout.title.trim() !== "" || workout.trainerNotes.trim() !== "";
+      const hasWorkoutText = workout.title.trim() !== "";
 
       const hasExerciseText = workout.exercises.some(
         (exercise) =>
@@ -880,7 +866,8 @@ export default function CreateProgram() {
           exercise.reps.trim() !== "" ||
           exercise.weight.trim() !== "" ||
           exercise.rest.trim() !== "" ||
-          exercise.videoLink.trim() !== ""
+          exercise.videoLink.trim() !== "" ||
+          exercise.trainerNotes.trim() !== ""
       );
 
       return hasWorkoutText || hasExerciseText;
@@ -929,7 +916,6 @@ export default function CreateProgram() {
           draftWorkouts.map((workout) => ({
             formId: workout.formId || makeId(),
             title: workout.title || "",
-            trainerNotes: workout.trainerNotes || "",
             exercises:
               workout.exercises && workout.exercises.length > 0
                 ? workout.exercises.map((exercise) => ({
@@ -941,6 +927,7 @@ export default function CreateProgram() {
                     weight: exercise.weight || "",
                     rest: exercise.rest || "",
                     videoLink: exercise.videoLink || "",
+                    trainerNotes: exercise.trainerNotes || "",
                   }))
                 : [blankExercise()],
           }))
@@ -1078,7 +1065,6 @@ export default function CreateProgram() {
       .map((workout) => ({
         ...workout,
         title: workout.title.trim(),
-        trainerNotes: workout.trainerNotes.trim(),
         exercises: workout.exercises
           .map((exercise) => ({
             ...exercise,
@@ -1089,6 +1075,7 @@ export default function CreateProgram() {
             weight: exercise.weight.trim(),
             rest: exercise.rest.trim(),
             videoLink: exercise.videoLink.trim(),
+            trainerNotes: exercise.trainerNotes.trim(),
           }))
           .filter((exercise) => exercise.exerciseName !== ""),
       }))
@@ -1181,7 +1168,6 @@ export default function CreateProgram() {
         .insert({
           week_id: weekId,
           title: workout.title,
-          trainer_notes: workout.trainerNotes,
           workout_order: currentHighestWorkoutOrder + workoutIndex + 1,
         })
         .select()
@@ -1206,6 +1192,7 @@ export default function CreateProgram() {
         weight: exercise.weight,
         rest: exercise.rest,
         video_link: exercise.videoLink,
+        trainer_notes: exercise.trainerNotes,
         exercise_order: exerciseIndex + 1,
       }));
 
@@ -1764,22 +1751,6 @@ export default function CreateProgram() {
                     placeholder="Day 1 Stabilization Endurance"
                   />
 
-                  <div className="mt-4">
-                    <label className="mb-2 block text-sm font-semibold text-slate-700">
-                      Trainer Notes
-                    </label>
-
-                    <textarea
-                      value={workout.trainerNotes}
-                      onChange={(event) =>
-                        updateWorkoutTrainerNotes(workoutIndex, event.target.value)
-                      }
-                      placeholder="Example: Focus on controlled tempo, neutral spine, breathing, and pain-free range of motion."
-                      rows={3}
-                      className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                    />
-                  </div>
-
                   <div className="mt-5">
                     <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div>
@@ -2085,6 +2056,27 @@ function SortableExerciseCard({
           }
           placeholder="https://youtube.com/..."
         />
+
+        <div className="md:col-span-3">
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Trainer Notes
+          </label>
+
+          <textarea
+            value={exercise.trainerNotes}
+            onChange={(event) =>
+              updateExercise(
+                workoutIndex,
+                exerciseIndex,
+                "trainerNotes",
+                event.target.value
+              )
+            }
+            placeholder="Example: Keep shoulders relaxed, move slowly, stop if pain increases."
+            rows={3}
+            className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+          />
+        </div>
       </div>
     </div>
   );
