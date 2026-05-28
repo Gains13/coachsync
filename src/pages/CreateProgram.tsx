@@ -34,6 +34,20 @@ type ClientProfile = {
   client_id: string;
 };
 
+type ExerciseLibraryItem = {
+  id: string;
+  exercise_name: string;
+  default_section: string | null;
+  movement_pattern: string | null;
+  default_sets: string | null;
+  default_reps: string | null;
+  default_weight: string | null;
+  default_rest: string | null;
+  video_link: string | null;
+  trainer_notes: string | null;
+  tags: string[] | null;
+};
+
 type ExerciseForm = {
   formId: string;
   section: string;
@@ -177,6 +191,8 @@ export default function CreateProgram() {
 
   const [currentTrainerUserId, setCurrentTrainerUserId] = useState("");
   const [clients, setClients] = useState<ClientProfile[]>([]);
+  const [exerciseLibrary, setExerciseLibrary] = useState<ExerciseLibraryItem[]>([]);
+  const [isLoadingExerciseLibrary, setIsLoadingExerciseLibrary] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState("");
   const [copySourceClientId, setCopySourceClientId] = useState("");
 
@@ -222,6 +238,7 @@ export default function CreateProgram() {
   useEffect(() => {
     loadTrainerUser();
     loadClients();
+    loadExerciseLibrary();
     loadHistoricalTemplates();
 
     return () => {
@@ -310,6 +327,28 @@ export default function CreateProgram() {
     }
 
     setCurrentTrainerUserId(user.id);
+  }
+
+  async function loadExerciseLibrary() {
+    setIsLoadingExerciseLibrary(true);
+
+    const { data, error } = await supabase
+      .from("exercise_library")
+      .select(
+        "id, exercise_name, default_section, movement_pattern, default_sets, default_reps, default_weight, default_rest, video_link, trainer_notes, tags"
+      )
+      .order("exercise_name", { ascending: true });
+
+    if (error) {
+      console.error(error);
+      setStatusMessage("Could not load exercise library: " + error.message);
+      setExerciseLibrary([]);
+      setIsLoadingExerciseLibrary(false);
+      return;
+    }
+
+    setExerciseLibrary((data || []) as ExerciseLibraryItem[]);
+    setIsLoadingExerciseLibrary(false);
   }
 
   async function loadClients() {
@@ -742,6 +781,93 @@ export default function CreateProgram() {
     setWorkouts((currentWorkouts) =>
       currentWorkouts.filter((_, index) => index !== workoutIndex)
     );
+  }
+
+  function applyExerciseFromLibrary(
+    workoutIndex: number,
+    exerciseIndex: number,
+    libraryExerciseId: string
+  ) {
+    if (!libraryExerciseId) return;
+
+    const libraryExercise = exerciseLibrary.find(
+      (exercise) => exercise.id === libraryExerciseId
+    );
+
+    if (!libraryExercise) {
+      setStatusMessage("Could not find that exercise in the library.");
+      return;
+    }
+
+    setWorkouts((currentWorkouts) =>
+      currentWorkouts.map((workout, currentWorkoutIndex) => {
+        if (currentWorkoutIndex !== workoutIndex) return workout;
+
+        return {
+          ...workout,
+          exercises: workout.exercises.map((exercise, currentExerciseIndex) => {
+            if (currentExerciseIndex !== exerciseIndex) return exercise;
+
+            return {
+              ...exercise,
+              section:
+                libraryExercise.default_section ||
+                exercise.section ||
+                "Resistance Training",
+              exerciseName: libraryExercise.exercise_name || exercise.exerciseName,
+              sets: libraryExercise.default_sets || exercise.sets,
+              reps: libraryExercise.default_reps || exercise.reps,
+              weight: libraryExercise.default_weight || exercise.weight,
+              rest: libraryExercise.default_rest || exercise.rest,
+              videoLink: libraryExercise.video_link || exercise.videoLink,
+              trainerNotes:
+                libraryExercise.trainer_notes || exercise.trainerNotes,
+            };
+          }),
+        };
+      })
+    );
+
+    setStatusMessage(`Added "${libraryExercise.exercise_name}" from library.`);
+  }
+
+  async function saveExerciseToLibrary(exercise: ExerciseForm) {
+    if (!currentTrainerUserId) {
+      setStatusMessage("You must be logged in as a trainer to save exercises.");
+      return;
+    }
+
+    if (!exercise.exerciseName.trim()) {
+      setStatusMessage("Add an exercise name before saving to the library.");
+      return;
+    }
+
+    const { error } = await supabase.from("exercise_library").insert({
+      trainer_user_id: currentTrainerUserId,
+      exercise_name: exercise.exerciseName.trim(),
+      default_section: exercise.section,
+      default_sets: exercise.sets.trim(),
+      default_reps: exercise.reps.trim(),
+      default_weight: exercise.weight.trim(),
+      default_rest: exercise.rest.trim(),
+      video_link: exercise.videoLink.trim(),
+      trainer_notes: exercise.trainerNotes.trim(),
+      movement_pattern: "",
+      tags: [],
+    });
+
+    if (error) {
+      if (error.message.toLowerCase().includes("duplicate")) {
+        setStatusMessage("That exercise is already in your library.");
+      } else {
+        setStatusMessage("Could not save exercise to library: " + error.message);
+      }
+
+      return;
+    }
+
+    setStatusMessage(`"${exercise.exerciseName}" saved to your exercise library.`);
+    await loadExerciseLibrary();
   }
 
   function updateExercise(
@@ -1846,6 +1972,14 @@ export default function CreateProgram() {
                                         updateExercise={updateExercise}
                                         moveExercise={moveExercise}
                                         removeExercise={removeExercise}
+                                        exerciseLibrary={exerciseLibrary}
+                                        isLoadingExerciseLibrary={
+                                          isLoadingExerciseLibrary
+                                        }
+                                        applyExerciseFromLibrary={
+                                          applyExerciseFromLibrary
+                                        }
+                                        saveExerciseToLibrary={saveExerciseToLibrary}
                                       />
                                     )
                                   )}
@@ -1890,6 +2024,10 @@ function SortableExerciseCard({
   updateExercise,
   moveExercise,
   removeExercise,
+  exerciseLibrary,
+  isLoadingExerciseLibrary,
+  applyExerciseFromLibrary,
+  saveExerciseToLibrary,
 }: {
   exercise: ExerciseForm;
   exerciseIndex: number;
@@ -1908,6 +2046,14 @@ function SortableExerciseCard({
     direction: "up" | "down"
   ) => void;
   removeExercise: (workoutIndex: number, exerciseIndex: number) => void;
+  exerciseLibrary: ExerciseLibraryItem[];
+  isLoadingExerciseLibrary: boolean;
+  applyExerciseFromLibrary: (
+    workoutIndex: number,
+    exerciseIndex: number,
+    libraryExerciseId: string
+  ) => void;
+  saveExerciseToLibrary: (exercise: ExerciseForm) => void;
 }) {
   const {
     attributes,
@@ -1973,6 +2119,70 @@ function SortableExerciseCard({
             className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
           >
             Remove
+          </button>
+        </div>
+      </div>
+
+      <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+        <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Choose Exercise From Library
+            </label>
+
+            <select
+              value=""
+              onChange={(event) =>
+                applyExerciseFromLibrary(
+                  workoutIndex,
+                  exerciseIndex,
+                  event.target.value
+                )
+              }
+              disabled={isLoadingExerciseLibrary}
+              className="w-full rounded-xl border border-blue-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <option value="">
+                {isLoadingExerciseLibrary
+                  ? "Loading exercise library..."
+                  : "Search/choose an exercise to auto-fill this tile"}
+              </option>
+
+              {WORKOUT_SECTIONS.map((section) => {
+                const sectionExercises = exerciseLibrary.filter(
+                  (libraryExercise) =>
+                    (libraryExercise.default_section || "Other") === section
+                );
+
+                if (sectionExercises.length === 0) return null;
+
+                return (
+                  <optgroup key={section} label={section}>
+                    {sectionExercises.map((libraryExercise) => (
+                      <option key={libraryExercise.id} value={libraryExercise.id}>
+                        {libraryExercise.exercise_name}
+                        {libraryExercise.default_reps
+                          ? ` — ${libraryExercise.default_reps}`
+                          : ""}
+                      </option>
+                    ))}
+                  </optgroup>
+                );
+              })}
+            </select>
+
+            <p className="mt-2 text-xs font-medium text-slate-500">
+              Selecting from the library auto-fills section, sets, reps, weight,
+              rest, video link, and trainer notes. You can still edit anything.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => saveExerciseToLibrary(exercise)}
+            className="rounded-xl bg-white px-4 py-3 text-sm font-semibold text-blue-700 ring-1 ring-blue-100 transition hover:bg-blue-50"
+          >
+            Save This Exercise
           </button>
         </div>
       </div>
