@@ -363,7 +363,12 @@ export default function StartWorkout() {
   }
 
   async function saveDraftToSupabase() {
-    if (isRepeatMode || !currentUserId || !workoutId || loggedExercises.length === 0) {
+    if (
+      isRepeatMode ||
+      !currentUserId ||
+      !workoutId ||
+      loggedExercises.length === 0
+    ) {
       return;
     }
 
@@ -600,7 +605,7 @@ export default function StartWorkout() {
       .from("workout_submissions")
       .insert({
         client_user_id: user.id,
-        workout_id: isRepeatMode ? null : workout.id,
+        workout_id: workout.id,
         workout_title: isRepeatMode
           ? `Repeated - ${workout.title}`
           : workout.title,

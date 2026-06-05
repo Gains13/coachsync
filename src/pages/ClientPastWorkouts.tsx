@@ -235,9 +235,9 @@ export default function ClientPastWorkouts() {
         submission.date ||
         null;
 
-      const isRepeatedWorkout =
-        submission.workout_id === null ||
-        workoutTitle.toLowerCase().includes("repeated");
+      const isRepeatedWorkout = workoutTitle
+        .toLowerCase()
+        .includes("repeated");
 
       return {
         type: "program" as const,
@@ -283,10 +283,7 @@ export default function ClientPastWorkouts() {
     const workoutTitle =
       submission.workout_title || submission.title || "Completed Workout";
 
-    return (
-      submission.workout_id === null ||
-      workoutTitle.toLowerCase().includes("repeated")
-    );
+    return workoutTitle.toLowerCase().includes("repeated");
   }).length;
 
   const painReportCount = programSubmissions.filter(
