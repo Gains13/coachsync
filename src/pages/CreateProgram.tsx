@@ -232,6 +232,7 @@ export default function CreateProgram() {
   const [statusMessage, setStatusMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingWeek, setIsLoadingWeek] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState("");
   const [isSavingDraft, setIsSavingDraft] = useState(false);
