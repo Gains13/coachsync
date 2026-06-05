@@ -132,7 +132,9 @@ function normalizeSection(section: string | null | undefined) {
 export default function StartWorkout() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
   const workoutId = searchParams.get("workoutId");
+  const isRepeatMode = searchParams.get("repeat") === "true";
 
   const saveTimerRef = useRef<number | null>(null);
 
@@ -543,39 +545,42 @@ export default function StartWorkout() {
       return;
     }
 
-    const { data: existingSubmission, error: existingSubmissionError } =
-      await supabase
-        .from("workout_submissions")
-        .select("id")
-        .eq("client_user_id", user.id)
-        .eq("workout_id", workout.id)
-        .maybeSingle();
+    if (!isRepeatMode) {
+      const { data: existingSubmission, error: existingSubmissionError } =
+        await supabase
+          .from("workout_submissions")
+          .select("id")
+          .eq("client_user_id", user.id)
+          .eq("workout_id", workout.id)
+          .maybeSingle();
 
-    if (existingSubmissionError) {
-      console.error(existingSubmissionError);
-      setErrorMessage("Could not check if this workout was already submitted.");
-      setIsSubmitting(false);
-      return;
-    }
+      if (existingSubmissionError) {
+        console.error(existingSubmissionError);
+        setErrorMessage("Could not check if this workout was already submitted.");
+        setIsSubmitting(false);
+        return;
+      }
 
-    if (existingSubmission) {
-      await clearSavedDraft();
-      navigate(`/workout-history/${existingSubmission.id}`);
-      return;
+      if (existingSubmission) {
+        await clearSavedDraft();
+        navigate(`/workout-history/${existingSubmission.id}`);
+        return;
+      }
     }
 
     const cleanPainLocation = painReported ? painLocation.trim() : "";
     const cleanPainExercise = painReported ? painExercise.trim() : "";
     const cleanPainNotes = painReported ? painNotes.trim() : "";
-    const cleanPainLevel =
-      painReported && painLevel ? Number(painLevel) : null;
+    const cleanPainLevel = painReported && painLevel ? Number(painLevel) : null;
 
     const { data: submission, error: submissionError } = await supabase
       .from("workout_submissions")
       .insert({
         client_user_id: user.id,
-        workout_id: workout.id,
-        workout_title: workout.title,
+        workout_id: isRepeatMode ? null : workout.id,
+        workout_title: isRepeatMode
+          ? `Repeated - ${workout.title}`
+          : workout.title,
         notes: workoutNotes.trim(),
         pain_reported: painReported,
         pain_location: cleanPainLocation || null,
@@ -627,7 +632,11 @@ export default function StartWorkout() {
 
     await clearSavedDraft();
 
-    setSuccessMessage("Workout submitted successfully!");
+    setSuccessMessage(
+      isRepeatMode
+        ? "Repeated workout submitted successfully!"
+        : "Workout submitted successfully!"
+    );
 
     setTimeout(() => {
       navigate(`/workout-history/${submission.id}`);
@@ -750,7 +759,7 @@ export default function StartWorkout() {
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
-                Start Workout
+                {isRepeatMode ? "Repeat Workout" : "Start Workout"}
               </p>
 
               <h1 className="mt-2 break-words text-2xl font-black leading-tight sm:mt-3 sm:text-4xl">
@@ -758,8 +767,16 @@ export default function StartWorkout() {
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
-                Your progress and pain report save automatically across devices.
+                {isRepeatMode
+                  ? "You are repeating a past workout. This will save as a new completed workout."
+                  : "Your progress and pain report save automatically across devices."}
               </p>
+
+              {isRepeatMode && (
+                <span className="mt-3 inline-flex w-fit rounded-full bg-white/20 px-3 py-1 text-xs font-black text-white ring-1 ring-white/30">
+                  Repeat Workout
+                </span>
+              )}
             </div>
 
             <Link
@@ -1110,7 +1127,11 @@ export default function StartWorkout() {
         disabled={isSubmitting || loggedExercises.length === 0}
         className="mt-6 w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 sm:mt-8"
       >
-        {isSubmitting ? "Submitting workout..." : "Submit Workout"}
+        {isSubmitting
+          ? "Submitting workout..."
+          : isRepeatMode
+          ? "Submit Repeated Workout"
+          : "Submit Workout"}
       </button>
     </ClientLayout>
   );
