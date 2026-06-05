@@ -86,7 +86,6 @@ type GuidedStep = {
 
 function normalizeSection(section: string | null | undefined) {
   const cleaned = (section || "").trim();
-
   if (!cleaned) return "Other";
 
   const lower = cleaned.toLowerCase();
@@ -101,12 +100,9 @@ function normalizeSection(section: string | null | undefined) {
     lower === "activation" ||
     lower === "activation/core/balance" ||
     lower === "activation / core / balance" ||
-    lower === "core/balance"
+    lower === "core/balance" ||
+    lower === "balance"
   ) {
-    return "Activation / Core / Balance";
-  }
-
-  if (lower === "balance") {
     return "Activation / Core / Balance";
   }
 
@@ -149,11 +145,9 @@ function parseSets(value: string) {
   }
 
   const match = value.match(/\d+/);
-
   if (!match) return 1;
 
   const parsed = Number(match[0]);
-
   if (Number.isNaN(parsed) || parsed <= 0) return 1;
 
   return Math.round(parsed);
@@ -168,7 +162,6 @@ function parseRestSeconds(value: string) {
   if (!match) return 60;
 
   const number = Number(match[0]);
-
   if (Number.isNaN(number) || number <= 0) return 60;
 
   if (lower.includes("min")) {
@@ -1684,7 +1677,7 @@ export default function StartWorkout() {
                     {activeExercise.exerciseName || "Unnamed Exercise"}
                   </h2>
 
-                  <p className="mt-3 text-sm leading-6 text-slate-500 sm:text-base">
+                  <p className="mt-3 text-base leading-7 text-slate-500 sm:text-base sm:leading-6">
                     Stay focused on this movement. Complete the set, rest, then
                     continue.
                   </p>
@@ -1704,43 +1697,43 @@ export default function StartWorkout() {
             </div>
 
             <div className="p-5 sm:p-8">
-              <div className="grid gap-3 sm:grid-cols-4">
-                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-3 sm:p-4">
                   <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
                     Set
                   </p>
 
-                  <p className="mt-2 text-2xl font-black text-slate-900">
+                  <p className="mt-1 text-xl font-black text-slate-900 sm:mt-2 sm:text-2xl">
                     {activeSetNumber} of {currentTotalSets}
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-3 sm:p-4">
                   <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
                     Reps
                   </p>
 
-                  <p className="mt-2 text-2xl font-black text-slate-900">
+                  <p className="mt-1 text-xl font-black text-slate-900 sm:mt-2 sm:text-2xl">
                     {activeExercise.plannedReps || "N/A"}
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-3 sm:p-4">
                   <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
                     Weight
                   </p>
 
-                  <p className="mt-2 text-2xl font-black text-slate-900">
+                  <p className="mt-1 text-xl font-black text-slate-900 sm:mt-2 sm:text-2xl">
                     {activeExercise.plannedWeight || "N/A"}
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-3 sm:p-4">
                   <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
                     Rest
                   </p>
 
-                  <p className="mt-2 text-2xl font-black text-slate-900">
+                  <p className="mt-1 text-xl font-black text-slate-900 sm:mt-2 sm:text-2xl">
                     {activeExercise.plannedRest || "60 sec"}
                   </p>
                 </div>
