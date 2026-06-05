@@ -22,6 +22,7 @@ import Clients from "./pages/Clients";
 import ClientDetails from "./pages/ClientDetails";
 import CreateClient from "./pages/CreateClient";
 import CreateProgram from "./pages/CreateProgram";
+import EditPublishedWorkout from "./pages/EditPublishedWorkout";
 import ImportProgram from "./pages/ImportProgram";
 import Program from "./pages/Program";
 import Messages from "./pages/Messages";
@@ -233,6 +234,15 @@ export default function App() {
           element={
             <RequireRole allowedRoles={["trainer"]}>
               <CreateProgram />
+            </RequireRole>
+          }
+        />
+
+        <Route
+          path="/edit-workout/:workoutId"
+          element={
+            <RequireRole allowedRoles={["trainer"]}>
+              <EditPublishedWorkout />
             </RequireRole>
           }
         />

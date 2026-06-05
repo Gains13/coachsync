@@ -197,7 +197,7 @@ export default function ClientDetails() {
     setAssessment(assessmentData || null);
     setGoals(goalsData || null);
     setSubmittedWorkouts(workoutsData || []);
-    setPlanWeeks(planData || []);
+    setPlanWeeks((planData || []) as PlanWeek[]);
     setEditingWorkout(null);
     setEditingExercise(null);
     setIsLoading(false);
@@ -384,7 +384,9 @@ export default function ClientDetails() {
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-600">
             CoachSync
           </p>
+
           <h1 className="mt-3 text-2xl font-bold">Loading client...</h1>
+
           <p className="mt-2 text-slate-500">
             Pulling client details from Supabase.
           </p>
@@ -400,6 +402,7 @@ export default function ClientDetails() {
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-600">
             CoachSync
           </p>
+
           <h1 className="mt-3 text-2xl font-bold">Client not found</h1>
 
           {debugMessage && (
@@ -541,7 +544,10 @@ export default function ClientDetails() {
                 <InfoRow label="BMI" value={assessment.hips || "Not set"} />
 
                 <div className="md:col-span-2">
-                  <InfoRow label="Notes" value={assessment.notes || "No notes"} />
+                  <InfoRow
+                    label="Notes"
+                    value={assessment.notes || "No notes"}
+                  />
                 </div>
               </div>
             ) : (
@@ -623,7 +629,9 @@ export default function ClientDetails() {
                         </button>
 
                         <button
-                          onClick={() => updateWeekStatus(week.id, "completed")}
+                          onClick={() =>
+                            updateWeekStatus(week.id, "completed")
+                          }
                           className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-100 hover:bg-emerald-100"
                         >
                           Mark Complete
@@ -715,13 +723,20 @@ export default function ClientDetails() {
                                   </div>
 
                                   <div className="flex flex-wrap gap-2">
+                                    <Link
+                                      to={`/edit-workout/${workout.id}`}
+                                      className="rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                                    >
+                                      Full Editor
+                                    </Link>
+
                                     <button
                                       onClick={() =>
                                         startEditingWorkout(workout)
                                       }
                                       className="rounded-xl bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 ring-1 ring-blue-100 hover:bg-blue-100"
                                     >
-                                      Edit Workout
+                                      Quick Edit
                                     </button>
 
                                     <button
