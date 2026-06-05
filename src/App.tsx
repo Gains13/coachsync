@@ -1,5 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
+import { useEffect } from "react";
 
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
@@ -33,6 +34,20 @@ import CompletedWorkout from "./pages/CompletedWorkout";
 
 type UserRole = "trainer" | "client";
 
+function ScrollToTop() {
+  const { pathname, search } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "instant",
+    });
+  }, [pathname, search]);
+
+  return null;
+}
+
 function RequireRole({
   allowedRoles,
   children,
@@ -54,6 +69,8 @@ function RequireRole({
 export default function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
+
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/landing" element={<Landing />} />
