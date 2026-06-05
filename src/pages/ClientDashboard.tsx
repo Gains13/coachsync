@@ -340,10 +340,10 @@ export default function ClientDashboard() {
 
   return (
     <ClientLayout unreadMessages={unreadMessages}>
-      <section className="mb-4 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
-        <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-4 py-5 text-white sm:px-6 sm:py-8 md:px-8">
+      <section className="mb-4 overflow-hidden rounded-[1.5rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
+        <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-4 py-5 text-white sm:px-6 sm:py-8">
           <div className="flex items-center gap-4">
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[1.75rem] border border-white/20 bg-white/15 text-2xl font-black text-white shadow-sm ring-1 ring-white/20">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/15 text-xl font-black text-white shadow-sm ring-1 ring-white/20 sm:h-20 sm:w-20 sm:text-2xl">
               {client.avatar_url ? (
                 <img
                   src={client.avatar_url}
@@ -356,50 +356,63 @@ export default function ClientDashboard() {
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100">
                 Today
               </p>
 
-              <h1 className="mt-2 break-words text-2xl font-black leading-tight sm:text-4xl">
+              <h1 className="mt-1 break-words text-2xl font-black leading-tight sm:text-4xl">
                 Welcome back, {firstName}
               </h1>
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
-                Here’s your next step, your weekly progress, and quick access to
-                your training tools.
+              <p className="mt-2 text-sm font-semibold leading-6 text-blue-50">
+                Your training plan is ready.
               </p>
             </div>
+
+            <Link
+              to="/client-settings"
+              className="hidden shrink-0 rounded-2xl bg-white/15 px-4 py-3 text-sm font-black text-white ring-1 ring-white/20 transition hover:bg-white/25 sm:block"
+            >
+              Edit Profile
+            </Link>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="mt-5 grid grid-cols-2 gap-3">
             <div className="rounded-2xl bg-white/15 p-4 ring-1 ring-white/20">
-              <p className="text-xs font-bold uppercase tracking-wide text-blue-100">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-blue-100">
                 Current Week
               </p>
+
               <p className="mt-1 text-xl font-black">
                 {currentWeek ? `Week ${currentWeek}` : "Not set"}
               </p>
             </div>
 
             <div className="rounded-2xl bg-white/15 p-4 ring-1 ring-white/20">
-              <p className="text-xs font-bold uppercase tracking-wide text-blue-100">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-blue-100">
                 This Week
               </p>
+
               <p className="mt-1 text-xl font-black">
                 {weeklyWorkoutCompleted}/{weeklyWorkoutTotal || 0}
               </p>
             </div>
+          </div>
 
-            <Link
-              to="/client-settings"
-              className="rounded-2xl bg-white p-4 text-blue-700 ring-1 ring-white/20 transition hover:bg-blue-50"
-            >
-              <p className="text-xs font-bold uppercase tracking-wide">
+          <Link
+            to="/client-settings"
+            className="mt-3 flex items-center justify-between rounded-2xl bg-white px-4 py-3 text-blue-700 shadow-sm transition hover:bg-blue-50 sm:hidden"
+          >
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wide">
                 Profile
               </p>
-              <p className="mt-1 text-xl font-black">Settings →</p>
-            </Link>
-          </div>
+
+              <p className="text-base font-black">Settings</p>
+            </div>
+
+            <span className="text-xl font-black">→</span>
+          </Link>
         </div>
       </section>
 
@@ -427,26 +440,32 @@ export default function ClientDashboard() {
         </Link>
       )}
 
-      <section className="mb-4 rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
-        <div className="grid gap-5 lg:grid-cols-[1.3fr_0.7fr] lg:items-center">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
-              Next Up
-            </p>
+      <section className="mb-4 rounded-[1.5rem] border border-sky-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
+        <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr] lg:items-stretch">
+          <div className="rounded-[1.35rem] border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-sky-50 p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                  Next Up
+                </p>
 
-            <h2 className="mt-1 break-words text-2xl font-black text-slate-900 sm:text-3xl">
-              {nextWorkout
-                ? nextWorkout.title
-                : "You’re caught up for now"}
-            </h2>
+                <h2 className="mt-2 break-words text-2xl font-black leading-tight text-slate-900 sm:text-3xl">
+                  {nextWorkout ? nextWorkout.title : "You’re caught up"}
+                </h2>
 
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              {nextWorkout
-                ? `Week ${nextWorkout.weekNumber} • ${nextWorkout.exerciseCount} movement${
-                    nextWorkout.exerciseCount === 1 ? "" : "s"
-                  }`
-                : "Open your plan to review completed workouts or repeat a past workout."}
-            </p>
+                <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
+                  {nextWorkout
+                    ? `Week ${nextWorkout.weekNumber} • ${
+                        nextWorkout.exerciseCount
+                      } movement${nextWorkout.exerciseCount === 1 ? "" : "s"}`
+                    : "Review your plan, repeat a past workout, or log extra activity."}
+                </p>
+              </div>
+
+              <div className="shrink-0 rounded-2xl bg-white px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-blue-100">
+                {nextWorkout ? "Ready" : "Done"}
+              </div>
+            </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               {nextWorkout ? (
@@ -454,7 +473,7 @@ export default function ClientDashboard() {
                   to={`/start-workout?workoutId=${nextWorkout.id}`}
                   className="rounded-2xl bg-blue-600 px-5 py-4 text-center text-sm font-black text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.99]"
                 >
-                  Start Guided Workout →
+                  Start Workout →
                 </Link>
               ) : (
                 <Link
@@ -467,19 +486,20 @@ export default function ClientDashboard() {
 
               <Link
                 to="/client-past-workouts"
-                className="rounded-2xl border border-sky-100 bg-sky-50 px-5 py-4 text-center text-sm font-black text-blue-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 active:scale-[0.99]"
+                className="rounded-2xl border border-sky-100 bg-white px-5 py-4 text-center text-sm font-black text-blue-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 active:scale-[0.99]"
               >
                 Past Workouts →
               </Link>
             </div>
           </div>
 
-          <div className="rounded-[1.5rem] border border-sky-100 bg-sky-50 p-5">
+          <div className="rounded-[1.35rem] border border-sky-100 bg-sky-50 p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
                   Weekly Progress
                 </p>
+
                 <h3 className="mt-1 text-3xl font-black text-slate-900">
                   {weeklyPercent}%
                 </h3>
@@ -498,8 +518,7 @@ export default function ClientDashboard() {
             </div>
 
             <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">
-              Complete your assigned workouts to keep your weekly progress
-              moving.
+              Keep completing your assigned workouts to build consistency.
             </p>
           </div>
         </div>
