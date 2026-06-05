@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import ClientLayout from "../components/ClientLayout";
@@ -7,6 +7,7 @@ type ClientData = {
   full_name: string;
   client_id: string;
   setup_complete?: boolean | null;
+  avatar_url?: string | null;
 };
 
 type GoalData = {
@@ -22,6 +23,41 @@ type LastWorkoutData = {
   date?: string | null;
 };
 
+type NextWorkout = {
+  id: string;
+  title: string;
+  weekNumber: number;
+  workoutOrder: number;
+  exerciseCount: number;
+};
+
+type PlanWeekRow = {
+  id: string;
+  week_number: number;
+  status: string;
+  client_plan_workouts: {
+    id: string;
+    title: string;
+    workout_order: number;
+    client_plan_exercises?: { id: string }[];
+  }[];
+};
+
+type SubmissionRow = {
+  workout_id: string | null;
+};
+
+function getInitials(name: string) {
+  const parts = name.trim().split(" ").filter(Boolean);
+
+  if (parts.length === 0) return "C";
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
 export default function ClientDashboard() {
   const navigate = useNavigate();
 
@@ -34,12 +70,21 @@ export default function ClientDashboard() {
   const [personalActivityCount, setPersonalActivityCount] = useState(0);
   const [importedWorkoutCount, setImportedWorkoutCount] = useState(0);
   const [lastWorkout, setLastWorkout] = useState<LastWorkoutData | null>(null);
+  const [nextWorkout, setNextWorkout] = useState<NextWorkout | null>(null);
+
+  const [weeklyWorkoutTotal, setWeeklyWorkoutTotal] = useState(0);
+  const [weeklyWorkoutCompleted, setWeeklyWorkoutCompleted] = useState(0);
 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadDashboard();
   }, []);
+
+  const firstName = useMemo(() => {
+    const name = client?.full_name || "there";
+    return name.split(" ")[0] || name;
+  }, [client]);
 
   async function loadDashboard() {
     setLoading(true);
@@ -58,7 +103,7 @@ export default function ClientDashboard() {
 
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
-      .select("full_name, client_id, setup_complete")
+      .select("full_name, client_id, setup_complete, avatar_url")
       .eq("id", userId)
       .maybeSingle();
 
@@ -79,7 +124,7 @@ export default function ClientDashboard() {
       return;
     }
 
-    setClient(profileData);
+    setClient(profileData as ClientData);
 
     const { data: goalData, error: goalError } = await supabase
       .from("client_goals")
@@ -97,18 +142,92 @@ export default function ClientDashboard() {
 
     const { data: weekData, error: weekError } = await supabase
       .from("client_plan_weeks")
-      .select("week_number")
+      .select(
+        `
+        id,
+        week_number,
+        status,
+        client_plan_workouts (
+          id,
+          title,
+          workout_order,
+          client_plan_exercises (
+            id
+          )
+        )
+      `
+      )
       .eq("client_user_id", userId)
-      .order("week_number", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order("week_number", { ascending: true });
 
     if (weekError) {
       console.error(weekError);
     }
 
-    if (weekData) {
-      setCurrentWeek(weekData.week_number);
+    const weeks = ((weekData || []) as unknown as PlanWeekRow[]).sort(
+      (a, b) => a.week_number - b.week_number
+    );
+
+    if (weeks.length > 0) {
+      setCurrentWeek(weeks[weeks.length - 1].week_number);
+    }
+
+    const { data: submittedRows, error: submittedRowsError } = await supabase
+      .from("workout_submissions")
+      .select("workout_id")
+      .eq("client_user_id", userId);
+
+    if (submittedRowsError) {
+      console.error(submittedRowsError);
+    }
+
+    const submittedWorkoutIds = new Set(
+      ((submittedRows || []) as SubmissionRow[])
+        .map((row) => row.workout_id)
+        .filter(Boolean) as string[]
+    );
+
+    const unlockedWeeks = weeks.filter((week) => week.status !== "locked");
+
+    const allAvailableWorkouts = unlockedWeeks.flatMap((week) =>
+      [...(week.client_plan_workouts || [])]
+        .sort((a, b) => a.workout_order - b.workout_order)
+        .map((workout) => ({
+          id: workout.id,
+          title: workout.title,
+          weekNumber: week.week_number,
+          workoutOrder: workout.workout_order,
+          exerciseCount: workout.client_plan_exercises?.length || 0,
+        }))
+    );
+
+    const firstIncompleteWorkout =
+      allAvailableWorkouts.find(
+        (workout) => !submittedWorkoutIds.has(workout.id)
+      ) || null;
+
+    setNextWorkout(firstIncompleteWorkout);
+
+    const progressWeekNumber =
+      firstIncompleteWorkout?.weekNumber ||
+      unlockedWeeks[unlockedWeeks.length - 1]?.week_number ||
+      null;
+
+    if (progressWeekNumber) {
+      const progressWeek = unlockedWeeks.find(
+        (week) => week.week_number === progressWeekNumber
+      );
+
+      const weekWorkouts = progressWeek?.client_plan_workouts || [];
+
+      setWeeklyWorkoutTotal(weekWorkouts.length);
+      setWeeklyWorkoutCompleted(
+        weekWorkouts.filter((workout) => submittedWorkoutIds.has(workout.id))
+          .length
+      );
+    } else {
+      setWeeklyWorkoutTotal(0);
+      setWeeklyWorkoutCompleted(0);
     }
 
     const { count: unreadCount, error: unreadError } = await supabase
@@ -204,44 +323,83 @@ export default function ClientDashboard() {
   }
 
   const lastWorkoutTitle =
-    lastWorkout?.workout_title || lastWorkout?.title || "No workout completed yet";
+    lastWorkout?.workout_title ||
+    lastWorkout?.title ||
+    "No workout completed yet";
 
   const lastWorkoutDate =
-    lastWorkout?.submitted_at || lastWorkout?.completed_at || lastWorkout?.date || null;
+    lastWorkout?.submitted_at ||
+    lastWorkout?.completed_at ||
+    lastWorkout?.date ||
+    null;
+
+  const weeklyPercent =
+    weeklyWorkoutTotal > 0
+      ? Math.round((weeklyWorkoutCompleted / weeklyWorkoutTotal) * 100)
+      : 0;
 
   return (
     <ClientLayout unreadMessages={unreadMessages}>
       <section className="mb-4 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
-        <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-5 text-white sm:px-6 sm:py-8 md:px-8">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
-            Client Home
-          </p>
+        <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-4 py-5 text-white sm:px-6 sm:py-8 md:px-8">
+          <div className="flex items-center gap-4">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[1.75rem] border border-white/20 bg-white/15 text-2xl font-black text-white shadow-sm ring-1 ring-white/20">
+              {client.avatar_url ? (
+                <img
+                  src={client.avatar_url}
+                  alt={`${client.full_name} profile`}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                getInitials(client.full_name)
+              )}
+            </div>
 
-          <h1 className="mt-2 break-words text-2xl font-black leading-tight sm:mt-3 sm:text-4xl">
-            Welcome, {client.full_name}
-          </h1>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
+                Today
+              </p>
 
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
-            Here’s what to focus on today, your training progress, and any new
-            messages from your trainer.
-          </p>
-        </div>
+              <h1 className="mt-2 break-words text-2xl font-black leading-tight sm:text-4xl">
+                Welcome back, {firstName}
+              </h1>
 
-        <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-4 md:p-8">
-          <SummaryCard
-            title="Current Week"
-            value={currentWeek ? `Week ${currentWeek}` : "Not set"}
-          />
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
+                Here’s your next step, your weekly progress, and quick access to
+                your training tools.
+              </p>
+            </div>
+          </div>
 
-          <SummaryCard title="Completed" value={`${completedWorkoutCount}`} />
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl bg-white/15 p-4 ring-1 ring-white/20">
+              <p className="text-xs font-bold uppercase tracking-wide text-blue-100">
+                Current Week
+              </p>
+              <p className="mt-1 text-xl font-black">
+                {currentWeek ? `Week ${currentWeek}` : "Not set"}
+              </p>
+            </div>
 
-          <SummaryCard
-            title="Messages"
-            value={`${unreadMessages}`}
-            alert={unreadMessages > 0}
-          />
+            <div className="rounded-2xl bg-white/15 p-4 ring-1 ring-white/20">
+              <p className="text-xs font-bold uppercase tracking-wide text-blue-100">
+                This Week
+              </p>
+              <p className="mt-1 text-xl font-black">
+                {weeklyWorkoutCompleted}/{weeklyWorkoutTotal || 0}
+              </p>
+            </div>
 
-          <SummaryCard title="Goal" value={goal?.main_goal || "Not set"} />
+            <Link
+              to="/client-settings"
+              className="rounded-2xl bg-white p-4 text-blue-700 ring-1 ring-white/20 transition hover:bg-blue-50"
+            >
+              <p className="text-xs font-bold uppercase tracking-wide">
+                Profile
+              </p>
+              <p className="mt-1 text-xl font-black">Settings →</p>
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -270,37 +428,79 @@ export default function ClientDashboard() {
       )}
 
       <section className="mb-4 rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
+        <div className="grid gap-5 lg:grid-cols-[1.3fr_0.7fr] lg:items-center">
+          <div>
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
-              Today’s Focus
+              Next Up
             </p>
 
-            <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
-              Start with your current training plan
+            <h2 className="mt-1 break-words text-2xl font-black text-slate-900 sm:text-3xl">
+              {nextWorkout
+                ? nextWorkout.title
+                : "You’re caught up for now"}
             </h2>
 
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Open your plan to see your next assigned workout. Completed
-              workouts and imported past workouts are still available in your
-              history if you need to review or repeat them.
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              {nextWorkout
+                ? `Week ${nextWorkout.weekNumber} • ${nextWorkout.exerciseCount} movement${
+                    nextWorkout.exerciseCount === 1 ? "" : "s"
+                  }`
+                : "Open your plan to review completed workouts or repeat a past workout."}
             </p>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {nextWorkout ? (
+                <Link
+                  to={`/start-workout?workoutId=${nextWorkout.id}`}
+                  className="rounded-2xl bg-blue-600 px-5 py-4 text-center text-sm font-black text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.99]"
+                >
+                  Start Guided Workout →
+                </Link>
+              ) : (
+                <Link
+                  to="/client-plan"
+                  className="rounded-2xl bg-blue-600 px-5 py-4 text-center text-sm font-black text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.99]"
+                >
+                  Open My Plan →
+                </Link>
+              )}
+
+              <Link
+                to="/client-past-workouts"
+                className="rounded-2xl border border-sky-100 bg-sky-50 px-5 py-4 text-center text-sm font-black text-blue-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 active:scale-[0.99]"
+              >
+                Past Workouts →
+              </Link>
+            </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:w-[430px]">
-            <Link
-              to="/client-plan"
-              className="rounded-2xl bg-blue-600 px-5 py-4 text-center text-sm font-black text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.99]"
-            >
-              Open My Plan →
-            </Link>
+          <div className="rounded-[1.5rem] border border-sky-100 bg-sky-50 p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Weekly Progress
+                </p>
+                <h3 className="mt-1 text-3xl font-black text-slate-900">
+                  {weeklyPercent}%
+                </h3>
+              </div>
 
-            <Link
-              to="/client-past-workouts"
-              className="rounded-2xl border border-sky-100 bg-sky-50 px-5 py-4 text-center text-sm font-black text-blue-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 active:scale-[0.99]"
-            >
-              View Past Workouts →
-            </Link>
+              <div className="rounded-full bg-white px-4 py-2 text-sm font-black text-blue-700 ring-1 ring-sky-100">
+                {weeklyWorkoutCompleted}/{weeklyWorkoutTotal || 0}
+              </div>
+            </div>
+
+            <div className="mt-4 h-3 rounded-full bg-white">
+              <div
+                className="h-3 rounded-full bg-blue-600 transition-all"
+                style={{ width: `${weeklyPercent}%` }}
+              />
+            </div>
+
+            <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">
+              Complete your assigned workouts to keep your weekly progress
+              moving.
+            </p>
           </div>
         </div>
       </section>
@@ -352,8 +552,8 @@ export default function ClientDashboard() {
               </h2>
 
               <p className="mt-1 text-sm leading-6 text-slate-600">
-                Log a hike, bike ride, walk, gym session, at-home workout, or
-                any extra training you completed.
+                Log a walk, gym session, at-home workout, hike, ride, or extra
+                training.
               </p>
             </div>
 
@@ -366,6 +566,25 @@ export default function ClientDashboard() {
           </div>
         </section>
       </div>
+
+      <section className="mt-4 rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:mt-6 sm:rounded-3xl sm:p-6">
+        <div className="mb-5">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+            Quick Actions
+          </p>
+
+          <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+            Training tools
+          </h2>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <QuickAction title="My Plan" href="/client-plan" />
+          <QuickAction title="Past Workouts" href="/client-past-workouts" />
+          <QuickAction title="Messages" href="/client-messages" />
+          <QuickAction title="Progress" href="/client-progress" />
+        </div>
+      </section>
 
       <section className="mt-4 rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:mt-6 sm:rounded-3xl sm:p-6">
         <div className="mb-5">
@@ -402,33 +621,14 @@ export default function ClientDashboard() {
   );
 }
 
-function SummaryCard({
-  title,
-  value,
-  alert = false,
-}: {
-  title: string;
-  value: string;
-  alert?: boolean;
-}) {
+function QuickAction({ title, href }: { title: string; href: string }) {
   return (
-    <div
-      className={`rounded-2xl border p-4 shadow-sm ${
-        alert ? "border-blue-200 bg-blue-50" : "border-sky-100 bg-sky-50"
-      }`}
+    <Link
+      to={href}
+      className="rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-black text-slate-900 transition hover:border-blue-200 hover:bg-blue-50"
     >
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-        {title}
-      </p>
-
-      <h2
-        className={`mt-2 line-clamp-2 break-words text-xl font-black leading-tight sm:text-2xl ${
-          alert ? "text-blue-700" : "text-slate-900"
-        }`}
-      >
-        {value}
-      </h2>
-    </div>
+      {title} →
+    </Link>
   );
 }
 
