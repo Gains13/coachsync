@@ -166,10 +166,11 @@ export default function StartWorkout() {
         window.clearTimeout(saveTimerRef.current);
       }
     };
-  }, [workoutId]);
+  }, [workoutId, isRepeatMode]);
 
   useEffect(() => {
     if (
+      isRepeatMode ||
       !currentUserId ||
       !workoutId ||
       !draftLoaded ||
@@ -193,6 +194,7 @@ export default function StartWorkout() {
       }
     };
   }, [
+    isRepeatMode,
     currentUserId,
     workoutId,
     workoutNotes,
@@ -211,6 +213,15 @@ export default function StartWorkout() {
     setErrorMessage("");
     setSuccessMessage("");
     setDraftLoaded(false);
+    setDraftSavedAt("");
+
+    setLoggedExercises([]);
+    setWorkoutNotes("");
+    setPainReported(false);
+    setPainLocation("");
+    setPainLevel("");
+    setPainExercise("");
+    setPainNotes("");
 
     const {
       data: { user },
@@ -295,6 +306,13 @@ export default function StartWorkout() {
 
     setWorkout(data as PlanWorkout);
 
+    if (isRepeatMode) {
+      setLoggedExercises(freshLoggedExercises);
+      setDraftLoaded(true);
+      setIsLoading(false);
+      return;
+    }
+
     const { data: existingDraft, error: draftError } = await supabase
       .from("workout_drafts")
       .select(
@@ -345,7 +363,9 @@ export default function StartWorkout() {
   }
 
   async function saveDraftToSupabase() {
-    if (!currentUserId || !workoutId || loggedExercises.length === 0) return;
+    if (isRepeatMode || !currentUserId || !workoutId || loggedExercises.length === 0) {
+      return;
+    }
 
     setIsSavingDraft(true);
 
@@ -415,7 +435,7 @@ export default function StartWorkout() {
   }
 
   async function clearSavedDraft() {
-    if (!currentUserId || !workoutId) return;
+    if (isRepeatMode || !currentUserId || !workoutId) return;
 
     await supabase
       .from("workout_drafts")
@@ -428,7 +448,7 @@ export default function StartWorkout() {
 
   async function resetWorkoutProgress() {
     const confirmed = window.confirm(
-      "This will clear your saved progress for this workout across your devices. Are you sure?"
+      "This will clear the progress currently shown on this workout. Are you sure?"
     );
 
     if (!confirmed) return;
@@ -449,9 +469,12 @@ export default function StartWorkout() {
     setPainExercise("");
     setPainNotes("");
 
-    await clearSavedDraft();
+    if (!isRepeatMode) {
+      await clearSavedDraft();
+    }
+
     setSuccessMessage("");
-    setErrorMessage("Saved progress was cleared.");
+    setErrorMessage("Progress was cleared.");
   }
 
   function toggleCompleted(exerciseIndex: number) {
@@ -630,7 +653,9 @@ export default function StartWorkout() {
       return;
     }
 
-    await clearSavedDraft();
+    if (!isRepeatMode) {
+      await clearSavedDraft();
+    }
 
     setSuccessMessage(
       isRepeatMode
@@ -816,7 +841,9 @@ export default function StartWorkout() {
 
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm font-bold text-slate-600">
-                {isSavingDraft
+                {isRepeatMode
+                  ? "Repeat workout progress starts fresh each time."
+                  : isSavingDraft
                   ? "Saving progress..."
                   : lastSavedLabel
                   ? `Progress saved across devices at ${lastSavedLabel}.`
@@ -829,7 +856,7 @@ export default function StartWorkout() {
                 disabled={isSubmitting}
                 className="rounded-xl border border-red-100 bg-white px-4 py-2 text-sm font-black text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Clear Saved Progress
+                Clear Progress
               </button>
             </div>
           </div>
