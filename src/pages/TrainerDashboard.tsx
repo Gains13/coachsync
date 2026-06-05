@@ -33,6 +33,11 @@ type WorkoutSubmission = {
   workout_title: string;
   submitted_at: string;
   notes: string | null;
+  pain_reported?: boolean | null;
+  pain_location?: string | null;
+  pain_level?: number | null;
+  pain_exercise?: string | null;
+  pain_notes?: string | null;
   workout_submission_exercises: SubmissionExercise[];
 };
 
@@ -51,13 +56,14 @@ type PersonalWorkoutLog = {
 
 type ActivityItem = {
   id: string;
-  type: "message" | "workout" | "note" | "personal";
+  type: "message" | "workout" | "note" | "personal" | "pain";
   title: string;
   description: string;
   clientUserId: string;
   clientName: string;
   createdAt: string;
   link: string;
+  priority?: "high" | "normal";
 };
 
 type SidebarItem = {
@@ -127,6 +133,11 @@ export default function TrainerDashboard() {
         workout_title,
         submitted_at,
         notes,
+        pain_reported,
+        pain_location,
+        pain_level,
+        pain_exercise,
+        pain_notes,
         workout_submission_exercises (
           id,
           exercise_name,
@@ -137,7 +148,7 @@ export default function TrainerDashboard() {
       `
       )
       .order("submitted_at", { ascending: false })
-      .limit(20);
+      .limit(30);
 
     if (submissionsError) {
       console.error(submissionsError);
@@ -232,6 +243,19 @@ export default function TrainerDashboard() {
     return parts.length > 0 ? parts.join(" • ") : "Personal activity logged.";
   }
 
+  function describePainReport(submission: WorkoutSubmission) {
+    const parts = [
+      submission.pain_level ? `Level: ${submission.pain_level}/10` : "",
+      submission.pain_location ? `Location: ${submission.pain_location}` : "",
+      submission.pain_exercise ? `Exercise: ${submission.pain_exercise}` : "",
+      submission.pain_notes ? `Notes: ${submission.pain_notes}` : "",
+    ].filter(Boolean);
+
+    return parts.length > 0
+      ? parts.join(" • ")
+      : "Pain or discomfort was reported.";
+  }
+
   const unreadClientMessages = useMemo(() => {
     return messages.filter((message) => {
       const sentByTrainer = message.sender_user_id === trainerUserId;
@@ -248,6 +272,17 @@ export default function TrainerDashboard() {
     return personalLogs.slice(0, 5);
   }, [personalLogs]);
 
+  const painReports = useMemo(() => {
+    return submissions.filter((submission) => submission.pain_reported === true);
+  }, [submissions]);
+
+  const highPriorityPainReports = useMemo(() => {
+    return painReports.filter(
+      (submission) =>
+        typeof submission.pain_level === "number" && submission.pain_level >= 7
+    );
+  }, [painReports]);
+
   const exerciseNotes = useMemo(() => {
     return submissions.flatMap((submission) => {
       return (submission.workout_submission_exercises || [])
@@ -259,7 +294,24 @@ export default function TrainerDashboard() {
     });
   }, [submissions]);
 
-  const activityItems = useMemo<ActivityItem[]>((() => {
+  const activityItems = useMemo<ActivityItem[]>(() => {
+    const painActivities: ActivityItem[] = painReports.map((submission) => ({
+      id: `pain-${submission.id}`,
+      type: "pain",
+      title: `${submission.pain_location || "Pain"} reported${
+        submission.pain_level ? ` — ${submission.pain_level}/10` : ""
+      }`,
+      description: describePainReport(submission),
+      clientUserId: submission.client_user_id,
+      clientName: getClientName(submission.client_user_id),
+      createdAt: submission.submitted_at,
+      link: `/workout-history/${submission.id}`,
+      priority:
+        typeof submission.pain_level === "number" && submission.pain_level >= 7
+          ? "high"
+          : "normal",
+    }));
+
     const messageActivities: ActivityItem[] = unreadClientMessages.map(
       (message) => ({
         id: `message-${message.id}`,
@@ -277,7 +329,7 @@ export default function TrainerDashboard() {
       (submission) => ({
         id: `workout-${submission.id}`,
         type: "workout",
-        title: `${submission.workout_title} completed`,
+        title: `${submission.workout_title || "Workout"} completed`,
         description: `${getCompletionPercent(submission)}% complete`,
         clientUserId: submission.client_user_id,
         clientName: getClientName(submission.client_user_id),
@@ -311,17 +363,23 @@ export default function TrainerDashboard() {
     );
 
     return [
+      ...painActivities,
       ...messageActivities,
       ...workoutActivities,
       ...personalActivities,
       ...noteActivities,
     ]
-      .sort(
-        (a, b) =>
+      .sort((a, b) => {
+        if (a.type === "pain" && a.priority === "high") return -1;
+        if (b.type === "pain" && b.priority === "high") return 1;
+
+        return (
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )
-      .slice(0, 10);
-  }) as () => ActivityItem[], [
+        );
+      })
+      .slice(0, 12);
+  }, [
+    painReports,
     unreadClientMessages,
     recentWorkoutSubmissions,
     recentPersonalLogs,
@@ -334,7 +392,8 @@ export default function TrainerDashboard() {
     unreadClientMessages.length +
     recentWorkoutSubmissions.length +
     exerciseNotes.length +
-    recentPersonalLogs.length;
+    recentPersonalLogs.length +
+    painReports.length;
 
   const sidebarItems: SidebarItem[] = [
     {
@@ -367,7 +426,7 @@ export default function TrainerDashboard() {
       to: "/workout-tracker",
       title: "Workout Tracker",
       icon: "🏋️",
-      badge: exerciseNotes.length,
+      badge: exerciseNotes.length + painReports.length,
     },
     {
       to: "/workout-history",
@@ -478,7 +537,19 @@ export default function TrainerDashboard() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 lg:grid-cols-5 lg:p-8">
+              <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 lg:grid-cols-6 lg:p-8">
+                <SummaryCard
+                  title="Pain Alerts"
+                  value={`${painReports.length}`}
+                  danger={painReports.length > 0}
+                />
+
+                <SummaryCard
+                  title="High Pain"
+                  value={`${highPriorityPainReports.length}`}
+                  danger={highPriorityPainReports.length > 0}
+                />
+
                 <SummaryCard
                   title="Messages"
                   value={`${unreadClientMessages.length}`}
@@ -502,13 +573,23 @@ export default function TrainerDashboard() {
                   value={`${exerciseNotes.length}`}
                   alert={exerciseNotes.length > 0}
                 />
-
-                <SummaryCard
-                  title="Alerts"
-                  value={`${notificationCount}`}
-                  alert={notificationCount > 0}
-                />
               </div>
+
+              {highPriorityPainReports.length > 0 && (
+                <div className="px-4 pb-4 sm:px-6 lg:px-8 lg:pb-8">
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+                    <p className="text-sm font-black text-red-700">
+                      {highPriorityPainReports.length} high-priority pain report
+                      {highPriorityPainReports.length === 1 ? "" : "s"} need
+                      review.
+                    </p>
+
+                    <p className="mt-1 text-sm font-semibold leading-6 text-red-600">
+                      These are reports marked 7/10 or higher.
+                    </p>
+                  </div>
+                </div>
+              )}
             </section>
 
             {statusMessage && (
@@ -529,8 +610,8 @@ export default function TrainerDashboard() {
                   </h2>
 
                   <p className="mt-1 text-sm leading-6 text-slate-500">
-                    New messages, program workouts, personal activity logs, and
-                    exercise notes from your clients.
+                    Pain reports, new messages, program workouts, personal
+                    activity logs, and exercise notes from your clients.
                   </p>
                 </div>
 
@@ -554,8 +635,8 @@ export default function TrainerDashboard() {
                   </h3>
 
                   <p className="mt-1 text-sm leading-6 text-slate-500">
-                    Client messages, workout submissions, personal activity
-                    logs, and exercise notes will appear here.
+                    Pain reports, client messages, workout submissions, personal
+                    activity logs, and exercise notes will appear here.
                   </p>
                 </div>
               ) : (
@@ -698,21 +779,38 @@ function ActivityCard({
       icon: "💬",
       label: "Message",
       badge: "bg-blue-50 text-blue-700 ring-blue-100",
+      card: "border-sky-100 bg-sky-50 hover:border-blue-200 hover:bg-blue-50",
+      text: "text-blue-600",
     },
     workout: {
       icon: "✅",
       label: "Program Workout",
       badge: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+      card:
+        "border-emerald-100 bg-emerald-50 hover:border-emerald-200 hover:bg-emerald-50",
+      text: "text-emerald-700",
     },
     personal: {
       icon: "🚶",
       label: "Personal Activity",
       badge: "bg-teal-50 text-teal-700 ring-teal-100",
+      card: "border-teal-100 bg-teal-50 hover:border-teal-200 hover:bg-teal-50",
+      text: "text-teal-700",
     },
     note: {
       icon: "📝",
       label: "Exercise Note",
       badge: "bg-amber-50 text-amber-700 ring-amber-100",
+      card:
+        "border-amber-100 bg-amber-50 hover:border-amber-200 hover:bg-amber-50",
+      text: "text-amber-700",
+    },
+    pain: {
+      icon: "⚠️",
+      label: item.priority === "high" ? "High Priority Pain" : "Pain Report",
+      badge: "bg-red-50 text-red-700 ring-red-100",
+      card: "border-red-100 bg-red-50 hover:border-red-200 hover:bg-red-50",
+      text: "text-red-700",
     },
   };
 
@@ -721,7 +819,7 @@ function ActivityCard({
   return (
     <Link
       to={item.link}
-      className="block rounded-2xl border border-sky-100 bg-sky-50 p-4 transition hover:-translate-y-1 hover:border-blue-200 hover:bg-blue-50 hover:shadow-md active:scale-[0.99] sm:rounded-3xl sm:p-5"
+      className={`block rounded-2xl border p-4 transition hover:-translate-y-1 hover:shadow-md active:scale-[0.99] sm:rounded-3xl sm:p-5 ${style.card}`}
     >
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0">
@@ -735,6 +833,12 @@ function ActivityCard({
             >
               {style.label}
             </span>
+
+            {item.priority === "high" && (
+              <span className="rounded-full bg-red-600 px-3 py-1 text-xs font-black text-white">
+                Review Now
+              </span>
+            )}
           </div>
 
           <h3 className="break-words text-base font-black leading-snug text-slate-900 sm:text-lg">
@@ -749,7 +853,7 @@ function ActivityCard({
             Client ID: {clientId}
           </p>
 
-          <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-500">
+          <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-500">
             {item.description}
           </p>
         </div>
@@ -759,7 +863,7 @@ function ActivityCard({
         </div>
       </div>
 
-      <p className="mt-3 text-sm font-black text-blue-600 sm:mt-4">Open →</p>
+      <p className={`mt-3 text-sm font-black sm:mt-4 ${style.text}`}>Open →</p>
     </Link>
   );
 }
@@ -768,15 +872,21 @@ function SummaryCard({
   title,
   value,
   alert = false,
+  danger = false,
 }: {
   title: string;
   value: string;
   alert?: boolean;
+  danger?: boolean;
 }) {
   return (
     <div
       className={`rounded-2xl border p-4 shadow-sm ${
-        alert ? "border-blue-200 bg-blue-50" : "border-sky-100 bg-sky-50"
+        danger
+          ? "border-red-200 bg-red-50"
+          : alert
+          ? "border-blue-200 bg-blue-50"
+          : "border-sky-100 bg-sky-50"
       }`}
     >
       <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
@@ -785,7 +895,7 @@ function SummaryCard({
 
       <h2
         className={`mt-2 break-words text-2xl font-black leading-none sm:text-3xl ${
-          alert ? "text-blue-700" : "text-slate-900"
+          danger ? "text-red-700" : alert ? "text-blue-700" : "text-slate-900"
         }`}
       >
         {value}
