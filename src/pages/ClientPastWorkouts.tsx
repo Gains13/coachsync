@@ -62,6 +62,7 @@ type CombinedWorkoutItem =
   | {
       type: "program";
       id: string;
+      workoutId: string | null;
       title: string;
       date: string | null;
       notes: string;
@@ -240,6 +241,7 @@ export default function ClientPastWorkouts() {
       return {
         type: "program" as const,
         id: submission.id,
+        workoutId: submission.workout_id || null,
         title: workoutTitle,
         date: submissionDate,
         notes,
@@ -252,41 +254,29 @@ export default function ClientPastWorkouts() {
       };
     }),
 
-    ...personalLogs.map((log) => {
-      return {
-        type: "personal" as const,
-        id: log.id,
-        title: log.title || "Personal Activity",
-        date: log.logged_at || log.created_at,
-        notes: log.notes || "No notes added",
-        activityType: log.activity_type || "Activity",
-        durationMinutes: log.duration_minutes,
-        intensity: log.intensity || "Not set",
-        location: log.location || "Not set",
-      };
-    }),
+    ...personalLogs.map((log) => ({
+      type: "personal" as const,
+      id: log.id,
+      title: log.title || "Personal Activity",
+      date: log.logged_at || log.created_at,
+      notes: log.notes || "No notes added",
+      activityType: log.activity_type || "Activity",
+      durationMinutes: log.duration_minutes,
+      intensity: log.intensity || "Not set",
+      location: log.location || "Not set",
+    })),
 
-    ...historicalWorkouts.map((workout) => {
-      return {
-        type: "historical" as const,
-        id: workout.id,
-        title: workout.title || "Imported Past Workout",
-        date: workout.workout_date || workout.created_at,
-        notes: workout.notes || "Imported from trainer notes.",
-        source: workout.source || "notes_import",
-        exerciseCount: workout.client_historical_workout_exercises.length,
-        previewExercises: workout.client_historical_workout_exercises.slice(
-          0,
-          5
-        ),
-      };
-    }),
-  ].sort((a, b) => {
-    const dateA = getDateValue(a.date);
-    const dateB = getDateValue(b.date);
-
-    return dateB - dateA;
-  });
+    ...historicalWorkouts.map((workout) => ({
+      type: "historical" as const,
+      id: workout.id,
+      title: workout.title || "Imported Past Workout",
+      date: workout.workout_date || workout.created_at,
+      notes: workout.notes || "Imported from trainer notes.",
+      source: workout.source || "notes_import",
+      exerciseCount: workout.client_historical_workout_exercises.length,
+      previewExercises: workout.client_historical_workout_exercises.slice(0, 5),
+    })),
+  ].sort((a, b) => getDateValue(b.date) - getDateValue(a.date));
 
   const repeatedWorkoutCount = programSubmissions.filter((submission) => {
     const workoutTitle =
@@ -306,7 +296,11 @@ export default function ClientPastWorkouts() {
     const painReported =
       submission.pain_reported === true || submission.pain === true;
 
-    return painReported && typeof submission.pain_level === "number" && submission.pain_level >= 7;
+    return (
+      painReported &&
+      typeof submission.pain_level === "number" &&
+      submission.pain_level >= 7
+    );
   }).length;
 
   return (
@@ -323,31 +317,20 @@ export default function ClientPastWorkouts() {
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
             Review completed program workouts, repeated workouts, personal
-            activities, imported workouts, and any pain or discomfort reports.
+            activities, imported workouts, and pain reports.
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-6 md:p-8">
           <SummaryCard title="Total Logs" value={`${combinedItems.length}`} />
-
-          <SummaryCard
-            title="Program"
-            value={`${programSubmissions.length}`}
-          />
-
+          <SummaryCard title="Program" value={`${programSubmissions.length}`} />
           <SummaryCard title="Personal" value={`${personalLogs.length}`} />
-
-          <SummaryCard
-            title="Imported"
-            value={`${historicalWorkouts.length}`}
-          />
-
+          <SummaryCard title="Imported" value={`${historicalWorkouts.length}`} />
           <SummaryCard
             title="Repeated"
             value={`${repeatedWorkoutCount}`}
             alert={repeatedWorkoutCount > 0}
           />
-
           <SummaryCard
             title="Pain Reports"
             value={`${painReportCount}`}
@@ -386,8 +369,7 @@ export default function ClientPastWorkouts() {
           </h2>
 
           <p className="mt-1 text-sm leading-6 text-slate-500">
-            Program workouts, repeated workouts, personal activities, imported
-            past workouts, and pain reports are shown together.
+            Program workouts can now be viewed or repeated from this page.
           </p>
         </div>
 
@@ -417,15 +399,14 @@ export default function ClientPastWorkouts() {
             {combinedItems.map((item) => {
               if (item.type === "program") {
                 return (
-                  <Link
+                  <div
                     key={`program-${item.id}`}
-                    to={`/workout-history/${item.id}`}
-                    className={`block rounded-2xl border p-4 transition hover:bg-white hover:shadow-sm active:scale-[0.99] sm:p-5 ${
+                    className={`rounded-2xl border p-4 transition sm:p-5 ${
                       item.isRepeatedWorkout
-                        ? "border-amber-100 bg-amber-50 hover:border-amber-200"
+                        ? "border-amber-100 bg-amber-50"
                         : item.painReported
-                        ? "border-red-100 bg-red-50 hover:border-red-200"
-                        : "border-sky-100 bg-sky-50 hover:border-blue-200"
+                        ? "border-red-100 bg-red-50"
+                        : "border-sky-100 bg-sky-50"
                     }`}
                   >
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -509,12 +490,10 @@ export default function ClientPastWorkouts() {
                             label="Location"
                             value={item.painLocation}
                           />
-
                           <PainInfo
                             label="Exercise"
                             value={item.painExercise}
                           />
-
                           <PainInfo
                             label="Level"
                             value={
@@ -537,18 +516,34 @@ export default function ClientPastWorkouts() {
                       </div>
                     )}
 
-                    <p
-                      className={`mt-4 text-sm font-black ${
-                        item.isRepeatedWorkout
-                          ? "text-amber-700"
-                          : item.painReported
-                          ? "text-red-700"
-                          : "text-blue-600"
-                      }`}
-                    >
-                      View workout details →
-                    </p>
-                  </Link>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <Link
+                        to={`/workout-history/${item.id}`}
+                        className={`block rounded-2xl px-4 py-3 text-center text-sm font-black shadow-sm transition active:scale-[0.99] ${
+                          item.painReported
+                            ? "bg-red-600 text-white hover:bg-red-700"
+                            : item.isRepeatedWorkout
+                            ? "bg-amber-500 text-white hover:bg-amber-600"
+                            : "bg-blue-600 text-white hover:bg-blue-700"
+                        }`}
+                      >
+                        View Details
+                      </Link>
+
+                      {item.workoutId ? (
+                        <Link
+                          to={`/start-workout?workoutId=${item.workoutId}&repeat=true&sourceSubmissionId=${item.id}`}
+                          className="block rounded-2xl border border-sky-100 bg-white px-4 py-3 text-center text-sm font-black text-slate-800 shadow-sm transition hover:bg-sky-50 active:scale-[0.99]"
+                        >
+                          Repeat This Workout
+                        </Link>
+                      ) : (
+                        <span className="block rounded-2xl border border-slate-100 bg-white px-4 py-3 text-center text-sm font-black text-slate-400">
+                          Repeat Not Available
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 );
               }
 
