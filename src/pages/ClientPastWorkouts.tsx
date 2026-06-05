@@ -143,7 +143,8 @@ export default function ClientPastWorkouts() {
     const { data: programData, error: programError } = await supabase
       .from("workout_submissions")
       .select("*")
-      .eq("client_user_id", user.id);
+      .eq("client_user_id", user.id)
+      .order("submitted_at", { ascending: false });
 
     if (programError) {
       setStatusMessage(
@@ -316,21 +317,32 @@ export default function ClientPastWorkouts() {
           </h1>
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
-            Review completed program workouts, repeated workouts, personal
-            activities, imported workouts, and pain reports.
+            Review completed program workouts, repeat past sessions, view
+            personal activities, and check pain reports.
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-6 md:p-8">
           <SummaryCard title="Total Logs" value={`${combinedItems.length}`} />
-          <SummaryCard title="Program" value={`${programSubmissions.length}`} />
+
+          <SummaryCard
+            title="Program"
+            value={`${programSubmissions.length}`}
+          />
+
           <SummaryCard title="Personal" value={`${personalLogs.length}`} />
-          <SummaryCard title="Imported" value={`${historicalWorkouts.length}`} />
+
+          <SummaryCard
+            title="Imported"
+            value={`${historicalWorkouts.length}`}
+          />
+
           <SummaryCard
             title="Repeated"
             value={`${repeatedWorkoutCount}`}
             alert={repeatedWorkoutCount > 0}
           />
+
           <SummaryCard
             title="Pain Reports"
             value={`${painReportCount}`}
@@ -369,7 +381,8 @@ export default function ClientPastWorkouts() {
           </h2>
 
           <p className="mt-1 text-sm leading-6 text-slate-500">
-            Program workouts can now be viewed or repeated from this page.
+            Program workouts now show separate buttons for viewing details and
+            repeating the workout.
           </p>
         </div>
 
@@ -490,10 +503,12 @@ export default function ClientPastWorkouts() {
                             label="Location"
                             value={item.painLocation}
                           />
+
                           <PainInfo
                             label="Exercise"
                             value={item.painExercise}
                           />
+
                           <PainInfo
                             label="Level"
                             value={
