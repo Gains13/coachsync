@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import {
   closestCenter,
@@ -27,6 +27,17 @@ const WORKOUT_SECTIONS = [
   "Cool-Down",
   "Other",
 ];
+
+const SECTION_DESCRIPTIONS: Record<string, string> = {
+  "Warm-Up": "Prepare the body, increase temperature, and set movement quality.",
+  "Activation / Core / Balance":
+    "Core control, stability, balance, and activation work.",
+  "SAQ / Skill Development":
+    "Speed, agility, quickness, reaction, coordination, or sport skill work.",
+  "Resistance Training": "Main strength, stability, hypertrophy, or machine work.",
+  "Cool-Down": "Recovery, mobility, stretching, breathing, and reset work.",
+  Other: "Any additional coaching work that does not fit the main sections.",
+};
 
 type ClientProfile = {
   id: string;
@@ -186,13 +197,31 @@ function formatDate(dateValue?: string | null) {
   return date.toLocaleDateString();
 }
 
+function getWorkoutExerciseCount(workout: WorkoutForm) {
+  return workout.exercises.filter(
+    (exercise) => exercise.exerciseName.trim() !== ""
+  ).length;
+}
+
+function getWorkoutSectionCount(workout: WorkoutForm) {
+  return WORKOUT_SECTIONS.filter((section) =>
+    workout.exercises.some(
+      (exercise) =>
+        exercise.section === section && exercise.exerciseName.trim() !== ""
+    )
+  ).length;
+}
+
 export default function CreateProgram() {
   const saveDraftTimerRef = useRef<number | null>(null);
 
   const [currentTrainerUserId, setCurrentTrainerUserId] = useState("");
   const [clients, setClients] = useState<ClientProfile[]>([]);
-  const [exerciseLibrary, setExerciseLibrary] = useState<ExerciseLibraryItem[]>([]);
-  const [isLoadingExerciseLibrary, setIsLoadingExerciseLibrary] = useState(false);
+  const [exerciseLibrary, setExerciseLibrary] = useState<ExerciseLibraryItem[]>(
+    []
+  );
+  const [isLoadingExerciseLibrary, setIsLoadingExerciseLibrary] =
+    useState(false);
   const [selectedClientId, setSelectedClientId] = useState("");
   const [copySourceClientId, setCopySourceClientId] = useState("");
 
@@ -313,6 +342,27 @@ export default function CreateProgram() {
     draftLoaded,
     isSaving,
   ]);
+
+  const totalWorkoutCount = workouts.length;
+
+  const totalExerciseCount = workouts.reduce(
+    (total, workout) => total + getWorkoutExerciseCount(workout),
+    0
+  );
+
+  const totalSectionCount = useMemo(() => {
+    const sections = new Set<string>();
+
+    workouts.forEach((workout) => {
+      workout.exercises.forEach((exercise) => {
+        if (exercise.exerciseName.trim()) {
+          sections.add(exercise.section || "Other");
+        }
+      });
+    });
+
+    return sections.size;
+  }, [workouts]);
 
   async function loadTrainerUser() {
     const {
@@ -1376,22 +1426,22 @@ export default function CreateProgram() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
-      <section className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:py-10">
-        <div className="mb-8 overflow-hidden rounded-3xl border border-sky-100 bg-white shadow-sm sm:rounded-[2rem]">
-          <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-6 text-white sm:px-6 sm:py-8 md:px-8">
+      <section className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:py-10">
+        <div className="mb-6 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-8 sm:rounded-[2rem]">
+          <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-4 py-6 text-white sm:px-6 sm:py-8 md:px-8">
             <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
-                  Program Builder
+                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
+                  Guided Program Builder
                 </p>
 
-                <h1 className="mt-3 break-words text-3xl font-bold md:text-4xl">
+                <h1 className="mt-3 break-words text-3xl font-black leading-tight md:text-5xl">
                   Create Client Program
                 </h1>
 
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
-                  Build a section-based workout using your NASM flow: warm-up,
-                  activation, SAQ, resistance training, and cool-down.
+                <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-blue-50 sm:text-base">
+                  Build workouts exactly how clients will experience them:
+                  section by section, movement by movement, set by set.
                 </p>
               </div>
 
@@ -1399,15 +1449,15 @@ export default function CreateProgram() {
                 {selectedClientId && (
                   <Link
                     to={`/clients/${selectedClientId}`}
-                    className="w-full rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-50 sm:w-auto sm:py-2"
+                    className="w-full rounded-2xl bg-white px-4 py-3 text-center text-sm font-black text-blue-700 transition hover:bg-blue-50 sm:w-auto"
                   >
-                    View Target Client
+                    View Client
                   </Link>
                 )}
 
                 <Link
                   to="/trainer"
-                  className="w-full rounded-xl bg-white/15 px-4 py-3 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto sm:py-2"
+                  className="w-full rounded-2xl bg-white/15 px-4 py-3 text-center text-sm font-black text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto"
                 >
                   Back to Trainer
                 </Link>
@@ -1415,70 +1465,85 @@ export default function CreateProgram() {
             </div>
           </div>
 
-          <div className="grid gap-4 p-4 sm:p-6 md:grid-cols-4 md:p-8">
-            <SummaryCard title="Step 1" value="Choose Target" />
-            <SummaryCard title="Step 2" value="Copy or Template" />
-            <SummaryCard title="Step 3" value="Build by Section" />
-            <SummaryCard title="Step 4" value="Autosave + Save" />
+          <div className="grid gap-3 p-4 sm:p-6 md:grid-cols-4 md:p-8">
+            <SummaryCard title="Workouts" value={String(totalWorkoutCount)} />
+            <SummaryCard title="Exercises" value={String(totalExerciseCount)} />
+            <SummaryCard title="Sections Used" value={String(totalSectionCount)} />
+            <SummaryCard
+              title="Builder Mode"
+              value="Guided"
+            />
           </div>
         </div>
 
         <form
           onSubmit={saveProgram}
-          className="rounded-3xl border border-sky-100 bg-white p-4 shadow-sm sm:p-6"
+          className="rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6"
         >
-          <div className="grid gap-4 md:grid-cols-3">
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Target Client
-              </label>
+          <div className="rounded-[1.5rem] border border-sky-100 bg-sky-50 p-4 sm:p-5">
+            <div className="mb-4">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
+                Program Setup
+              </p>
 
-              <select
-                value={selectedClientId}
-                onChange={(event) => handleClientChange(event.target.value)}
-                className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="">Select target client</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.full_name} — {client.client_id}
-                  </option>
-                ))}
-              </select>
+              <h2 className="mt-1 text-2xl font-black text-slate-900">
+                Choose client and week
+              </h2>
             </div>
 
-            <Input
-              label={isLoadingWeek ? "Week Number Loading..." : "Week Number"}
-              value={weekNumber}
-              onChange={setWeekNumber}
-              placeholder="1"
-              type="number"
-            />
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <label className="mb-2 block text-sm font-black text-slate-700">
+                  Target Client
+                </label>
 
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Week Status
-              </label>
+                <select
+                  value={selectedClientId}
+                  onChange={(event) => handleClientChange(event.target.value)}
+                  className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                >
+                  <option value="">Select target client</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.full_name} — {client.client_id}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-              <select
-                value={weekStatus}
-                onChange={(event) => setWeekStatus(event.target.value)}
-                className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="unlocked">Unlocked</option>
-                <option value="locked">Locked</option>
-                <option value="completed">Completed</option>
-              </select>
+              <Input
+                label={isLoadingWeek ? "Week Number Loading..." : "Week Number"}
+                value={weekNumber}
+                onChange={setWeekNumber}
+                placeholder="1"
+                type="number"
+              />
+
+              <div>
+                <label className="mb-2 block text-sm font-black text-slate-700">
+                  Week Status
+                </label>
+
+                <select
+                  value={weekStatus}
+                  onChange={(event) => setWeekStatus(event.target.value)}
+                  className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                >
+                  <option value="unlocked">Unlocked</option>
+                  <option value="locked">Locked</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
             </div>
           </div>
 
           {selectedClient && (
-            <div className="mt-5 rounded-2xl border border-sky-100 bg-sky-50 p-4">
-              <p className="text-sm font-medium text-slate-500">
+            <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+              <p className="text-sm font-black text-blue-700">
                 Target Client
               </p>
 
-              <p className="mt-1 font-semibold text-slate-900">
+              <p className="mt-1 text-sm font-semibold leading-6 text-slate-700">
                 This workout/week will be saved to {selectedClient.full_name} —{" "}
                 {selectedClient.client_id}. If Week {weekNumber} already exists,
                 the workout will be added into that week.
@@ -1490,15 +1555,17 @@ export default function CreateProgram() {
             <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm font-bold text-emerald-700">
+                  <p className="text-sm font-black text-emerald-700">
                     Draft Autosave
                   </p>
 
-                  <p className="mt-1 text-sm font-semibold text-slate-700">
+                  <p className="mt-1 text-sm font-semibold leading-6 text-slate-700">
                     {isSavingDraft
                       ? "Saving program draft..."
                       : draftSavedAt
-                      ? `Draft saved at ${new Date(draftSavedAt).toLocaleTimeString([], {
+                      ? `Draft saved at ${new Date(
+                          draftSavedAt
+                        ).toLocaleTimeString([], {
                           hour: "numeric",
                           minute: "2-digit",
                         })}.`
@@ -1510,7 +1577,7 @@ export default function CreateProgram() {
                   type="button"
                   onClick={resetProgramDraft}
                   disabled={isSaving || isSavingDraft}
-                  className="rounded-xl border border-red-100 bg-white px-4 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm font-black text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Clear Draft
                 </button>
@@ -1519,322 +1586,306 @@ export default function CreateProgram() {
           )}
 
           {selectedClientId && (
-            <div className="mt-6 rounded-3xl border border-blue-100 bg-blue-50 p-4 sm:p-5">
-              <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900">
-                    Copy Existing Assigned Workout
-                  </h2>
+            <div className="mt-6 grid gap-5 xl:grid-cols-2">
+              <div className="rounded-[1.5rem] border border-blue-100 bg-blue-50 p-4 sm:p-5">
+                <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                      Copy Assigned Workout
+                    </p>
 
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
-                    Choose any client as the source, copy one of their assigned
-                    workouts, then edit it before saving it to the target client.
-                  </p>
-                </div>
+                    <h2 className="mt-1 text-xl font-black text-slate-900">
+                      Use existing workout
+                    </h2>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!copySourceClientId) {
-                      setStatusMessage("Choose a copy source client first.");
-                      return;
-                    }
-
-                    loadExistingWorkouts(copySourceClientId);
-                  }}
-                  className="rounded-xl border border-blue-100 bg-white px-4 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-50 sm:py-2"
-                >
-                  Refresh Source Workouts
-                </button>
-              </div>
-
-              <div className="mb-4">
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Copy From Client
-                </label>
-
-                <select
-                  value={copySourceClientId}
-                  onChange={(event) => setCopySourceClientId(event.target.value)}
-                  className="w-full rounded-xl border border-blue-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                >
-                  <option value="">Select source client</option>
-                  {clients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.full_name} — {client.client_id}
-                    </option>
-                  ))}
-                </select>
-
-                {copySourceClient && (
-                  <p className="mt-2 text-sm font-medium text-slate-600">
-                    Source: {copySourceClient.full_name} —{" "}
-                    {copySourceClient.client_id}
-                  </p>
-                )}
-              </div>
-
-              {isLoadingExistingWorkouts ? (
-                <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
-                  Loading source workouts...
-                </p>
-              ) : !copySourceClientId ? (
-                <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
-                  Choose a source client to see workouts you can copy.
-                </p>
-              ) : existingWorkouts.length === 0 ? (
-                <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
-                  No previous assigned workouts found for this source client
-                  yet.
-                </p>
-              ) : (
-                <>
-                  <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">
-                        Select Workout to Copy
-                      </label>
-
-                      <select
-                        value={selectedWorkoutToCopy}
-                        onChange={(event) =>
-                          setSelectedWorkoutToCopy(event.target.value)
-                        }
-                        className="w-full rounded-xl border border-blue-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                      >
-                        <option value="">Choose source workout</option>
-                        {existingWorkouts.map((workout) => (
-                          <option key={workout.id} value={workout.id}>
-                            {workout.source_client_name} — Week{" "}
-                            {workout.week_number} — {workout.title} (
-                            {workout.client_plan_exercises.length} exercises)
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={copySelectedWorkout}
-                      className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
-                    >
-                      Copy Into Form
-                    </button>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                      Copy a previous assigned workout, then edit it before
+                      saving.
+                    </p>
                   </div>
 
-                  <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    {existingWorkouts.slice(0, 6).map((workout) => (
-                      <button
-                        key={workout.id}
-                        type="button"
-                        onClick={() => copyWorkoutById(workout.id)}
-                        className="rounded-2xl border border-blue-100 bg-white p-4 text-left transition hover:border-blue-200 hover:bg-blue-50"
-                      >
-                        <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
-                          {workout.source_client_name} • Week{" "}
-                          {workout.week_number}
-                        </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!copySourceClientId) {
+                        setStatusMessage("Choose a copy source client first.");
+                        return;
+                      }
 
-                        <h3 className="mt-1 font-bold text-slate-900">
-                          {workout.title}
-                        </h3>
-
-                        <p className="mt-1 text-sm text-slate-500">
-                          {workout.client_plan_exercises.length} exercise
-                          {workout.client_plan_exercises.length === 1
-                            ? ""
-                            : "s"}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {selectedClientId && (
-            <div className="mt-6 rounded-3xl border border-amber-100 bg-amber-50 p-4 sm:p-5">
-              <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900">
-                    Use Imported Past Workout as Template
-                  </h2>
-
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
-                    Copy an imported historical workout into this program. This
-                    keeps the warm-up, activation, SAQ, resistance, and cool-down
-                    sections when available.
-                  </p>
+                      loadExistingWorkouts(copySourceClientId);
+                    }}
+                    className="rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm font-black text-blue-700 transition hover:bg-blue-50"
+                  >
+                    Refresh
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={loadHistoricalTemplates}
-                  className="rounded-xl border border-amber-100 bg-white px-4 py-3 text-sm font-semibold text-amber-700 transition hover:bg-amber-50 sm:py-2"
-                >
-                  Refresh Templates
-                </button>
-              </div>
-
-              <div className="mb-4 grid gap-3 md:grid-cols-2">
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
-                    Filter Templates by Client
+                <div className="mb-4">
+                  <label className="mb-2 block text-sm font-black text-slate-700">
+                    Copy From Client
                   </label>
 
                   <select
-                    value={selectedHistoricalClientId}
-                    onChange={(event) => {
-                      setSelectedHistoricalClientId(event.target.value);
-                      setSelectedHistoricalTemplateId("");
-                    }}
-                    className="w-full rounded-xl border border-amber-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-amber-300 focus:ring-2 focus:ring-amber-100"
+                    value={copySourceClientId}
+                    onChange={(event) =>
+                      setCopySourceClientId(event.target.value)
+                    }
+                    className="w-full rounded-2xl border border-blue-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
                   >
-                    <option value="all">All clients</option>
-                    {historicalClientsWithTemplates.map((client) => (
+                    <option value="">Select source client</option>
+                    {clients.map((client) => (
                       <option key={client.id} value={client.id}>
                         {client.full_name} — {client.client_id}
                       </option>
                     ))}
                   </select>
+
+                  {copySourceClient && (
+                    <p className="mt-2 text-sm font-semibold text-slate-600">
+                      Source: {copySourceClient.full_name} —{" "}
+                      {copySourceClient.client_id}
+                    </p>
+                  )}
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
-                    Select Past Workout Template
-                  </label>
+                {isLoadingExistingWorkouts ? (
+                  <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
+                    Loading source workouts...
+                  </p>
+                ) : !copySourceClientId ? (
+                  <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
+                    Choose a source client to see workouts you can copy.
+                  </p>
+                ) : existingWorkouts.length === 0 ? (
+                  <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
+                    No previous assigned workouts found for this source client
+                    yet.
+                  </p>
+                ) : (
+                  <>
+                    <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+                      <div>
+                        <label className="mb-2 block text-sm font-black text-slate-700">
+                          Select Workout
+                        </label>
 
-                  <select
-                    value={selectedHistoricalTemplateId}
-                    onChange={(event) =>
-                      setSelectedHistoricalTemplateId(event.target.value)
-                    }
-                    className="w-full rounded-xl border border-amber-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-amber-300 focus:ring-2 focus:ring-amber-100"
-                  >
-                    <option value="">Choose template</option>
-                    {filteredHistoricalTemplates.map((template) => (
-                      <option key={template.id} value={template.id}>
-                        {getClientName(template.client_id)} —{" "}
-                        {formatDate(template.workout_date)} —{" "}
-                        {template.title || "Untitled Past Workout"} (
-                        {
-                          template.client_historical_workout_exercises.length
-                        }{" "}
-                        exercises)
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                        <select
+                          value={selectedWorkoutToCopy}
+                          onChange={(event) =>
+                            setSelectedWorkoutToCopy(event.target.value)
+                          }
+                          className="w-full rounded-2xl border border-blue-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                        >
+                          <option value="">Choose source workout</option>
+                          {existingWorkouts.map((workout) => (
+                            <option key={workout.id} value={workout.id}>
+                              {workout.source_client_name} — Week{" "}
+                              {workout.week_number} — {workout.title} (
+                              {workout.client_plan_exercises.length} exercises)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={copySelectedWorkout}
+                        className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white transition hover:bg-blue-700"
+                      >
+                        Copy
+                      </button>
+                    </div>
+
+                    <div className="mt-4 grid gap-3">
+                      {existingWorkouts.slice(0, 4).map((workout) => (
+                        <button
+                          key={workout.id}
+                          type="button"
+                          onClick={() => copyWorkoutById(workout.id)}
+                          className="rounded-2xl border border-blue-100 bg-white p-4 text-left transition hover:border-blue-200 hover:bg-blue-50"
+                        >
+                          <p className="text-xs font-bold uppercase tracking-wide text-blue-600">
+                            {workout.source_client_name} • Week{" "}
+                            {workout.week_number}
+                          </p>
+
+                          <h3 className="mt-1 font-black text-slate-900">
+                            {workout.title}
+                          </h3>
+
+                          <p className="mt-1 text-sm font-semibold text-slate-500">
+                            {workout.client_plan_exercises.length} exercise
+                            {workout.client_plan_exercises.length === 1
+                              ? ""
+                              : "s"}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
 
-              {isLoadingHistoricalTemplates ? (
-                <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
-                  Loading imported past workout templates...
-                </p>
-              ) : historicalTemplates.length === 0 ? (
-                <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
-                  No imported historical workouts found yet. Import past notes
-                  first, then they will appear here as templates.
-                </p>
-              ) : filteredHistoricalTemplates.length === 0 ? (
-                <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
-                  No templates found for this client.
-                </p>
-              ) : (
-                <>
+              <div className="rounded-[1.5rem] border border-amber-100 bg-amber-50 p-4 sm:p-5">
+                <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-600">
+                      Historical Templates
+                    </p>
+
+                    <h2 className="mt-1 text-xl font-black text-slate-900">
+                      Use imported workout
+                    </h2>
+
+                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                      Copy a historical workout into this guided program.
+                    </p>
+                  </div>
+
                   <button
                     type="button"
-                    onClick={copySelectedHistoricalTemplate}
-                    className="mb-4 rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-600"
+                    onClick={loadHistoricalTemplates}
+                    className="rounded-2xl border border-amber-100 bg-white px-4 py-3 text-sm font-black text-amber-700 transition hover:bg-amber-50"
                   >
-                    Copy Selected Template Into Form
+                    Refresh
                   </button>
+                </div>
 
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {filteredHistoricalTemplates.slice(0, 8).map((template) => (
-                      <button
-                        key={template.id}
-                        type="button"
-                        onClick={() => copyHistoricalTemplateById(template.id)}
-                        className="rounded-2xl border border-amber-100 bg-white p-4 text-left transition hover:border-amber-200 hover:bg-amber-50"
-                      >
-                        <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">
-                          {getClientName(template.client_id)} •{" "}
-                          {formatDate(template.workout_date)}
-                        </p>
+                <div className="mb-4 grid gap-3 md:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-sm font-black text-slate-700">
+                      Filter by Client
+                    </label>
 
-                        <h3 className="mt-1 font-bold text-slate-900">
-                          {template.title || "Untitled Past Workout"}
-                        </h3>
+                    <select
+                      value={selectedHistoricalClientId}
+                      onChange={(event) => {
+                        setSelectedHistoricalClientId(event.target.value);
+                        setSelectedHistoricalTemplateId("");
+                      }}
+                      className="w-full rounded-2xl border border-amber-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-amber-300 focus:ring-4 focus:ring-amber-100"
+                    >
+                      <option value="all">All clients</option>
+                      {historicalClientsWithTemplates.map((client) => (
+                        <option key={client.id} value={client.id}>
+                          {client.full_name} — {client.client_id}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                        <p className="mt-1 text-sm text-slate-500">
-                          ID: {getClientCode(template.client_id)}
-                        </p>
+                  <div>
+                    <label className="mb-2 block text-sm font-black text-slate-700">
+                      Select Template
+                    </label>
 
-                        <p className="mt-1 text-sm text-slate-500">
+                    <select
+                      value={selectedHistoricalTemplateId}
+                      onChange={(event) =>
+                        setSelectedHistoricalTemplateId(event.target.value)
+                      }
+                      className="w-full rounded-2xl border border-amber-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-amber-300 focus:ring-4 focus:ring-amber-100"
+                    >
+                      <option value="">Choose template</option>
+                      {filteredHistoricalTemplates.map((template) => (
+                        <option key={template.id} value={template.id}>
+                          {getClientName(template.client_id)} —{" "}
+                          {formatDate(template.workout_date)} —{" "}
+                          {template.title || "Untitled Past Workout"} (
                           {
                             template.client_historical_workout_exercises.length
                           }{" "}
-                          exercise
-                          {template.client_historical_workout_exercises
-                            .length === 1
-                            ? ""
-                            : "s"}
-                        </p>
-
-                        <div className="mt-3 space-y-1">
-                          {template.client_historical_workout_exercises
-                            .slice(0, 3)
-                            .map((exercise) => (
-                              <p
-                                key={exercise.id}
-                                className="line-clamp-1 text-xs text-slate-500"
-                              >
-                                {exercise.section
-                                  ? `${exercise.section}: `
-                                  : ""}
-                                {exercise.exercise_name ||
-                                  exercise.original_line ||
-                                  "Imported exercise"}
-                              </p>
-                            ))}
-
-                          {template.client_historical_workout_exercises.length >
-                            3 && (
-                            <p className="text-xs font-semibold text-amber-600">
-                              +
-                              {template.client_historical_workout_exercises
-                                .length - 3}{" "}
-                              more
-                            </p>
-                          )}
-                        </div>
-                      </button>
-                    ))}
+                          exercises)
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                </>
-              )}
+                </div>
+
+                {isLoadingHistoricalTemplates ? (
+                  <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
+                    Loading imported past workout templates...
+                  </p>
+                ) : historicalTemplates.length === 0 ? (
+                  <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
+                    No imported historical workouts found yet.
+                  </p>
+                ) : filteredHistoricalTemplates.length === 0 ? (
+                  <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
+                    No templates found for this client.
+                  </p>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={copySelectedHistoricalTemplate}
+                      className="mb-4 rounded-2xl bg-amber-500 px-4 py-3 text-sm font-black text-white transition hover:bg-amber-600"
+                    >
+                      Copy Selected Template
+                    </button>
+
+                    <div className="grid gap-3">
+                      {filteredHistoricalTemplates
+                        .slice(0, 4)
+                        .map((template) => (
+                          <button
+                            key={template.id}
+                            type="button"
+                            onClick={() =>
+                              copyHistoricalTemplateById(template.id)
+                            }
+                            className="rounded-2xl border border-amber-100 bg-white p-4 text-left transition hover:border-amber-200 hover:bg-amber-50"
+                          >
+                            <p className="text-xs font-bold uppercase tracking-wide text-amber-600">
+                              {getClientName(template.client_id)} •{" "}
+                              {formatDate(template.workout_date)}
+                            </p>
+
+                            <h3 className="mt-1 font-black text-slate-900">
+                              {template.title || "Untitled Past Workout"}
+                            </h3>
+
+                            <p className="mt-1 text-sm font-semibold text-slate-500">
+                              {
+                                template.client_historical_workout_exercises
+                                  .length
+                              }{" "}
+                              exercise
+                              {template.client_historical_workout_exercises
+                                .length === 1
+                                ? ""
+                                : "s"}
+                            </p>
+                          </button>
+                        ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           )}
 
           <div className="mt-8">
             <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <h2 className="text-xl font-bold text-slate-900">
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
+                  Guided Sessions
+                </p>
+
+                <h2 className="mt-1 text-2xl font-black text-slate-900">
                   Workouts / Sessions
                 </h2>
 
                 <p className="mt-1 text-sm leading-6 text-slate-500">
-                  Build each workout by section. Add warm-up, activation, SAQ,
-                  resistance training, and cool-down exercises.
+                  Build each workout by section so the client sees warm-up,
+                  activation, SAQ, resistance, and cool-down in the correct flow.
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={addWorkout}
-                className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 sm:py-2"
+                className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white transition hover:bg-blue-700"
               >
                 Add Workout
               </button>
@@ -1844,60 +1895,91 @@ export default function CreateProgram() {
               {workouts.map((workout, workoutIndex) => (
                 <div
                   key={workout.formId}
-                  className="rounded-3xl border border-sky-100 bg-sky-50 p-4 sm:p-5"
+                  className="overflow-hidden rounded-[1.75rem] border border-sky-100 bg-sky-50 shadow-sm sm:rounded-[2rem]"
                 >
-                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <h3 className="text-lg font-bold text-slate-900">
-                      Workout {workoutIndex + 1}
-                    </h3>
+                  <div className="border-b border-sky-100 bg-white p-4 sm:p-5">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                          Workout {workoutIndex + 1}
+                        </p>
 
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <button
-                        type="button"
-                        onClick={() => duplicateWorkoutInForm(workoutIndex)}
-                        className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50"
-                      >
-                        Duplicate
-                      </button>
+                        <h3 className="mt-1 break-words text-2xl font-black text-slate-900">
+                          {workout.title.trim() || "Untitled Workout"}
+                        </h3>
 
-                      <button
-                        type="button"
-                        onClick={() => removeWorkout(workoutIndex)}
-                        className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
-                      >
-                        Remove Workout
-                      </button>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-sky-100">
+                            {getWorkoutExerciseCount(workout)} exercises
+                          </span>
+
+                          <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-sky-100">
+                            {getWorkoutSectionCount(workout)} sections
+                          </span>
+
+                          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-100">
+                            Guided-ready
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <button
+                          type="button"
+                          onClick={() => duplicateWorkoutInForm(workoutIndex)}
+                          className="rounded-2xl bg-sky-50 px-4 py-3 text-sm font-black text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50"
+                        >
+                          Duplicate
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => removeWorkout(workoutIndex)}
+                          className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-black text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-5">
+                      <Input
+                        label="Workout Title"
+                        value={workout.title}
+                        onChange={(value) =>
+                          updateWorkoutTitle(workoutIndex, value)
+                        }
+                        placeholder="Day 1 Stabilization Endurance"
+                      />
                     </div>
                   </div>
 
-                  <Input
-                    label="Workout Title"
-                    value={workout.title}
-                    onChange={(value) => updateWorkoutTitle(workoutIndex, value)}
-                    placeholder="Day 1 Stabilization Endurance"
-                  />
+                  <div className="p-4 sm:p-5">
+                    <div className="mb-4 rounded-[1.5rem] border border-blue-100 bg-blue-50 p-4">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                          <h4 className="text-lg font-black text-slate-900">
+                            Add exercises by section
+                          </h4>
 
-                  <div className="mt-5">
-                    <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div>
-                        <h4 className="font-bold text-slate-900">Exercises</h4>
-                        <p className="mt-1 text-sm text-slate-500">
-                          Use the section buttons to build the workout in your
-                          coaching flow.
-                        </p>
-                      </div>
+                          <p className="mt-1 text-sm leading-6 text-slate-600">
+                            These are the same section headings the client will
+                            see in the guided workout.
+                          </p>
+                        </div>
 
-                      <div className="flex flex-wrap gap-2">
-                        {WORKOUT_SECTIONS.map((section) => (
-                          <button
-                            key={section}
-                            type="button"
-                            onClick={() => addExercise(workoutIndex, section)}
-                            className="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50"
-                          >
-                            + {section}
-                          </button>
-                        ))}
+                        <div className="flex flex-wrap gap-2">
+                          {WORKOUT_SECTIONS.map((section) => (
+                            <button
+                              key={section}
+                              type="button"
+                              onClick={() => addExercise(workoutIndex, section)}
+                              className="rounded-2xl bg-white px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-blue-100 transition hover:bg-blue-50"
+                            >
+                              + {section}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
@@ -1914,7 +1996,7 @@ export default function CreateProgram() {
                         )}
                         strategy={verticalListSortingStrategy}
                       >
-                        <div className="space-y-6">
+                        <div className="space-y-5">
                           {WORKOUT_SECTIONS.map((section) => {
                             const sectionExercises = workout.exercises
                               .map((exercise, originalIndex) => ({
@@ -1925,39 +2007,63 @@ export default function CreateProgram() {
                                 (item) => item.exercise.section === section
                               );
 
-                            if (sectionExercises.length === 0) return null;
+                            const completedSectionExercises =
+                              sectionExercises.filter(({ exercise }) =>
+                                exercise.exerciseName.trim()
+                              );
+
+                            if (sectionExercises.length === 0) {
+                              return (
+                                <EmptySectionCard
+                                  key={section}
+                                  section={section}
+                                  workoutIndex={workoutIndex}
+                                  addExercise={addExercise}
+                                />
+                              );
+                            }
 
                             return (
                               <div
                                 key={section}
-                                className="rounded-3xl border border-sky-100 bg-white/70 p-4"
+                                className="overflow-hidden rounded-[1.5rem] border border-sky-100 bg-white shadow-sm"
                               >
-                                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                  <div>
-                                    <h5 className="text-base font-bold text-slate-900">
-                                      {section}
-                                    </h5>
+                                <div className="border-b border-sky-100 bg-gradient-to-br from-white via-sky-50 to-blue-50 p-4">
+                                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                                        Client Section Intro
+                                      </p>
 
-                                    <p className="text-xs font-medium text-slate-500">
-                                      {sectionExercises.length} exercise
-                                      {sectionExercises.length === 1
-                                        ? ""
-                                        : "s"}
-                                    </p>
+                                      <h5 className="mt-1 text-xl font-black text-slate-900">
+                                        {section}
+                                      </h5>
+
+                                      <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
+                                        {SECTION_DESCRIPTIONS[section] ||
+                                          "Section exercises for this workout."}
+                                      </p>
+                                    </div>
+
+                                    <div className="flex flex-col gap-2 sm:items-end">
+                                      <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-sky-100">
+                                        {completedSectionExercises.length} added
+                                      </span>
+
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          addExercise(workoutIndex, section)
+                                        }
+                                        className="rounded-2xl bg-blue-600 px-4 py-3 text-xs font-black text-white transition hover:bg-blue-700"
+                                      >
+                                        Add to {section}
+                                      </button>
+                                    </div>
                                   </div>
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      addExercise(workoutIndex, section)
-                                    }
-                                    className="rounded-xl bg-sky-50 px-3 py-2 text-xs font-semibold text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50"
-                                  >
-                                    Add to {section}
-                                  </button>
                                 </div>
 
-                                <div className="space-y-4">
+                                <div className="space-y-4 p-4">
                                   {sectionExercises.map(
                                     ({ exercise, originalIndex }) => (
                                       <SortableExerciseCard
@@ -1979,7 +2085,9 @@ export default function CreateProgram() {
                                         applyExerciseFromLibrary={
                                           applyExerciseFromLibrary
                                         }
-                                        saveExerciseToLibrary={saveExerciseToLibrary}
+                                        saveExerciseToLibrary={
+                                          saveExerciseToLibrary
+                                        }
                                       />
                                     )
                                   )}
@@ -1997,7 +2105,7 @@ export default function CreateProgram() {
           </div>
 
           {statusMessage && (
-            <p className="mt-6 rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-medium leading-6 text-slate-700">
+            <p className="mt-6 rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-semibold leading-6 text-slate-700">
               {statusMessage}
             </p>
           )}
@@ -2005,13 +2113,50 @@ export default function CreateProgram() {
           <button
             type="submit"
             disabled={isSaving}
-            className="mt-6 w-full rounded-2xl bg-blue-600 px-5 py-4 font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-6 w-full rounded-2xl bg-blue-600 px-5 py-4 font-black text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving ? "Saving Program..." : "Save Program Week / Add to Week"}
           </button>
         </form>
       </section>
     </main>
+  );
+}
+
+function EmptySectionCard({
+  section,
+  workoutIndex,
+  addExercise,
+}: {
+  section: string;
+  workoutIndex: number;
+  addExercise: (workoutIndex: number, section: string) => void;
+}) {
+  return (
+    <div className="rounded-[1.5rem] border border-dashed border-sky-200 bg-white/70 p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+            Empty Section
+          </p>
+
+          <h5 className="mt-1 text-lg font-black text-slate-700">{section}</h5>
+
+          <p className="mt-1 text-sm leading-6 text-slate-500">
+            {SECTION_DESCRIPTIONS[section] ||
+              "Add an exercise here if this section belongs in the workout."}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => addExercise(workoutIndex, section)}
+          className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50"
+        >
+          + Add Exercise
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -2069,54 +2214,66 @@ function SortableExerciseCard({
     transition,
   };
 
+  const hasExerciseName = exercise.exerciseName.trim() !== "";
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`rounded-2xl border border-sky-100 bg-white p-4 transition ${
-        isDragging ? "z-20 opacity-80 shadow-xl ring-2 ring-blue-200" : ""
+      className={`rounded-[1.25rem] border bg-white p-4 transition ${
+        isDragging
+          ? "z-20 border-blue-200 opacity-80 shadow-xl ring-2 ring-blue-200"
+          : hasExerciseName
+          ? "border-sky-100"
+          : "border-dashed border-slate-200"
       }`}
     >
-      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
           <button
             type="button"
             {...attributes}
             {...listeners}
-            className="cursor-grab rounded-xl bg-sky-50 px-3 py-2 text-sm font-semibold text-slate-600 ring-1 ring-sky-100 active:cursor-grabbing"
+            className="cursor-grab rounded-2xl bg-sky-50 px-3 py-2 text-sm font-black text-slate-600 ring-1 ring-sky-100 active:cursor-grabbing"
             aria-label={`Drag Exercise ${displayIndex}`}
           >
-            ☰ Drag
+            ☰
           </button>
 
-          <h5 className="font-semibold text-slate-900">
-            Exercise {displayIndex}
-          </h5>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-600">
+              Movement {displayIndex}
+            </p>
+
+            <h5 className="mt-1 text-base font-black text-slate-900">
+              {exercise.exerciseName.trim() || "New Exercise"}
+            </h5>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-row">
           <button
             type="button"
             onClick={() => moveExercise(workoutIndex, exerciseIndex, "up")}
             disabled={exerciseIndex === 0}
-            className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-xl bg-white px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Move Up
+            Up
           </button>
 
           <button
             type="button"
             onClick={() => moveExercise(workoutIndex, exerciseIndex, "down")}
             disabled={exerciseIndex === totalExercises - 1}
-            className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-xl bg-white px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Move Down
+            Down
           </button>
 
           <button
             type="button"
             onClick={() => removeExercise(workoutIndex, exerciseIndex)}
-            className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
+            className="rounded-xl bg-red-50 px-3 py-2 text-xs font-black text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
           >
             Remove
           </button>
@@ -2124,9 +2281,9 @@ function SortableExerciseCard({
       </div>
 
       <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
-        <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+        <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
+            <label className="mb-2 block text-sm font-black text-slate-700">
               Choose Exercise From Library
             </label>
 
@@ -2140,7 +2297,7 @@ function SortableExerciseCard({
                 )
               }
               disabled={isLoadingExerciseLibrary}
-              className="w-full rounded-xl border border-blue-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-2xl border border-blue-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <option value="">
                 {isLoadingExerciseLibrary
@@ -2159,7 +2316,10 @@ function SortableExerciseCard({
                 return (
                   <optgroup key={section} label={section}>
                     {sectionExercises.map((libraryExercise) => (
-                      <option key={libraryExercise.id} value={libraryExercise.id}>
+                      <option
+                        key={libraryExercise.id}
+                        value={libraryExercise.id}
+                      >
                         {libraryExercise.exercise_name}
                         {libraryExercise.default_reps
                           ? ` — ${libraryExercise.default_reps}`
@@ -2171,16 +2331,15 @@ function SortableExerciseCard({
               })}
             </select>
 
-            <p className="mt-2 text-xs font-medium text-slate-500">
-              Selecting from the library auto-fills section, sets, reps, weight,
-              rest, video link, and trainer notes. You can still edit anything.
+            <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">
+              Auto-fills section, sets, reps, weight, rest, video link, and notes.
             </p>
           </div>
 
           <button
             type="button"
             onClick={() => saveExerciseToLibrary(exercise)}
-            className="rounded-xl bg-white px-4 py-3 text-sm font-semibold text-blue-700 ring-1 ring-blue-100 transition hover:bg-blue-50"
+            className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-blue-700 ring-1 ring-blue-100 transition hover:bg-blue-50"
           >
             Save This Exercise
           </button>
@@ -2189,7 +2348,7 @@ function SortableExerciseCard({
 
       <div className="grid gap-4 md:grid-cols-3">
         <div>
-          <label className="mb-2 block text-sm font-semibold text-slate-700">
+          <label className="mb-2 block text-sm font-black text-slate-700">
             Section
           </label>
 
@@ -2203,7 +2362,7 @@ function SortableExerciseCard({
                 event.target.value
               )
             }
-            className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
           >
             {WORKOUT_SECTIONS.map((section) => (
               <option key={section} value={section}>
@@ -2268,7 +2427,7 @@ function SortableExerciseCard({
         />
 
         <div className="md:col-span-3">
-          <label className="mb-2 block text-sm font-semibold text-slate-700">
+          <label className="mb-2 block text-sm font-black text-slate-700">
             Trainer Notes
           </label>
 
@@ -2284,7 +2443,7 @@ function SortableExerciseCard({
             }
             placeholder="Example: Keep shoulders relaxed, move slowly, stop if pain increases."
             rows={3}
-            className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
           />
         </div>
       </div>
@@ -2295,9 +2454,11 @@ function SortableExerciseCard({
 function SummaryCard({ title, value }: { title: string; value: string }) {
   return (
     <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 sm:p-5">
-      <p className="text-xs font-medium text-slate-500 sm:text-sm">{title}</p>
+      <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+        {title}
+      </p>
 
-      <h2 className="mt-2 break-words text-lg font-bold text-slate-900 sm:text-xl">
+      <h2 className="mt-2 break-words text-xl font-black text-slate-900 sm:text-2xl">
         {value}
       </h2>
     </div>
@@ -2319,7 +2480,7 @@ function Input({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-semibold text-slate-700">
+      <label className="mb-2 block text-sm font-black text-slate-700">
         {label}
       </label>
 
@@ -2328,7 +2489,7 @@ function Input({
         type={type}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+        className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
       />
     </div>
   );
