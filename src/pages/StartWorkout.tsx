@@ -58,6 +58,10 @@ type LoggedExercise = {
 
 type WorkoutDraftData = {
   loggedExercises: LoggedExercise[];
+  completedSetCounts?: Record<string, number>;
+  activeStepIndex?: number;
+  activeSetNumber?: number;
+  showFinalReview?: boolean;
   painReported?: boolean;
   painLocation?: string;
   painLevel?: string;
@@ -72,6 +76,11 @@ type WorkoutDraftRow = {
   workout_notes: string | null;
   draft_data: WorkoutDraftData | null;
   updated_at: string;
+};
+
+type GuidedStep = {
+  exercise: LoggedExercise;
+  originalIndex: number;
 };
 
 function normalizeSection(section: string | null | undefined) {
@@ -129,6 +138,52 @@ function normalizeSection(section: string | null | undefined) {
   return cleaned;
 }
 
+function parseSets(value: string) {
+  if (!value) return 1;
+
+  const directNumber = Number(value);
+
+  if (!Number.isNaN(directNumber) && directNumber > 0) {
+    return Math.round(directNumber);
+  }
+
+  const match = value.match(/\d+/);
+
+  if (!match) return 1;
+
+  const parsed = Number(match[0]);
+
+  if (Number.isNaN(parsed) || parsed <= 0) return 1;
+
+  return Math.round(parsed);
+}
+
+function parseRestSeconds(value: string) {
+  if (!value) return 60;
+
+  const lower = value.toLowerCase();
+  const match = lower.match(/\d+/);
+
+  if (!match) return 60;
+
+  const number = Number(match[0]);
+
+  if (Number.isNaN(number) || number <= 0) return 60;
+
+  if (lower.includes("min")) {
+    return number * 60;
+  }
+
+  return number;
+}
+
+function formatSeconds(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
 export default function StartWorkout() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -141,6 +196,18 @@ export default function StartWorkout() {
   const [currentUserId, setCurrentUserId] = useState("");
   const [workout, setWorkout] = useState<PlanWorkout | null>(null);
   const [loggedExercises, setLoggedExercises] = useState<LoggedExercise[]>([]);
+  const [completedSetCounts, setCompletedSetCounts] = useState<
+    Record<string, number>
+  >({});
+
+  const [activeStepIndex, setActiveStepIndex] = useState(0);
+  const [activeSetNumber, setActiveSetNumber] = useState(1);
+
+  const [isResting, setIsResting] = useState(false);
+  const [restSeconds, setRestSeconds] = useState(60);
+
+  const [showFinalReview, setShowFinalReview] = useState(false);
+
   const [workoutNotes, setWorkoutNotes] = useState("");
 
   const [painReported, setPainReported] = useState(false);
@@ -167,6 +234,23 @@ export default function StartWorkout() {
       }
     };
   }, [workoutId, isRepeatMode]);
+
+  useEffect(() => {
+    if (!isResting) return;
+
+    if (restSeconds <= 0) {
+      finishRest();
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setRestSeconds((currentSeconds) => currentSeconds - 1);
+    }, 1000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isResting, restSeconds]);
 
   useEffect(() => {
     if (
@@ -199,6 +283,10 @@ export default function StartWorkout() {
     workoutId,
     workoutNotes,
     loggedExercises,
+    completedSetCounts,
+    activeStepIndex,
+    activeSetNumber,
+    showFinalReview,
     painReported,
     painLocation,
     painLevel,
@@ -208,6 +296,127 @@ export default function StartWorkout() {
     isSubmitting,
   ]);
 
+  const groupedExercises = useMemo(() => {
+    const knownGroups = SECTION_ORDER.map((section) => {
+      const exercises = loggedExercises
+        .map((exercise, originalIndex) => ({
+          exercise,
+          originalIndex,
+        }))
+        .filter((item) => item.exercise.section === section);
+
+      return {
+        section,
+        exercises,
+      };
+    });
+
+    const customSections = Array.from(
+      new Set(
+        loggedExercises
+          .map((exercise) => exercise.section || "Other")
+          .filter((section) => !SECTION_ORDER.includes(section))
+      )
+    ).map((section) => {
+      const exercises = loggedExercises
+        .map((exercise, originalIndex) => ({
+          exercise,
+          originalIndex,
+        }))
+        .filter((item) => item.exercise.section === section);
+
+      return {
+        section,
+        exercises,
+      };
+    });
+
+    return [...knownGroups, ...customSections].filter(
+      (group) => group.exercises.length > 0
+    );
+  }, [loggedExercises]);
+
+  const guidedSteps = useMemo(() => {
+    const steps: GuidedStep[] = [];
+
+    groupedExercises.forEach((group) => {
+      group.exercises.forEach((item) => {
+        steps.push(item);
+      });
+    });
+
+    return steps;
+  }, [groupedExercises]);
+
+  const activeStep = guidedSteps[activeStepIndex];
+  const activeExercise = activeStep?.exercise;
+  const activeOriginalIndex = activeStep?.originalIndex ?? 0;
+
+  const currentTotalSets = activeExercise
+    ? parseSets(activeExercise.plannedSets)
+    : 1;
+
+  const currentCompletedSets = activeExercise
+    ? completedSetCounts[activeExercise.exerciseId] || 0
+    : 0;
+
+  const currentSectionPosition = useMemo(() => {
+    if (!activeExercise) return 1;
+
+    const sectionIndex = groupedExercises.findIndex(
+      (group) => group.section === activeExercise.section
+    );
+
+    return sectionIndex >= 0 ? sectionIndex + 1 : 1;
+  }, [activeExercise, groupedExercises]);
+
+  const currentExerciseInSectionPosition = useMemo(() => {
+    if (!activeExercise) return 1;
+
+    const currentGroup = groupedExercises.find(
+      (group) => group.section === activeExercise.section
+    );
+
+    if (!currentGroup) return 1;
+
+    const exerciseIndex = currentGroup.exercises.findIndex(
+      (item) => item.exercise.exerciseId === activeExercise.exerciseId
+    );
+
+    return exerciseIndex >= 0 ? exerciseIndex + 1 : 1;
+  }, [activeExercise, groupedExercises]);
+
+  const totalExercisesInCurrentSection = useMemo(() => {
+    if (!activeExercise) return 1;
+
+    const currentGroup = groupedExercises.find(
+      (group) => group.section === activeExercise.section
+    );
+
+    return currentGroup?.exercises.length || 1;
+  }, [activeExercise, groupedExercises]);
+
+  const completedCount = loggedExercises.filter(
+    (exercise) => exercise.completed
+  ).length;
+
+  const completionPercent =
+    loggedExercises.length > 0
+      ? Math.round((completedCount / loggedExercises.length) * 100)
+      : 0;
+
+  const setProgressPercent =
+    currentTotalSets > 0
+      ? Math.round((currentCompletedSets / currentTotalSets) * 100)
+      : 0;
+
+  const lastSavedLabel = draftSavedAt
+    ? new Date(draftSavedAt).toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : "";
+
   async function loadWorkout() {
     setIsLoading(true);
     setErrorMessage("");
@@ -216,12 +425,18 @@ export default function StartWorkout() {
     setDraftSavedAt("");
 
     setLoggedExercises([]);
+    setCompletedSetCounts({});
     setWorkoutNotes("");
     setPainReported(false);
     setPainLocation("");
     setPainLevel("");
     setPainExercise("");
     setPainNotes("");
+    setActiveStepIndex(0);
+    setActiveSetNumber(1);
+    setIsResting(false);
+    setRestSeconds(60);
+    setShowFinalReview(false);
 
     const {
       data: { user },
@@ -308,6 +523,7 @@ export default function StartWorkout() {
 
     if (isRepeatMode) {
       setLoggedExercises(freshLoggedExercises);
+      setCompletedSetCounts({});
       setDraftLoaded(true);
       setIsLoading(false);
       return;
@@ -345,6 +561,11 @@ export default function StartWorkout() {
       });
 
       setLoggedExercises(restoredExercises);
+      setCompletedSetCounts(draft.draft_data?.completedSetCounts || {});
+      setActiveStepIndex(draft.draft_data?.activeStepIndex || 0);
+      setActiveSetNumber(draft.draft_data?.activeSetNumber || 1);
+      setShowFinalReview(draft.draft_data?.showFinalReview || false);
+
       setWorkoutNotes(draft.workout_notes || "");
 
       setPainReported(draft.draft_data?.painReported || false);
@@ -378,6 +599,10 @@ export default function StartWorkout() {
 
     const draftData: WorkoutDraftData = {
       loggedExercises,
+      completedSetCounts,
+      activeStepIndex,
+      activeSetNumber,
+      showFinalReview,
       painReported,
       painLocation,
       painLevel,
@@ -467,6 +692,13 @@ export default function StartWorkout() {
       }))
     );
 
+    setCompletedSetCounts({});
+    setActiveStepIndex(0);
+    setActiveSetNumber(1);
+    setIsResting(false);
+    setRestSeconds(60);
+    setShowFinalReview(false);
+
     setWorkoutNotes("");
     setPainReported(false);
     setPainLocation("");
@@ -480,19 +712,6 @@ export default function StartWorkout() {
 
     setSuccessMessage("");
     setErrorMessage("Progress was cleared.");
-  }
-
-  function toggleCompleted(exerciseIndex: number) {
-    setLoggedExercises((currentExercises) =>
-      currentExercises.map((exercise, index) => {
-        if (index !== exerciseIndex) return exercise;
-
-        return {
-          ...exercise,
-          completed: !exercise.completed,
-        };
-      })
-    );
   }
 
   function updateDifficulty(exerciseIndex: number, value: string) {
@@ -521,6 +740,32 @@ export default function StartWorkout() {
     );
   }
 
+  function markExerciseComplete(exerciseIndex: number) {
+    setLoggedExercises((currentExercises) =>
+      currentExercises.map((exercise, index) => {
+        if (index !== exerciseIndex) return exercise;
+
+        return {
+          ...exercise,
+          completed: true,
+        };
+      })
+    );
+  }
+
+  function markExerciseIncomplete(exerciseIndex: number) {
+    setLoggedExercises((currentExercises) =>
+      currentExercises.map((exercise, index) => {
+        if (index !== exerciseIndex) return exercise;
+
+        return {
+          ...exercise,
+          completed: false,
+        };
+      })
+    );
+  }
+
   function handlePainReportedChange(value: boolean) {
     setPainReported(value);
 
@@ -529,6 +774,90 @@ export default function StartWorkout() {
       setPainLevel("");
       setPainExercise("");
       setPainNotes("");
+    }
+  }
+
+  function completeCurrentSet() {
+    if (!activeExercise) return;
+
+    const nextCompletedSetCount = Math.max(
+      currentCompletedSets,
+      activeSetNumber
+    );
+
+    setCompletedSetCounts((currentCounts) => ({
+      ...currentCounts,
+      [activeExercise.exerciseId]: nextCompletedSetCount,
+    }));
+
+    const isLastSet = activeSetNumber >= currentTotalSets;
+
+    if (isLastSet) {
+      markExerciseComplete(activeOriginalIndex);
+      moveToNextExercise();
+      return;
+    }
+
+    const nextRestSeconds = parseRestSeconds(activeExercise.plannedRest);
+    setRestSeconds(nextRestSeconds);
+    setIsResting(true);
+  }
+
+  function finishRest() {
+    setIsResting(false);
+    setActiveSetNumber((currentSet) => currentSet + 1);
+  }
+
+  function moveToNextExercise() {
+    const hasNextExercise = activeStepIndex < guidedSteps.length - 1;
+
+    if (hasNextExercise) {
+      setActiveStepIndex((currentIndex) => currentIndex + 1);
+      setActiveSetNumber(1);
+      return;
+    }
+
+    setShowFinalReview(true);
+  }
+
+  function skipCurrentExercise() {
+    if (!activeExercise) return;
+
+    const confirmed = window.confirm(
+      "Skip this exercise? It will stay marked as incomplete."
+    );
+
+    if (!confirmed) return;
+
+    markExerciseIncomplete(activeOriginalIndex);
+    moveToNextExercise();
+  }
+
+  function goBackStep() {
+    if (showFinalReview) {
+      setShowFinalReview(false);
+      return;
+    }
+
+    if (isResting) {
+      setIsResting(false);
+      return;
+    }
+
+    if (activeSetNumber > 1) {
+      setActiveSetNumber((currentSet) => currentSet - 1);
+      return;
+    }
+
+    if (activeStepIndex > 0) {
+      const previousStepIndex = activeStepIndex - 1;
+      const previousStep = guidedSteps[previousStepIndex];
+
+      if (previousStep) {
+        const previousExerciseSets = parseSets(previousStep.exercise.plannedSets);
+        setActiveStepIndex(previousStepIndex);
+        setActiveSetNumber(previousExerciseSets);
+      }
     }
   }
 
@@ -556,6 +885,11 @@ export default function StartWorkout() {
         setErrorMessage("Pain level must be between 1 and 10.");
         return;
       }
+    }
+
+    if (painReported && !painLevel) {
+      setErrorMessage("Please select a pain level before submitting.");
+      return;
     }
 
     setIsSubmitting(true);
@@ -673,62 +1007,6 @@ export default function StartWorkout() {
     }, 700);
   }
 
-  const completedCount = loggedExercises.filter(
-    (exercise) => exercise.completed
-  ).length;
-
-  const completionPercent =
-    loggedExercises.length > 0
-      ? Math.round((completedCount / loggedExercises.length) * 100)
-      : 0;
-
-  const groupedExercises = useMemo(() => {
-    const knownGroups = SECTION_ORDER.map((section) => {
-      const exercises = loggedExercises
-        .map((exercise, originalIndex) => ({
-          exercise,
-          originalIndex,
-        }))
-        .filter((item) => item.exercise.section === section);
-
-      return {
-        section,
-        exercises,
-      };
-    });
-
-    const customSections = Array.from(
-      new Set(
-        loggedExercises
-          .map((exercise) => exercise.section || "Other")
-          .filter((section) => !SECTION_ORDER.includes(section))
-      )
-    ).map((section) => {
-      const exercises = loggedExercises
-        .map((exercise, originalIndex) => ({
-          exercise,
-          originalIndex,
-        }))
-        .filter((item) => item.exercise.section === section);
-
-      return {
-        section,
-        exercises,
-      };
-    });
-
-    return [...knownGroups, ...customSections].filter(
-      (group) => group.exercises.length > 0
-    );
-  }, [loggedExercises]);
-
-  const lastSavedLabel = draftSavedAt
-    ? new Date(draftSavedAt).toLocaleTimeString([], {
-        hour: "numeric",
-        minute: "2-digit",
-      })
-    : "";
-
   if (isLoading) {
     return (
       <ClientLayout unreadMessages={unreadMessages}>
@@ -742,7 +1020,7 @@ export default function StartWorkout() {
           </h1>
 
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            Getting your assigned workout ready.
+            Getting your guided workout ready.
           </p>
         </section>
       </ClientLayout>
@@ -782,6 +1060,343 @@ export default function StartWorkout() {
     );
   }
 
+  if (isResting && activeExercise) {
+    return (
+      <ClientLayout unreadMessages={unreadMessages}>
+        <section className="overflow-hidden rounded-[1.75rem] border border-sky-100 bg-slate-950 shadow-sm sm:rounded-[2rem]">
+          <div className="px-5 py-8 text-center text-white sm:px-8 sm:py-12">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-300">
+              Rest Timer
+            </p>
+
+            <h1 className="mt-5 text-7xl font-black sm:text-8xl">
+              {formatSeconds(restSeconds)}
+            </h1>
+
+            <p className="mt-5 text-sm font-semibold leading-6 text-slate-300 sm:text-base">
+              Next up: Set {activeSetNumber + 1} of {currentTotalSets}
+            </p>
+
+            <div className="mx-auto mt-6 max-w-md rounded-3xl border border-white/10 bg-white/10 p-5 text-left">
+              <p className="text-xs font-bold uppercase tracking-wide text-blue-200">
+                Current Exercise
+              </p>
+
+              <h2 className="mt-2 text-2xl font-black">
+                {activeExercise.exerciseName || "Unnamed Exercise"}
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                {activeExercise.plannedSets || "N/A"} sets x{" "}
+                {activeExercise.plannedReps || "N/A"} reps • Rest:{" "}
+                {activeExercise.plannedRest || "60 sec"}
+              </p>
+            </div>
+
+            <div className="mx-auto mt-8 flex max-w-md flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={goBackStep}
+                className="w-full rounded-2xl border border-white/20 bg-white/10 px-5 py-4 text-sm font-black text-white hover:bg-white/20"
+              >
+                Back
+              </button>
+
+              <button
+                type="button"
+                onClick={finishRest}
+                className="w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black text-white hover:bg-blue-700"
+              >
+                Skip Rest
+              </button>
+            </div>
+          </div>
+        </section>
+      </ClientLayout>
+    );
+  }
+
+  if (showFinalReview) {
+    return (
+      <ClientLayout unreadMessages={unreadMessages}>
+        <section className="mb-4 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
+          <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-5 text-white sm:px-6 sm:py-8 md:px-8">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
+                  Final Review
+                </p>
+
+                <h1 className="mt-2 break-words text-2xl font-black leading-tight sm:mt-3 sm:text-4xl">
+                  {workout.title}
+                </h1>
+
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
+                  Add your overall notes, complete the pain check, then submit
+                  your workout.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={goBackStep}
+                className="w-full rounded-2xl bg-white/15 px-4 py-3 text-center text-sm font-black text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto"
+              >
+                Back to Workout
+              </button>
+            </div>
+          </div>
+
+          <div className="p-4 sm:p-6 md:p-8">
+            <div className="rounded-[1.5rem] border border-sky-100 bg-sky-50 p-4 sm:rounded-3xl sm:p-6">
+              <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Workout Progress
+                  </p>
+
+                  <h2 className="mt-2 text-xl font-black text-slate-900 sm:text-2xl">
+                    {completedCount} / {loggedExercises.length} exercises
+                    completed
+                  </h2>
+                </div>
+
+                <div className="w-fit rounded-full bg-white px-4 py-2 text-sm font-black text-blue-700 ring-1 ring-sky-100">
+                  {completionPercent}% complete
+                </div>
+              </div>
+
+              <div className="mt-5 h-3 rounded-full bg-white">
+                <div
+                  className="h-3 rounded-full bg-blue-600 transition-all"
+                  style={{ width: `${completionPercent}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {successMessage && (
+          <div className="mb-4 rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-5 text-center text-sm font-black text-emerald-700 shadow-sm sm:mb-6 sm:rounded-3xl">
+            {successMessage} Opening your completed workout...
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="mb-4 rounded-[1.5rem] border border-red-100 bg-red-50 p-5 text-center text-sm font-black text-red-700 shadow-sm sm:mb-6 sm:rounded-3xl">
+            {errorMessage}
+          </div>
+        )}
+
+        <section className="mb-4 rounded-[1.5rem] border border-sky-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
+          <label className="mb-2 block text-sm font-black text-slate-700">
+            Overall Workout Notes
+          </label>
+
+          <textarea
+            value={workoutNotes}
+            onChange={(event) => setWorkoutNotes(event.target.value)}
+            disabled={isSubmitting}
+            placeholder="Optional notes about the whole workout"
+            rows={4}
+            className="w-full rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+          />
+        </section>
+
+        <section className="mb-4 rounded-[1.5rem] border border-sky-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
+          <h2 className="text-xl font-black text-slate-900">
+            Completed Exercise Summary
+          </h2>
+
+          <div className="mt-5 space-y-3">
+            {loggedExercises.map((exercise) => {
+              const setsCompleted = completedSetCounts[exercise.exerciseId] || 0;
+              const totalSets = parseSets(exercise.plannedSets);
+
+              return (
+                <div
+                  key={exercise.exerciseId}
+                  className={`rounded-2xl border p-4 ${
+                    exercise.completed
+                      ? "border-emerald-100 bg-emerald-50"
+                      : "border-slate-200 bg-slate-50"
+                  }`}
+                >
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="font-black text-slate-900">
+                        {exercise.exerciseName || "Unnamed Exercise"}
+                      </p>
+
+                      <p className="mt-1 text-sm font-semibold text-slate-500">
+                        {exercise.section} • {setsCompleted} of {totalSets} sets
+                        completed
+                      </p>
+                    </div>
+
+                    <span
+                      className={`w-fit rounded-full px-3 py-1 text-xs font-black ${
+                        exercise.completed
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-slate-200 text-slate-600"
+                      }`}
+                    >
+                      {exercise.completed ? "Completed" : "Incomplete"}
+                    </span>
+                  </div>
+
+                  {exercise.difficulty && (
+                    <p className="mt-2 text-sm font-semibold text-slate-600">
+                      Difficulty: {exercise.difficulty}
+                    </p>
+                  )}
+
+                  {exercise.notes && (
+                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                      Notes: {exercise.notes}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="rounded-[1.5rem] border border-red-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+          <div className="mb-5">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-red-600">
+              Pain & Discomfort Check
+            </p>
+
+            <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+              Did you feel any pain today?
+            </h2>
+
+            <p className="mt-1 text-sm leading-6 text-slate-500">
+              This helps your trainer adjust your plan and keep your training
+              safe.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => handlePainReportedChange(false)}
+              disabled={isSubmitting}
+              className={`rounded-2xl border px-4 py-4 text-left text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                !painReported
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-100"
+                  : "border-sky-100 bg-sky-50 text-slate-600 hover:bg-white"
+              }`}
+            >
+              No pain or discomfort
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handlePainReportedChange(true)}
+              disabled={isSubmitting}
+              className={`rounded-2xl border px-4 py-4 text-left text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                painReported
+                  ? "border-red-200 bg-red-50 text-red-700 ring-2 ring-red-100"
+                  : "border-sky-100 bg-sky-50 text-slate-600 hover:bg-white"
+              }`}
+            >
+              Yes, I felt pain/discomfort
+            </button>
+          </div>
+
+          {painReported && (
+            <div className="mt-5 rounded-2xl border border-red-100 bg-red-50 p-4">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div>
+                  <label className="mb-2 block text-sm font-black text-slate-700">
+                    Pain Location
+                  </label>
+
+                  <input
+                    value={painLocation}
+                    onChange={(event) => setPainLocation(event.target.value)}
+                    disabled={isSubmitting}
+                    placeholder="Hip, shoulder, knee, back..."
+                    className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-black text-slate-700">
+                    Pain Level
+                  </label>
+
+                  <select
+                    value={painLevel}
+                    onChange={(event) => setPainLevel(event.target.value)}
+                    disabled={isSubmitting}
+                    className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <option value="">Select 1–10</option>
+                    <option value="1">1 - Very mild</option>
+                    <option value="2">2</option>
+                    <option value="3">3 - Mild</option>
+                    <option value="4">4</option>
+                    <option value="5">5 - Moderate</option>
+                    <option value="6">6</option>
+                    <option value="7">7 - High</option>
+                    <option value="8">8</option>
+                    <option value="9">9 - Very high</option>
+                    <option value="10">10 - Severe</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-black text-slate-700">
+                    Exercise Related to Pain
+                  </label>
+
+                  <input
+                    value={painExercise}
+                    onChange={(event) => setPainExercise(event.target.value)}
+                    disabled={isSubmitting}
+                    placeholder="Box Step-Up, Chest Press..."
+                    className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <label className="mb-2 block text-sm font-black text-slate-700">
+                  Pain Notes
+                </label>
+
+                <textarea
+                  value={painNotes}
+                  onChange={(event) => setPainNotes(event.target.value)}
+                  disabled={isSubmitting}
+                  placeholder="Describe what happened, when you felt it, and anything your trainer should know."
+                  rows={4}
+                  className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                />
+              </div>
+            </div>
+          )}
+        </section>
+
+        <button
+          type="button"
+          onClick={submitWorkout}
+          disabled={isSubmitting || loggedExercises.length === 0}
+          className="mt-6 w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 sm:mt-8"
+        >
+          {isSubmitting
+            ? "Submitting workout..."
+            : isRepeatMode
+            ? "Submit Repeated Workout"
+            : "Submit Workout"}
+        </button>
+      </ClientLayout>
+    );
+  }
+
   return (
     <ClientLayout unreadMessages={unreadMessages}>
       <section className="mb-4 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
@@ -789,7 +1404,7 @@ export default function StartWorkout() {
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
-                {isRepeatMode ? "Repeat Workout" : "Start Workout"}
+                {isRepeatMode ? "Repeat Guided Workout" : "Guided Workout"}
               </p>
 
               <h1 className="mt-2 break-words text-2xl font-black leading-tight sm:mt-3 sm:text-4xl">
@@ -797,9 +1412,8 @@ export default function StartWorkout() {
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
-                {isRepeatMode
-                  ? "You are repeating a past workout. This will save as a new completed workout."
-                  : "Your progress and pain report save automatically across devices."}
+                Follow your workout section by section, exercise by exercise,
+                and set by set.
               </p>
 
               {isRepeatMode && (
@@ -813,7 +1427,7 @@ export default function StartWorkout() {
               to="/client-plan"
               className="w-full rounded-2xl bg-white/15 px-4 py-3 text-center text-sm font-black text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto"
             >
-              Back to My Plan
+              Exit to My Plan
             </Link>
           </div>
         </div>
@@ -880,291 +1494,202 @@ export default function StartWorkout() {
         </div>
       )}
 
-      <section className="mb-4 rounded-[1.5rem] border border-sky-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
-        <label className="mb-2 block text-sm font-black text-slate-700">
-          Overall Workout Notes
-        </label>
-
-        <textarea
-          value={workoutNotes}
-          onChange={(event) => setWorkoutNotes(event.target.value)}
-          disabled={isSubmitting}
-          placeholder="Optional notes about the whole workout"
-          rows={3}
-          className="w-full rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
-        />
-      </section>
-
-      <section className="space-y-5 sm:space-y-6">
-        {groupedExercises.length === 0 ? (
-          <div className="rounded-[1.5rem] border border-red-100 bg-red-50 p-5 text-center shadow-sm sm:rounded-3xl">
-            <h2 className="text-lg font-black text-red-700">
-              No exercises are available to check off
-            </h2>
-
-            <p className="mt-2 text-sm font-semibold leading-6 text-red-600">
-              This workout exists, but no exercise rows were loaded. Go back to
-              the trainer side and make sure this program has exercises saved.
-            </p>
-          </div>
-        ) : (
-          groupedExercises.map((group) => (
-            <div
-              key={group.section}
-              className="rounded-[1.5rem] border border-sky-100 bg-sky-50 p-4 shadow-sm sm:rounded-3xl sm:p-5"
-            >
-              <div className="mb-4">
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
-                  Section
-                </p>
-
-                <h2 className="mt-1 text-xl font-black text-slate-900">
-                  {group.section}
-                </h2>
-              </div>
-
-              <div className="space-y-4">
-                {group.exercises.map(({ exercise, originalIndex }) => (
-                  <div
-                    key={`${exercise.exerciseId}-${originalIndex}`}
-                    className={`rounded-[1.5rem] border p-4 shadow-sm transition sm:rounded-3xl sm:p-6 ${
-                      exercise.completed
-                        ? "border-emerald-200 bg-emerald-50"
-                        : "border-sky-100 bg-white"
-                    }`}
-                  >
-                    <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-3">
-                          <h3 className="text-lg font-black text-slate-900 sm:text-xl">
-                            {exercise.exerciseName || "Unnamed Exercise"}
-                          </h3>
-
-                          {exercise.completed && (
-                            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700">
-                              Completed
-                            </span>
-                          )}
-                        </div>
-
-                        <p className="mt-2 text-sm leading-6 text-slate-500">
-                          {exercise.plannedSets || "N/A"} sets x{" "}
-                          {exercise.plannedReps || "N/A"} reps • Weight:{" "}
-                          {exercise.plannedWeight || "N/A"} • Rest:{" "}
-                          {exercise.plannedRest || "N/A"}
-                        </p>
-                      </div>
-
-                      {exercise.videoLink && (
-                        <a
-                          href={exercise.videoLink}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-center text-sm font-black text-white shadow-sm hover:bg-blue-700 sm:w-auto"
-                        >
-                          Watch Video
-                        </a>
-                      )}
-                    </div>
-
-                    <label
-                      className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 ${
-                        exercise.completed
-                          ? "border-emerald-200 bg-white"
-                          : "border-sky-100 bg-sky-50"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={exercise.completed}
-                        onChange={() => toggleCompleted(originalIndex)}
-                        className="mt-0.5 h-5 w-5 shrink-0 accent-blue-600"
-                        disabled={isSubmitting}
-                      />
-
-                      <span className="text-sm font-black leading-6 text-slate-800 sm:text-base">
-                        I completed this exercise as prescribed
-                      </span>
-                    </label>
-
-                    <div className="mt-4 grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label className="mb-2 block text-sm font-black text-slate-700">
-                          Difficulty
-                        </label>
-
-                        <select
-                          value={exercise.difficulty}
-                          onChange={(event) =>
-                            updateDifficulty(originalIndex, event.target.value)
-                          }
-                          disabled={isSubmitting}
-                          className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          <option value="">Select difficulty</option>
-                          <option value="Easy">Easy</option>
-                          <option value="Moderate">Moderate</option>
-                          <option value="Hard">Hard</option>
-                          <option value="Could not complete">
-                            Could not complete
-                          </option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="mb-2 block text-sm font-black text-slate-700">
-                          Notes
-                        </label>
-
-                        <input
-                          value={exercise.notes}
-                          onChange={(event) =>
-                            updateNotes(originalIndex, event.target.value)
-                          }
-                          disabled={isSubmitting}
-                          placeholder="Optional note for your trainer"
-                          className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))
-        )}
-      </section>
-
-      <section className="mt-6 rounded-[1.5rem] border border-red-100 bg-white p-4 shadow-sm sm:mt-8 sm:rounded-3xl sm:p-6">
-        <div className="mb-5">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-red-600">
-            Pain & Discomfort Check
-          </p>
-
-          <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
-            Did you feel any pain today?
+      {guidedSteps.length === 0 || !activeExercise ? (
+        <section className="rounded-[1.5rem] border border-red-100 bg-red-50 p-5 text-center shadow-sm sm:rounded-3xl">
+          <h2 className="text-lg font-black text-red-700">
+            No exercises are available
           </h2>
 
-          <p className="mt-1 text-sm leading-6 text-slate-500">
-            This helps your trainer adjust your plan and keep your training safe.
+          <p className="mt-2 text-sm font-semibold leading-6 text-red-600">
+            This workout exists, but no exercise rows were loaded. Go back to the
+            trainer side and make sure this program has exercises saved.
           </p>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <button
-            type="button"
-            onClick={() => handlePainReportedChange(false)}
-            disabled={isSubmitting}
-            className={`rounded-2xl border px-4 py-4 text-left text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
-              !painReported
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-100"
-                : "border-sky-100 bg-sky-50 text-slate-600 hover:bg-white"
-            }`}
-          >
-            No pain or discomfort
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handlePainReportedChange(true)}
-            disabled={isSubmitting}
-            className={`rounded-2xl border px-4 py-4 text-left text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
-              painReported
-                ? "border-red-200 bg-red-50 text-red-700 ring-2 ring-red-100"
-                : "border-sky-100 bg-sky-50 text-slate-600 hover:bg-white"
-            }`}
-          >
-            Yes, I felt pain/discomfort
-          </button>
-        </div>
-
-        {painReported && (
-          <div className="mt-5 rounded-2xl border border-red-100 bg-red-50 p-4">
-            <div className="grid gap-4 md:grid-cols-3">
+        </section>
+      ) : (
+        <>
+          <section className="mb-4 rounded-[1.5rem] border border-blue-100 bg-blue-600 p-5 text-white shadow-sm sm:mb-6 sm:rounded-3xl sm:p-7">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <label className="mb-2 block text-sm font-black text-slate-700">
-                  Pain Location
-                </label>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-100">
+                  Section {currentSectionPosition} of {groupedExercises.length}
+                </p>
 
-                <input
-                  value={painLocation}
-                  onChange={(event) => setPainLocation(event.target.value)}
-                  disabled={isSubmitting}
-                  placeholder="Hip, shoulder, knee, back..."
-                  className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                />
+                <h2 className="mt-2 text-2xl font-black">
+                  {activeExercise.section}
+                </h2>
+
+                <p className="mt-2 text-sm font-semibold text-blue-50">
+                  Exercise {currentExerciseInSectionPosition} of{" "}
+                  {totalExercisesInCurrentSection}
+                </p>
               </div>
 
+              <div className="rounded-2xl bg-white/15 px-4 py-3 text-sm font-black ring-1 ring-white/20">
+                Overall: {activeStepIndex + 1} / {guidedSteps.length}
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6 md:p-8">
+            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                  Current Exercise
+                </p>
+
+                <h2 className="mt-2 break-words text-3xl font-black text-slate-900 sm:text-4xl">
+                  {activeExercise.exerciseName || "Unnamed Exercise"}
+                </h2>
+
+                <p className="mt-3 text-sm leading-6 text-slate-500 sm:text-base">
+                  Complete each set, rest when prompted, then move to the next
+                  exercise.
+                </p>
+              </div>
+
+              {activeExercise.videoLink && (
+                <a
+                  href={activeExercise.videoLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-center text-sm font-black text-white shadow-sm hover:bg-blue-700 sm:w-auto"
+                >
+                  Watch Video
+                </a>
+              )}
+            </div>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-4">
+              <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Set
+                </p>
+
+                <p className="mt-2 text-2xl font-black text-slate-900">
+                  {activeSetNumber} of {currentTotalSets}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Reps
+                </p>
+
+                <p className="mt-2 text-2xl font-black text-slate-900">
+                  {activeExercise.plannedReps || "N/A"}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Weight
+                </p>
+
+                <p className="mt-2 text-2xl font-black text-slate-900">
+                  {activeExercise.plannedWeight || "N/A"}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Rest
+                </p>
+
+                <p className="mt-2 text-2xl font-black text-slate-900">
+                  {activeExercise.plannedRest || "60 sec"}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-sky-100 bg-sky-50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-black text-slate-700">
+                  Set Progress
+                </p>
+
+                <p className="text-sm font-black text-blue-700">
+                  {currentCompletedSets} / {currentTotalSets} sets
+                </p>
+              </div>
+
+              <div className="mt-3 h-3 rounded-full bg-white">
+                <div
+                  className="h-3 rounded-full bg-blue-600 transition-all"
+                  style={{ width: `${setProgressPercent}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
               <div>
                 <label className="mb-2 block text-sm font-black text-slate-700">
-                  Pain Level
+                  Difficulty
                 </label>
 
                 <select
-                  value={painLevel}
-                  onChange={(event) => setPainLevel(event.target.value)}
+                  value={activeExercise.difficulty}
+                  onChange={(event) =>
+                    updateDifficulty(activeOriginalIndex, event.target.value)
+                  }
                   disabled={isSubmitting}
-                  className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <option value="">Select 1–10</option>
-                  <option value="1">1 - Very mild</option>
-                  <option value="2">2</option>
-                  <option value="3">3 - Mild</option>
-                  <option value="4">4</option>
-                  <option value="5">5 - Moderate</option>
-                  <option value="6">6</option>
-                  <option value="7">7 - High</option>
-                  <option value="8">8</option>
-                  <option value="9">9 - Very high</option>
-                  <option value="10">10 - Severe</option>
+                  <option value="">Select difficulty</option>
+                  <option value="Easy">Easy</option>
+                  <option value="Moderate">Moderate</option>
+                  <option value="Hard">Hard</option>
+                  <option value="Could not complete">Could not complete</option>
                 </select>
               </div>
 
               <div>
                 <label className="mb-2 block text-sm font-black text-slate-700">
-                  Exercise Related to Pain
+                  Exercise Notes
                 </label>
 
                 <input
-                  value={painExercise}
-                  onChange={(event) => setPainExercise(event.target.value)}
+                  value={activeExercise.notes}
+                  onChange={(event) =>
+                    updateNotes(activeOriginalIndex, event.target.value)
+                  }
                   disabled={isSubmitting}
-                  placeholder="Box Step-Up, Chest Press..."
-                  className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  placeholder="Optional note for your trainer"
+                  className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
             </div>
 
-            <div className="mt-4">
-              <label className="mb-2 block text-sm font-black text-slate-700">
-                Pain Notes
-              </label>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={goBackStep}
+                disabled={activeStepIndex === 0 && activeSetNumber === 1}
+                className="w-full rounded-2xl border border-sky-100 bg-white px-5 py-4 text-sm font-black text-slate-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-1/3"
+              >
+                Back
+              </button>
 
-              <textarea
-                value={painNotes}
-                onChange={(event) => setPainNotes(event.target.value)}
+              <button
+                type="button"
+                onClick={skipCurrentExercise}
                 disabled={isSubmitting}
-                placeholder="Describe what happened, when you felt it, and anything your trainer should know."
-                rows={4}
-                className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-              />
-            </div>
-          </div>
-        )}
-      </section>
+                className="w-full rounded-2xl border border-orange-100 bg-orange-50 px-5 py-4 text-sm font-black text-orange-700 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-1/3"
+              >
+                Skip Exercise
+              </button>
 
-      <button
-        type="button"
-        onClick={submitWorkout}
-        disabled={isSubmitting || loggedExercises.length === 0}
-        className="mt-6 w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 sm:mt-8"
-      >
-        {isSubmitting
-          ? "Submitting workout..."
-          : isRepeatMode
-          ? "Submit Repeated Workout"
-          : "Submit Workout"}
-      </button>
+              <button
+                type="button"
+                onClick={completeCurrentSet}
+                disabled={isSubmitting}
+                className="w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-1/3"
+              >
+                Complete Set
+              </button>
+            </div>
+          </section>
+        </>
+      )}
     </ClientLayout>
   );
 }
