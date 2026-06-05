@@ -17,19 +17,42 @@ type SubmissionExercise = {
 
 type SubmittedWorkout = {
   id: string;
+  client_user_id: string;
   workout_id: string | null;
   workout_title: string;
   submitted_at: string;
-  notes: string;
+  notes: string | null;
+
+  pain_reported: boolean | null;
+  pain_location: string | null;
+  pain_level: number | null;
+  pain_exercise: string | null;
+  pain_notes: string | null;
+
   workout_submission_exercises: SubmissionExercise[];
+};
+
+type ClientProfile = {
+  id: string;
+  full_name: string | null;
+  client_id: string | null;
 };
 
 export default function CompletedWorkout() {
   const { submissionId } = useParams();
 
   const [workout, setWorkout] = useState<SubmittedWorkout | null>(null);
+  const [clientProfile, setClientProfile] = useState<ClientProfile | null>(
+    null
+  );
+
+  const [trainerUserId, setTrainerUserId] = useState("");
+  const [trainerResponse, setTrainerResponse] = useState("");
+  const [isSendingResponse, setIsSendingResponse] = useState(false);
+
   const [isLoading, setIsLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [unreadMessages, setUnreadMessages] = useState(0);
 
   const userRole = localStorage.getItem("coachsync-user-role");
@@ -52,24 +75,29 @@ export default function CompletedWorkout() {
   async function loadWorkout() {
     setIsLoading(true);
     setStatusMessage("");
+    setSuccessMessage("");
 
     const {
       data: { user },
       error: userError,
     } = await supabase.auth.getUser();
 
-    if (!userError && user && userRole !== "trainer") {
-      const { count: unreadCount, error: unreadError } = await supabase
-        .from("messages")
-        .select("id", { count: "exact", head: true })
-        .eq("client_user_id", user.id)
-        .eq("receiver_user_id", user.id)
-        .is("read_at", null);
-
-      if (unreadError) {
-        console.error(unreadError);
+    if (!userError && user) {
+      if (userRole === "trainer") {
+        setTrainerUserId(user.id);
       } else {
-        setUnreadMessages(unreadCount || 0);
+        const { count: unreadCount, error: unreadError } = await supabase
+          .from("messages")
+          .select("id", { count: "exact", head: true })
+          .eq("client_user_id", user.id)
+          .eq("receiver_user_id", user.id)
+          .is("read_at", null);
+
+        if (unreadError) {
+          console.error(unreadError);
+        } else {
+          setUnreadMessages(unreadCount || 0);
+        }
       }
     }
 
@@ -84,10 +112,16 @@ export default function CompletedWorkout() {
       .select(
         `
         id,
+        client_user_id,
         workout_id,
         workout_title,
         submitted_at,
         notes,
+        pain_reported,
+        pain_location,
+        pain_level,
+        pain_exercise,
+        pain_notes,
         workout_submission_exercises (
           id,
           exercise_name,
@@ -113,8 +147,81 @@ export default function CompletedWorkout() {
       return;
     }
 
-    setWorkout(data as SubmittedWorkout);
+    const loadedWorkout = data as SubmittedWorkout;
+    setWorkout(loadedWorkout);
+
+    if (loadedWorkout.client_user_id) {
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, full_name, client_id")
+        .eq("id", loadedWorkout.client_user_id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error(profileError);
+      } else if (profileData) {
+        setClientProfile(profileData as ClientProfile);
+      }
+    }
+
     setIsLoading(false);
+  }
+
+  async function sendPainResponseToClient() {
+    if (!workout) return;
+
+    if (!trainerResponse.trim()) {
+      setStatusMessage("Write a response before sending.");
+      return;
+    }
+
+    if (!trainerUserId) {
+      setStatusMessage("Trainer account could not be confirmed.");
+      return;
+    }
+
+    setIsSendingResponse(true);
+    setStatusMessage("");
+    setSuccessMessage("");
+
+    const clientName =
+      clientProfile?.full_name || clientProfile?.client_id || "there";
+
+    const messageBody = `Hi ${clientName},
+
+I reviewed your pain report from "${workout.workout_title}".
+
+Pain report:
+- Location: ${workout.pain_location || "Not specified"}
+- Level: ${
+      typeof workout.pain_level === "number"
+        ? `${workout.pain_level}/10`
+        : "Not recorded"
+    }
+- Related exercise: ${workout.pain_exercise || "Not specified"}
+- Notes: ${workout.pain_notes || "No notes added"}
+
+Trainer response:
+${trainerResponse.trim()}`;
+
+    const { error } = await supabase.from("messages").insert({
+      client_user_id: workout.client_user_id,
+      sender_user_id: trainerUserId,
+      receiver_user_id: workout.client_user_id,
+      message_body: messageBody,
+      read_at: null,
+    });
+
+    if (error) {
+      console.error(error);
+      setStatusMessage("Could not send response: " + error.message);
+      setIsSendingResponse(false);
+      return;
+    }
+
+    setTrainerResponse("");
+    setSuccessMessage("Response sent to the client.");
+    setIsSendingResponse(false);
   }
 
   if (isLoading) {
@@ -129,7 +236,7 @@ export default function CompletedWorkout() {
         </h1>
 
         <p className="mt-2 text-sm leading-6 text-slate-500">
-          Pulling up your submitted workout details.
+          Pulling up the submitted workout details.
         </p>
       </section>
     );
@@ -210,7 +317,6 @@ export default function CompletedWorkout() {
   ).length;
 
   const totalExercises = exercises.length;
-
   const incompleteCount = totalExercises - completedCount;
 
   const completionPercent =
@@ -223,6 +329,11 @@ export default function CompletedWorkout() {
   const submittedShortDate = new Date(
     workout.submitted_at
   ).toLocaleDateString();
+
+  const painReported = workout.pain_reported === true;
+
+  const clientDisplayName =
+    clientProfile?.full_name || clientProfile?.client_id || "Unknown Client";
 
   const pageContent = (
     <>
@@ -241,6 +352,12 @@ export default function CompletedWorkout() {
               <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
                 Submitted: {submittedDate}
               </p>
+
+              {userRole === "trainer" && (
+                <p className="mt-1 text-sm font-bold text-blue-50">
+                  Client: {clientDisplayName}
+                </p>
+              )}
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -263,7 +380,7 @@ export default function CompletedWorkout() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-4 md:p-8">
+        <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-5 md:p-8">
           <SummaryCard
             title="Completed"
             value={`${completedCount} / ${totalExercises}`}
@@ -274,13 +391,117 @@ export default function CompletedWorkout() {
           <SummaryCard title="Incomplete" value={`${incompleteCount}`} />
 
           <SummaryCard title="Submitted" value={submittedShortDate} />
+
+          <SummaryCard
+            title="Pain"
+            value={painReported ? "Reported" : "None"}
+            danger={painReported}
+          />
         </div>
       </section>
 
       {statusMessage && (
-        <p className="mb-4 rounded-2xl border border-sky-100 bg-white p-4 text-sm font-semibold leading-6 text-slate-700 shadow-sm sm:mb-6">
+        <p className="mb-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-semibold leading-6 text-red-700 shadow-sm sm:mb-6">
           {statusMessage}
         </p>
+      )}
+
+      {successMessage && (
+        <p className="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-black leading-6 text-emerald-700 shadow-sm sm:mb-6">
+          {successMessage}
+        </p>
+      )}
+
+      {painReported && (
+        <section className="mb-4 rounded-[1.75rem] border border-red-100 bg-red-50 p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
+          <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-red-600">
+                Pain & Discomfort Report
+              </p>
+
+              <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+                {typeof workout.pain_level === "number"
+                  ? `${workout.pain_level}/10 pain level`
+                  : "Pain level not recorded"}
+              </h2>
+
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Review the client’s pain report and respond with next steps.
+              </p>
+            </div>
+
+            {typeof workout.pain_level === "number" &&
+              workout.pain_level >= 7 && (
+                <span className="w-fit rounded-full bg-red-600 px-4 py-2 text-sm font-black text-white shadow-sm">
+                  High Priority
+                </span>
+              )}
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            <PainBox
+              label="Location"
+              value={workout.pain_location || "Not specified"}
+            />
+
+            <PainBox
+              label="Related Exercise"
+              value={workout.pain_exercise || "Not specified"}
+            />
+
+            <PainBox
+              label="Pain Level"
+              value={
+                typeof workout.pain_level === "number"
+                  ? `${workout.pain_level}/10`
+                  : "Not recorded"
+              }
+            />
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-red-100 bg-white p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-red-600">
+              Client Pain Notes
+            </p>
+
+            <p className="mt-2 whitespace-pre-wrap break-words text-sm font-black leading-6 text-slate-900">
+              {workout.pain_notes || "No pain notes added."}
+            </p>
+          </div>
+
+          {userRole === "trainer" && (
+            <div className="mt-5 rounded-2xl border border-red-100 bg-white p-4">
+              <label className="block text-sm font-black text-slate-800">
+                Respond to Pain Report
+              </label>
+
+              <p className="mt-1 text-sm leading-6 text-slate-500">
+                This sends a message directly to the client.
+              </p>
+
+              <textarea
+                value={trainerResponse}
+                onChange={(event) => setTrainerResponse(event.target.value)}
+                disabled={isSendingResponse}
+                rows={5}
+                placeholder="Example: Thanks for letting me know. For now, avoid that movement, keep the intensity low, and I’ll adjust your next workout."
+                className="mt-3 w-full rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+              />
+
+              <button
+                type="button"
+                onClick={sendPainResponseToClient}
+                disabled={isSendingResponse}
+                className="mt-3 w-full rounded-2xl bg-red-600 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              >
+                {isSendingResponse
+                  ? "Sending Response..."
+                  : "Send Response to Client"}
+              </button>
+            </div>
+          )}
+        </section>
       )}
 
       <section className="mb-4 rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
@@ -398,14 +619,30 @@ export default function CompletedWorkout() {
   );
 }
 
-function SummaryCard({ title, value }: { title: string; value: string }) {
+function SummaryCard({
+  title,
+  value,
+  danger = false,
+}: {
+  title: string;
+  value: string;
+  danger?: boolean;
+}) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 shadow-sm sm:p-5">
+    <div
+      className={`rounded-2xl border p-4 shadow-sm sm:p-5 ${
+        danger ? "border-red-100 bg-red-50" : "border-sky-100 bg-sky-50"
+      }`}
+    >
       <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
         {title}
       </p>
 
-      <h2 className="mt-2 line-clamp-2 break-words text-xl font-black leading-tight text-slate-900 sm:text-2xl">
+      <h2
+        className={`mt-2 line-clamp-2 break-words text-xl font-black leading-tight sm:text-2xl ${
+          danger ? "text-red-700" : "text-slate-900"
+        }`}
+      >
         {value}
       </h2>
     </div>
@@ -416,6 +653,20 @@ function InfoBox({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-white/70 bg-white p-4">
       <p className="text-sm font-bold text-slate-500">{label}</p>
+
+      <p className="mt-1 whitespace-pre-wrap break-words text-sm font-black leading-6 text-slate-900 sm:text-base">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function PainBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-red-100 bg-white p-4">
+      <p className="text-xs font-bold uppercase tracking-wide text-red-600">
+        {label}
+      </p>
 
       <p className="mt-1 whitespace-pre-wrap break-words text-sm font-black leading-6 text-slate-900 sm:text-base">
         {value}
