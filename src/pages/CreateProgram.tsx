@@ -34,7 +34,8 @@ const SECTION_DESCRIPTIONS: Record<string, string> = {
     "Core control, stability, balance, and activation work.",
   "SAQ / Skill Development":
     "Speed, agility, quickness, reaction, coordination, or sport skill work.",
-  "Resistance Training": "Main strength, stability, hypertrophy, or machine work.",
+  "Resistance Training":
+    "Main strength, stability, hypertrophy, or machine work.",
   "Cool-Down": "Recovery, mobility, stretching, breathing, and reset work.",
   Other: "Any additional coaching work that does not fit the main sections.",
 };
@@ -222,6 +223,7 @@ export default function CreateProgram() {
   );
   const [isLoadingExerciseLibrary, setIsLoadingExerciseLibrary] =
     useState(false);
+
   const [selectedClientId, setSelectedClientId] = useState("");
   const [copySourceClientId, setCopySourceClientId] = useState("");
 
@@ -428,8 +430,7 @@ export default function CreateProgram() {
     if (workoutsError) {
       console.error(workoutsError);
       setStatusMessage(
-        "Could not load historical workout templates: " +
-          workoutsError.message
+        "Could not load historical workout templates: " + workoutsError.message
       );
       setHistoricalTemplates([]);
       setIsLoadingHistoricalTemplates(false);
@@ -599,14 +600,6 @@ export default function CreateProgram() {
     );
 
     return client?.full_name || client?.client_id || "Unknown Client";
-  }
-
-  function getClientCode(clientUserId: string) {
-    const client = clients.find(
-      (currentClient) => currentClient.id === clientUserId
-    );
-
-    return client?.client_id || "Not set";
   }
 
   function handleClientChange(value: string) {
@@ -1469,10 +1462,7 @@ export default function CreateProgram() {
             <SummaryCard title="Workouts" value={String(totalWorkoutCount)} />
             <SummaryCard title="Exercises" value={String(totalExerciseCount)} />
             <SummaryCard title="Sections Used" value={String(totalSectionCount)} />
-            <SummaryCard
-              title="Builder Mode"
-              value="Guided"
-            />
+            <SummaryCard title="Builder Mode" value="Guided" />
           </div>
         </div>
 
@@ -1539,9 +1529,7 @@ export default function CreateProgram() {
 
           {selectedClient && (
             <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4">
-              <p className="text-sm font-black text-blue-700">
-                Target Client
-              </p>
+              <p className="text-sm font-black text-blue-700">Target Client</p>
 
               <p className="mt-1 text-sm font-semibold leading-6 text-slate-700">
                 This workout/week will be saved to {selectedClient.full_name} —{" "}
@@ -2200,6 +2188,10 @@ function SortableExerciseCard({
   ) => void;
   saveExerciseToLibrary: (exercise: ExerciseForm) => void;
 }) {
+  const [isExpanded, setIsExpanded] = useState(
+    exercise.exerciseName.trim() === ""
+  );
+
   const {
     attributes,
     listeners,
@@ -2216,237 +2208,278 @@ function SortableExerciseCard({
 
   const hasExerciseName = exercise.exerciseName.trim() !== "";
 
+  const summaryParts = [
+    exercise.section,
+    exercise.sets ? `${exercise.sets} sets` : "",
+    exercise.reps ? exercise.reps : "",
+    exercise.weight ? exercise.weight : "",
+    exercise.rest ? `${exercise.rest} rest` : "",
+  ].filter(Boolean);
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`rounded-[1.25rem] border bg-white p-4 transition ${
+      className={`overflow-hidden rounded-[1.35rem] border bg-white transition ${
         isDragging
           ? "z-20 border-blue-200 opacity-80 shadow-xl ring-2 ring-blue-200"
           : hasExerciseName
-          ? "border-sky-100"
+          ? "border-sky-100 shadow-sm"
           : "border-dashed border-slate-200"
       }`}
     >
-      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            {...attributes}
-            {...listeners}
-            className="cursor-grab rounded-2xl bg-sky-50 px-3 py-2 text-sm font-black text-slate-600 ring-1 ring-sky-100 active:cursor-grabbing"
-            aria-label={`Drag Exercise ${displayIndex}`}
-          >
-            ☰
-          </button>
+      <div className="p-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <button
+              type="button"
+              {...attributes}
+              {...listeners}
+              className="mt-1 cursor-grab rounded-2xl bg-sky-50 px-3 py-2 text-sm font-black text-slate-600 ring-1 ring-sky-100 active:cursor-grabbing"
+              aria-label={`Drag Exercise ${displayIndex}`}
+            >
+              ☰
+            </button>
 
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-600">
-              Movement {displayIndex}
-            </p>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-blue-600">
+                Movement {displayIndex}
+              </p>
 
-            <h5 className="mt-1 text-base font-black text-slate-900">
-              {exercise.exerciseName.trim() || "New Exercise"}
-            </h5>
+              <h5 className="mt-1 break-words text-lg font-black text-slate-900">
+                {exercise.exerciseName.trim() || "New Exercise"}
+              </h5>
+
+              <p className="mt-1 break-words text-sm font-semibold leading-6 text-slate-500">
+                {summaryParts.length > 0
+                  ? summaryParts.join(" • ")
+                  : "Add exercise details to make this guided-workout ready."}
+              </p>
+
+              {exercise.trainerNotes.trim() && !isExpanded && (
+                <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-500">
+                  Note: {exercise.trainerNotes}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-row">
-          <button
-            type="button"
-            onClick={() => moveExercise(workoutIndex, exerciseIndex, "up")}
-            disabled={exerciseIndex === 0}
-            className="rounded-xl bg-white px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Up
-          </button>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row">
+            <button
+              type="button"
+              onClick={() => setIsExpanded((current) => !current)}
+              className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-black text-white transition hover:bg-blue-700"
+            >
+              {isExpanded ? "Collapse" : "Edit Details"}
+            </button>
 
-          <button
-            type="button"
-            onClick={() => moveExercise(workoutIndex, exerciseIndex, "down")}
-            disabled={exerciseIndex === totalExercises - 1}
-            className="rounded-xl bg-white px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Down
-          </button>
+            <button
+              type="button"
+              onClick={() => moveExercise(workoutIndex, exerciseIndex, "up")}
+              disabled={exerciseIndex === 0}
+              className="rounded-xl bg-white px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Up
+            </button>
 
-          <button
-            type="button"
-            onClick={() => removeExercise(workoutIndex, exerciseIndex)}
-            className="rounded-xl bg-red-50 px-3 py-2 text-xs font-black text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
-          >
-            Remove
-          </button>
+            <button
+              type="button"
+              onClick={() => moveExercise(workoutIndex, exerciseIndex, "down")}
+              disabled={exerciseIndex === totalExercises - 1}
+              className="rounded-xl bg-white px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Down
+            </button>
+
+            <button
+              type="button"
+              onClick={() => removeExercise(workoutIndex, exerciseIndex)}
+              className="rounded-xl bg-red-50 px-3 py-2 text-xs font-black text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
+            >
+              Remove
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
-        <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
-          <div>
-            <label className="mb-2 block text-sm font-black text-slate-700">
-              Choose Exercise From Library
-            </label>
+      {isExpanded && (
+        <div className="border-t border-sky-100 bg-sky-50/60 p-4">
+          <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+            <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
+              <div>
+                <label className="mb-2 block text-sm font-black text-slate-700">
+                  Choose Exercise From Library
+                </label>
 
-            <select
-              value=""
-              onChange={(event) =>
-                applyExerciseFromLibrary(
+                <select
+                  value=""
+                  onChange={(event) =>
+                    applyExerciseFromLibrary(
+                      workoutIndex,
+                      exerciseIndex,
+                      event.target.value
+                    )
+                  }
+                  disabled={isLoadingExerciseLibrary}
+                  className="w-full rounded-2xl border border-blue-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <option value="">
+                    {isLoadingExerciseLibrary
+                      ? "Loading exercise library..."
+                      : "Search/choose an exercise to auto-fill this tile"}
+                  </option>
+
+                  {WORKOUT_SECTIONS.map((section) => {
+                    const sectionExercises = exerciseLibrary.filter(
+                      (libraryExercise) =>
+                        (libraryExercise.default_section || "Other") ===
+                        section
+                    );
+
+                    if (sectionExercises.length === 0) return null;
+
+                    return (
+                      <optgroup key={section} label={section}>
+                        {sectionExercises.map((libraryExercise) => (
+                          <option
+                            key={libraryExercise.id}
+                            value={libraryExercise.id}
+                          >
+                            {libraryExercise.exercise_name}
+                            {libraryExercise.default_reps
+                              ? ` — ${libraryExercise.default_reps}`
+                              : ""}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
+                </select>
+
+                <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">
+                  Auto-fills section, sets, reps, weight, rest, video link, and
+                  notes.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => saveExerciseToLibrary(exercise)}
+                className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-blue-700 ring-1 ring-blue-100 transition hover:bg-blue-50"
+              >
+                Save This Exercise
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <label className="mb-2 block text-sm font-black text-slate-700">
+                Section
+              </label>
+
+              <select
+                value={exercise.section}
+                onChange={(event) =>
+                  updateExercise(
+                    workoutIndex,
+                    exerciseIndex,
+                    "section",
+                    event.target.value
+                  )
+                }
+                className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+              >
+                {WORKOUT_SECTIONS.map((section) => (
+                  <option key={section} value={section}>
+                    {section}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <Input
+              label="Exercise Name"
+              value={exercise.exerciseName}
+              onChange={(value) =>
+                updateExercise(
                   workoutIndex,
                   exerciseIndex,
-                  event.target.value
+                  "exerciseName",
+                  value
                 )
               }
-              disabled={isLoadingExerciseLibrary}
-              className="w-full rounded-2xl border border-blue-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <option value="">
-                {isLoadingExerciseLibrary
-                  ? "Loading exercise library..."
-                  : "Search/choose an exercise to auto-fill this tile"}
-              </option>
+              placeholder="Band Pull Aparts"
+            />
 
-              {WORKOUT_SECTIONS.map((section) => {
-                const sectionExercises = exerciseLibrary.filter(
-                  (libraryExercise) =>
-                    (libraryExercise.default_section || "Other") === section
-                );
+            <Input
+              label="Sets"
+              value={exercise.sets}
+              onChange={(value) =>
+                updateExercise(workoutIndex, exerciseIndex, "sets", value)
+              }
+              placeholder="2"
+            />
 
-                if (sectionExercises.length === 0) return null;
+            <Input
+              label="Reps / Time"
+              value={exercise.reps}
+              onChange={(value) =>
+                updateExercise(workoutIndex, exerciseIndex, "reps", value)
+              }
+              placeholder="10 reps or 30 sec"
+            />
 
-                return (
-                  <optgroup key={section} label={section}>
-                    {sectionExercises.map((libraryExercise) => (
-                      <option
-                        key={libraryExercise.id}
-                        value={libraryExercise.id}
-                      >
-                        {libraryExercise.exercise_name}
-                        {libraryExercise.default_reps
-                          ? ` — ${libraryExercise.default_reps}`
-                          : ""}
-                      </option>
-                    ))}
-                  </optgroup>
-                );
-              })}
-            </select>
+            <Input
+              label="Weight"
+              value={exercise.weight}
+              onChange={(value) =>
+                updateExercise(workoutIndex, exerciseIndex, "weight", value)
+              }
+              placeholder="None or 45 lbs"
+            />
 
-            <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">
-              Auto-fills section, sets, reps, weight, rest, video link, and notes.
-            </p>
+            <Input
+              label="Rest"
+              value={exercise.rest}
+              onChange={(value) =>
+                updateExercise(workoutIndex, exerciseIndex, "rest", value)
+              }
+              placeholder="30-60 sec"
+            />
+
+            <Input
+              label="Video Link"
+              value={exercise.videoLink}
+              onChange={(value) =>
+                updateExercise(workoutIndex, exerciseIndex, "videoLink", value)
+              }
+              placeholder="https://youtube.com/..."
+            />
+
+            <div className="md:col-span-3">
+              <label className="mb-2 block text-sm font-black text-slate-700">
+                Trainer Notes
+              </label>
+
+              <textarea
+                value={exercise.trainerNotes}
+                onChange={(event) =>
+                  updateExercise(
+                    workoutIndex,
+                    exerciseIndex,
+                    "trainerNotes",
+                    event.target.value
+                  )
+                }
+                placeholder="Example: Keep shoulders relaxed, move slowly, stop if pain increases."
+                rows={3}
+                className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+              />
+            </div>
           </div>
-
-          <button
-            type="button"
-            onClick={() => saveExerciseToLibrary(exercise)}
-            className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-blue-700 ring-1 ring-blue-100 transition hover:bg-blue-50"
-          >
-            Save This Exercise
-          </button>
         </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <div>
-          <label className="mb-2 block text-sm font-black text-slate-700">
-            Section
-          </label>
-
-          <select
-            value={exercise.section}
-            onChange={(event) =>
-              updateExercise(
-                workoutIndex,
-                exerciseIndex,
-                "section",
-                event.target.value
-              )
-            }
-            className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
-          >
-            {WORKOUT_SECTIONS.map((section) => (
-              <option key={section} value={section}>
-                {section}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <Input
-          label="Exercise Name"
-          value={exercise.exerciseName}
-          onChange={(value) =>
-            updateExercise(workoutIndex, exerciseIndex, "exerciseName", value)
-          }
-          placeholder="Band Pull Aparts"
-        />
-
-        <Input
-          label="Sets"
-          value={exercise.sets}
-          onChange={(value) =>
-            updateExercise(workoutIndex, exerciseIndex, "sets", value)
-          }
-          placeholder="2"
-        />
-
-        <Input
-          label="Reps / Time"
-          value={exercise.reps}
-          onChange={(value) =>
-            updateExercise(workoutIndex, exerciseIndex, "reps", value)
-          }
-          placeholder="10 reps or 30 sec"
-        />
-
-        <Input
-          label="Weight"
-          value={exercise.weight}
-          onChange={(value) =>
-            updateExercise(workoutIndex, exerciseIndex, "weight", value)
-          }
-          placeholder="None or 45 lbs"
-        />
-
-        <Input
-          label="Rest"
-          value={exercise.rest}
-          onChange={(value) =>
-            updateExercise(workoutIndex, exerciseIndex, "rest", value)
-          }
-          placeholder="30-60 sec"
-        />
-
-        <Input
-          label="Video Link"
-          value={exercise.videoLink}
-          onChange={(value) =>
-            updateExercise(workoutIndex, exerciseIndex, "videoLink", value)
-          }
-          placeholder="https://youtube.com/..."
-        />
-
-        <div className="md:col-span-3">
-          <label className="mb-2 block text-sm font-black text-slate-700">
-            Trainer Notes
-          </label>
-
-          <textarea
-            value={exercise.trainerNotes}
-            onChange={(event) =>
-              updateExercise(
-                workoutIndex,
-                exerciseIndex,
-                "trainerNotes",
-                event.target.value
-              )
-            }
-            placeholder="Example: Keep shoulders relaxed, move slowly, stop if pain increases."
-            rows={3}
-            className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
-          />
-        </div>
-      </div>
+      )}
     </div>
   );
 }
