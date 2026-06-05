@@ -58,6 +58,11 @@ type LoggedExercise = {
 
 type WorkoutDraftData = {
   loggedExercises: LoggedExercise[];
+  painReported?: boolean;
+  painLocation?: string;
+  painLevel?: string;
+  painExercise?: string;
+  painNotes?: string;
 };
 
 type WorkoutDraftRow = {
@@ -135,6 +140,13 @@ export default function StartWorkout() {
   const [workout, setWorkout] = useState<PlanWorkout | null>(null);
   const [loggedExercises, setLoggedExercises] = useState<LoggedExercise[]>([]);
   const [workoutNotes, setWorkoutNotes] = useState("");
+
+  const [painReported, setPainReported] = useState(false);
+  const [painLocation, setPainLocation] = useState("");
+  const [painLevel, setPainLevel] = useState("");
+  const [painExercise, setPainExercise] = useState("");
+  const [painNotes, setPainNotes] = useState("");
+
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState("");
   const [isSavingDraft, setIsSavingDraft] = useState(false);
@@ -183,6 +195,11 @@ export default function StartWorkout() {
     workoutId,
     workoutNotes,
     loggedExercises,
+    painReported,
+    painLocation,
+    painLevel,
+    painExercise,
+    painNotes,
     draftLoaded,
     isSubmitting,
   ]);
@@ -309,6 +326,13 @@ export default function StartWorkout() {
 
       setLoggedExercises(restoredExercises);
       setWorkoutNotes(draft.workout_notes || "");
+
+      setPainReported(draft.draft_data?.painReported || false);
+      setPainLocation(draft.draft_data?.painLocation || "");
+      setPainLevel(draft.draft_data?.painLevel || "");
+      setPainExercise(draft.draft_data?.painExercise || "");
+      setPainNotes(draft.draft_data?.painNotes || "");
+
       setDraftSavedAt(draft.updated_at || "");
     } else {
       setLoggedExercises(freshLoggedExercises);
@@ -324,6 +348,15 @@ export default function StartWorkout() {
     setIsSavingDraft(true);
 
     const now = new Date().toISOString();
+
+    const draftData: WorkoutDraftData = {
+      loggedExercises,
+      painReported,
+      painLocation,
+      painLevel,
+      painExercise,
+      painNotes,
+    };
 
     const { data: existingDraft, error: findError } = await supabase
       .from("workout_drafts")
@@ -344,9 +377,7 @@ export default function StartWorkout() {
         .from("workout_drafts")
         .update({
           workout_notes: workoutNotes,
-          draft_data: {
-            loggedExercises,
-          },
+          draft_data: draftData,
           updated_at: now,
         })
         .eq("id", existingDraft.id);
@@ -365,9 +396,7 @@ export default function StartWorkout() {
           workout_id: workoutId,
           historical_workout_id: null,
           workout_notes: workoutNotes,
-          draft_data: {
-            loggedExercises,
-          },
+          draft_data: draftData,
           updated_at: now,
         });
 
@@ -412,6 +441,12 @@ export default function StartWorkout() {
     );
 
     setWorkoutNotes("");
+    setPainReported(false);
+    setPainLocation("");
+    setPainLevel("");
+    setPainExercise("");
+    setPainNotes("");
+
     await clearSavedDraft();
     setSuccessMessage("");
     setErrorMessage("Saved progress was cleared.");
@@ -456,6 +491,17 @@ export default function StartWorkout() {
     );
   }
 
+  function handlePainReportedChange(value: boolean) {
+    setPainReported(value);
+
+    if (!value) {
+      setPainLocation("");
+      setPainLevel("");
+      setPainExercise("");
+      setPainNotes("");
+    }
+  }
+
   async function submitWorkout() {
     if (!workout) {
       setErrorMessage("No workout found.");
@@ -467,6 +513,19 @@ export default function StartWorkout() {
     if (loggedExercises.length === 0) {
       setErrorMessage("This workout has no exercises to submit.");
       return;
+    }
+
+    if (painReported && painLevel) {
+      const numericPainLevel = Number(painLevel);
+
+      if (
+        Number.isNaN(numericPainLevel) ||
+        numericPainLevel < 1 ||
+        numericPainLevel > 10
+      ) {
+        setErrorMessage("Pain level must be between 1 and 10.");
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -505,6 +564,12 @@ export default function StartWorkout() {
       return;
     }
 
+    const cleanPainLocation = painReported ? painLocation.trim() : "";
+    const cleanPainExercise = painReported ? painExercise.trim() : "";
+    const cleanPainNotes = painReported ? painNotes.trim() : "";
+    const cleanPainLevel =
+      painReported && painLevel ? Number(painLevel) : null;
+
     const { data: submission, error: submissionError } = await supabase
       .from("workout_submissions")
       .insert({
@@ -512,6 +577,11 @@ export default function StartWorkout() {
         workout_id: workout.id,
         workout_title: workout.title,
         notes: workoutNotes.trim(),
+        pain_reported: painReported,
+        pain_location: cleanPainLocation || null,
+        pain_level: cleanPainLevel,
+        pain_exercise: cleanPainExercise || null,
+        pain_notes: cleanPainNotes || null,
       })
       .select("id")
       .single();
@@ -688,7 +758,7 @@ export default function StartWorkout() {
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
-                Your progress saves automatically across devices.
+                Your progress and pain report save automatically across devices.
               </p>
             </div>
 
@@ -913,6 +983,124 @@ export default function StartWorkout() {
               </div>
             </div>
           ))
+        )}
+      </section>
+
+      <section className="mt-6 rounded-[1.5rem] border border-red-100 bg-white p-4 shadow-sm sm:mt-8 sm:rounded-3xl sm:p-6">
+        <div className="mb-5">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-red-600">
+            Pain & Discomfort Check
+          </p>
+
+          <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+            Did you feel any pain today?
+          </h2>
+
+          <p className="mt-1 text-sm leading-6 text-slate-500">
+            This helps your trainer adjust your plan and keep your training safe.
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => handlePainReportedChange(false)}
+            disabled={isSubmitting}
+            className={`rounded-2xl border px-4 py-4 text-left text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
+              !painReported
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-100"
+                : "border-sky-100 bg-sky-50 text-slate-600 hover:bg-white"
+            }`}
+          >
+            No pain or discomfort
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handlePainReportedChange(true)}
+            disabled={isSubmitting}
+            className={`rounded-2xl border px-4 py-4 text-left text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
+              painReported
+                ? "border-red-200 bg-red-50 text-red-700 ring-2 ring-red-100"
+                : "border-sky-100 bg-sky-50 text-slate-600 hover:bg-white"
+            }`}
+          >
+            Yes, I felt pain/discomfort
+          </button>
+        </div>
+
+        {painReported && (
+          <div className="mt-5 rounded-2xl border border-red-100 bg-red-50 p-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <label className="mb-2 block text-sm font-black text-slate-700">
+                  Pain Location
+                </label>
+
+                <input
+                  value={painLocation}
+                  onChange={(event) => setPainLocation(event.target.value)}
+                  disabled={isSubmitting}
+                  placeholder="Hip, shoulder, knee, back..."
+                  className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-black text-slate-700">
+                  Pain Level
+                </label>
+
+                <select
+                  value={painLevel}
+                  onChange={(event) => setPainLevel(event.target.value)}
+                  disabled={isSubmitting}
+                  className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <option value="">Select 1–10</option>
+                  <option value="1">1 - Very mild</option>
+                  <option value="2">2</option>
+                  <option value="3">3 - Mild</option>
+                  <option value="4">4</option>
+                  <option value="5">5 - Moderate</option>
+                  <option value="6">6</option>
+                  <option value="7">7 - High</option>
+                  <option value="8">8</option>
+                  <option value="9">9 - Very high</option>
+                  <option value="10">10 - Severe</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-black text-slate-700">
+                  Exercise Related to Pain
+                </label>
+
+                <input
+                  value={painExercise}
+                  onChange={(event) => setPainExercise(event.target.value)}
+                  disabled={isSubmitting}
+                  placeholder="Box Step-Up, Chest Press..."
+                  className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                />
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <label className="mb-2 block text-sm font-black text-slate-700">
+                Pain Notes
+              </label>
+
+              <textarea
+                value={painNotes}
+                onChange={(event) => setPainNotes(event.target.value)}
+                disabled={isSubmitting}
+                placeholder="Describe what happened, when you felt it, and anything your trainer should know."
+                rows={4}
+                className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+              />
+            </div>
+          </div>
         )}
       </section>
 
