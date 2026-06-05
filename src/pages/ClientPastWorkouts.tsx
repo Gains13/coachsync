@@ -13,6 +13,10 @@ type WorkoutSubmission = {
   workout_notes?: string | null;
   pain_reported?: boolean | null;
   pain?: boolean | null;
+  pain_location?: string | null;
+  pain_level?: number | null;
+  pain_exercise?: string | null;
+  pain_notes?: string | null;
   submitted_at?: string | null;
   completed_at?: string | null;
   date?: string | null;
@@ -62,6 +66,10 @@ type CombinedWorkoutItem =
       date: string | null;
       notes: string;
       painReported: boolean;
+      painLocation: string;
+      painLevel: number | null;
+      painExercise: string;
+      painNotes: string;
       isRepeatedWorkout: boolean;
     }
   | {
@@ -236,6 +244,10 @@ export default function ClientPastWorkouts() {
         date: submissionDate,
         notes,
         painReported,
+        painLocation: submission.pain_location || "Not specified",
+        painLevel: submission.pain_level ?? null,
+        painExercise: submission.pain_exercise || "Not specified",
+        painNotes: submission.pain_notes || "No pain notes added",
         isRepeatedWorkout,
       };
     }),
@@ -290,6 +302,13 @@ export default function ClientPastWorkouts() {
     (submission) => submission.pain_reported === true || submission.pain === true
   ).length;
 
+  const highPainReportCount = programSubmissions.filter((submission) => {
+    const painReported =
+      submission.pain_reported === true || submission.pain === true;
+
+    return painReported && typeof submission.pain_level === "number" && submission.pain_level >= 7;
+  }).length;
+
   return (
     <ClientLayout unreadMessages={unreadMessages}>
       <section className="mb-4 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
@@ -304,11 +323,11 @@ export default function ClientPastWorkouts() {
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
             Review completed program workouts, repeated workouts, personal
-            activities, and imported workouts from your trainer’s notes.
+            activities, imported workouts, and any pain or discomfort reports.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-5 md:p-8">
+        <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-6 md:p-8">
           <SummaryCard title="Total Logs" value={`${combinedItems.length}`} />
 
           <SummaryCard
@@ -328,6 +347,12 @@ export default function ClientPastWorkouts() {
             value={`${repeatedWorkoutCount}`}
             alert={repeatedWorkoutCount > 0}
           />
+
+          <SummaryCard
+            title="Pain Reports"
+            value={`${painReportCount}`}
+            danger={painReportCount > 0}
+          />
         </div>
 
         {painReportCount > 0 && (
@@ -337,6 +362,14 @@ export default function ClientPastWorkouts() {
                 {painReportCount} pain report
                 {painReportCount === 1 ? "" : "s"} found in completed workouts.
               </p>
+
+              {highPainReportCount > 0 && (
+                <p className="mt-1 text-sm font-semibold text-red-600">
+                  {highPainReportCount} report
+                  {highPainReportCount === 1 ? "" : "s"} marked as 7/10 or
+                  higher.
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -353,8 +386,8 @@ export default function ClientPastWorkouts() {
           </h2>
 
           <p className="mt-1 text-sm leading-6 text-slate-500">
-            Program workouts, repeated workouts, personal activities, and
-            imported past workouts are shown together, but labeled separately.
+            Program workouts, repeated workouts, personal activities, imported
+            past workouts, and pain reports are shown together.
           </p>
         </div>
 
@@ -390,6 +423,8 @@ export default function ClientPastWorkouts() {
                     className={`block rounded-2xl border p-4 transition hover:bg-white hover:shadow-sm active:scale-[0.99] sm:p-5 ${
                       item.isRepeatedWorkout
                         ? "border-amber-100 bg-amber-50 hover:border-amber-200"
+                        : item.painReported
+                        ? "border-red-100 bg-red-50 hover:border-red-200"
                         : "border-sky-100 bg-sky-50 hover:border-blue-200"
                     }`}
                   >
@@ -400,6 +435,8 @@ export default function ClientPastWorkouts() {
                             className={`w-fit rounded-full px-3 py-1 text-xs font-black ring-1 ${
                               item.isRepeatedWorkout
                                 ? "bg-amber-100 text-amber-700 ring-amber-200"
+                                : item.painReported
+                                ? "bg-red-100 text-red-700 ring-red-200"
                                 : "bg-blue-50 text-blue-700 ring-blue-100"
                             }`}
                           >
@@ -427,7 +464,7 @@ export default function ClientPastWorkouts() {
                       <span
                         className={`w-fit rounded-full px-3 py-1 text-xs font-black ${
                           item.painReported
-                            ? "bg-red-50 text-red-700 ring-1 ring-red-100"
+                            ? "bg-red-100 text-red-700 ring-1 ring-red-200"
                             : "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
                         }`}
                       >
@@ -445,10 +482,67 @@ export default function ClientPastWorkouts() {
                       </p>
                     </div>
 
+                    {item.painReported && (
+                      <div className="mt-4 rounded-2xl border border-red-100 bg-white p-4">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-wide text-red-600">
+                              Pain & Discomfort Report
+                            </p>
+
+                            <h3 className="mt-1 text-base font-black text-red-700">
+                              {item.painLevel
+                                ? `${item.painLevel}/10 pain level`
+                                : "Pain level not recorded"}
+                            </h3>
+                          </div>
+
+                          {item.painLevel && item.painLevel >= 7 && (
+                            <span className="w-fit rounded-full bg-red-100 px-3 py-1 text-xs font-black text-red-700 ring-1 ring-red-200">
+                              High Priority
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                          <PainInfo
+                            label="Location"
+                            value={item.painLocation}
+                          />
+
+                          <PainInfo
+                            label="Exercise"
+                            value={item.painExercise}
+                          />
+
+                          <PainInfo
+                            label="Level"
+                            value={
+                              item.painLevel
+                                ? `${item.painLevel}/10`
+                                : "Not recorded"
+                            }
+                          />
+                        </div>
+
+                        <div className="mt-3 rounded-2xl bg-red-50 p-4">
+                          <p className="text-xs font-bold uppercase tracking-wide text-red-600">
+                            Pain Notes
+                          </p>
+
+                          <p className="mt-1 break-words text-sm font-semibold leading-6 text-slate-800">
+                            {item.painNotes}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     <p
                       className={`mt-4 text-sm font-black ${
                         item.isRepeatedWorkout
                           ? "text-amber-700"
+                          : item.painReported
+                          ? "text-red-700"
                           : "text-blue-600"
                       }`}
                     >
@@ -677,19 +771,39 @@ function MiniInfo({ label, value }: { label: string; value: string }) {
   );
 }
 
+function PainInfo({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-red-50 p-4 ring-1 ring-red-100">
+      <p className="text-xs font-bold uppercase tracking-wide text-red-600">
+        {label}
+      </p>
+
+      <p className="mt-1 break-words text-sm font-black text-slate-900">
+        {value}
+      </p>
+    </div>
+  );
+}
+
 function SummaryCard({
   title,
   value,
   alert = false,
+  danger = false,
 }: {
   title: string;
   value: string;
   alert?: boolean;
+  danger?: boolean;
 }) {
   return (
     <div
       className={`rounded-2xl border p-4 shadow-sm ${
-        alert ? "border-blue-200 bg-blue-50" : "border-sky-100 bg-sky-50"
+        danger
+          ? "border-red-200 bg-red-50"
+          : alert
+          ? "border-blue-200 bg-blue-50"
+          : "border-sky-100 bg-sky-50"
       }`}
     >
       <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
@@ -698,7 +812,7 @@ function SummaryCard({
 
       <h2
         className={`mt-2 line-clamp-2 break-words text-xl font-black leading-tight sm:text-2xl ${
-          alert ? "text-blue-700" : "text-slate-900"
+          danger ? "text-red-700" : alert ? "text-blue-700" : "text-slate-900"
         }`}
       >
         {value}
