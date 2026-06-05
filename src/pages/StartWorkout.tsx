@@ -61,6 +61,7 @@ type WorkoutDraftData = {
   completedSetCounts?: Record<string, number>;
   activeStepIndex?: number;
   activeSetNumber?: number;
+  showSectionIntro?: boolean;
   showFinalReview?: boolean;
   painReported?: boolean;
   painLocation?: string;
@@ -206,6 +207,7 @@ export default function StartWorkout() {
   const [isResting, setIsResting] = useState(false);
   const [restSeconds, setRestSeconds] = useState(60);
 
+  const [showSectionIntro, setShowSectionIntro] = useState(true);
   const [showFinalReview, setShowFinalReview] = useState(false);
 
   const [workoutNotes, setWorkoutNotes] = useState("");
@@ -286,6 +288,7 @@ export default function StartWorkout() {
     completedSetCounts,
     activeStepIndex,
     activeSetNumber,
+    showSectionIntro,
     showFinalReview,
     painReported,
     painLocation,
@@ -436,6 +439,7 @@ export default function StartWorkout() {
     setActiveSetNumber(1);
     setIsResting(false);
     setRestSeconds(60);
+    setShowSectionIntro(true);
     setShowFinalReview(false);
 
     const {
@@ -564,6 +568,7 @@ export default function StartWorkout() {
       setCompletedSetCounts(draft.draft_data?.completedSetCounts || {});
       setActiveStepIndex(draft.draft_data?.activeStepIndex || 0);
       setActiveSetNumber(draft.draft_data?.activeSetNumber || 1);
+      setShowSectionIntro(draft.draft_data?.showSectionIntro ?? true);
       setShowFinalReview(draft.draft_data?.showFinalReview || false);
 
       setWorkoutNotes(draft.workout_notes || "");
@@ -602,6 +607,7 @@ export default function StartWorkout() {
       completedSetCounts,
       activeStepIndex,
       activeSetNumber,
+      showSectionIntro,
       showFinalReview,
       painReported,
       painLocation,
@@ -697,6 +703,7 @@ export default function StartWorkout() {
     setActiveSetNumber(1);
     setIsResting(false);
     setRestSeconds(60);
+    setShowSectionIntro(true);
     setShowFinalReview(false);
 
     setWorkoutNotes("");
@@ -812,8 +819,17 @@ export default function StartWorkout() {
     const hasNextExercise = activeStepIndex < guidedSteps.length - 1;
 
     if (hasNextExercise) {
+      const nextStep = guidedSteps[activeStepIndex + 1];
+      const currentSection = activeExercise?.section;
+      const nextSection = nextStep?.exercise.section;
+
       setActiveStepIndex((currentIndex) => currentIndex + 1);
       setActiveSetNumber(1);
+
+      if (currentSection && nextSection && currentSection !== nextSection) {
+        setShowSectionIntro(true);
+      }
+
       return;
     }
 
@@ -841,6 +857,25 @@ export default function StartWorkout() {
 
     if (isResting) {
       setIsResting(false);
+      return;
+    }
+
+    if (showSectionIntro) {
+      if (activeStepIndex > 0) {
+        const previousStepIndex = activeStepIndex - 1;
+        const previousStep = guidedSteps[previousStepIndex];
+
+        if (previousStep) {
+          const previousExerciseSets = parseSets(
+            previousStep.exercise.plannedSets
+          );
+
+          setActiveStepIndex(previousStepIndex);
+          setActiveSetNumber(previousExerciseSets);
+          setShowSectionIntro(false);
+        }
+      }
+
       return;
     }
 
@@ -1064,7 +1099,7 @@ export default function StartWorkout() {
     return (
       <ClientLayout unreadMessages={unreadMessages}>
         <section className="overflow-hidden rounded-[1.75rem] border border-sky-100 bg-slate-950 shadow-sm sm:rounded-[2rem]">
-          <div className="px-5 py-8 text-center text-white sm:px-8 sm:py-12">
+          <div className="bg-[radial-gradient(circle_at_top,_rgba(37,99,235,0.55),_transparent_35%),linear-gradient(135deg,_#020617,_#0f172a,_#1d4ed8)] px-5 py-8 text-center text-white sm:px-8 sm:py-12">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-300">
               Rest Timer
             </p>
@@ -1077,9 +1112,9 @@ export default function StartWorkout() {
               Next up: Set {activeSetNumber + 1} of {currentTotalSets}
             </p>
 
-            <div className="mx-auto mt-6 max-w-md rounded-3xl border border-white/10 bg-white/10 p-5 text-left">
+            <div className="mx-auto mt-6 max-w-md rounded-3xl border border-white/10 bg-white/10 p-5 text-left shadow-2xl backdrop-blur">
               <p className="text-xs font-bold uppercase tracking-wide text-blue-200">
-                Current Exercise
+                Current Movement
               </p>
 
               <h2 className="mt-2 text-2xl font-black">
@@ -1120,7 +1155,7 @@ export default function StartWorkout() {
     return (
       <ClientLayout unreadMessages={unreadMessages}>
         <section className="mb-4 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
-          <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-5 text-white sm:px-6 sm:py-8 md:px-8">
+          <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-4 py-6 text-white sm:px-6 sm:py-8 md:px-8">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
@@ -1397,10 +1432,117 @@ export default function StartWorkout() {
     );
   }
 
+  if (showSectionIntro && activeExercise) {
+    const currentGroup = groupedExercises.find(
+      (group) => group.section === activeExercise.section
+    );
+
+    const sectionExercises = currentGroup?.exercises || [];
+
+    return (
+      <ClientLayout unreadMessages={unreadMessages}>
+        <section className="overflow-hidden rounded-[2rem] border border-sky-100 bg-white shadow-sm">
+          <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-5 py-8 text-white sm:px-8 sm:py-12">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-200">
+              Up Next
+            </p>
+
+            <h1 className="mt-4 text-4xl font-black leading-tight sm:text-6xl">
+              {activeExercise.section}
+            </h1>
+
+            <p className="mt-4 max-w-xl text-sm font-semibold leading-6 text-blue-100 sm:text-base">
+              You’ll move through this section exercise by exercise, set by set.
+              Complete each set, follow the rest timer, and keep moving.
+            </p>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <span className="rounded-full bg-white/15 px-4 py-2 text-sm font-black text-white ring-1 ring-white/20">
+                Section {currentSectionPosition} of {groupedExercises.length}
+              </span>
+
+              <span className="rounded-full bg-white/15 px-4 py-2 text-sm font-black text-white ring-1 ring-white/20">
+                {sectionExercises.length} movements
+              </span>
+
+              <span className="rounded-full bg-white/15 px-4 py-2 text-sm font-black text-white ring-1 ring-white/20">
+                Guided Mode
+              </span>
+            </div>
+          </div>
+
+          <div className="p-5 sm:p-8">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                  Section Preview
+                </p>
+
+                <h2 className="mt-1 text-2xl font-black text-slate-900">
+                  What’s inside
+                </h2>
+              </div>
+
+              <div className="rounded-full bg-sky-50 px-4 py-2 text-sm font-black text-blue-700 ring-1 ring-sky-100">
+                {sectionExercises.length} total
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {sectionExercises.map(({ exercise }, index) => (
+                <div
+                  key={exercise.exerciseId}
+                  className="flex items-center gap-4 rounded-3xl border border-sky-100 bg-sky-50 p-4"
+                >
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-sm font-black text-blue-700 ring-1 ring-sky-100">
+                    {index + 1}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words text-base font-black text-slate-900">
+                      {exercise.exerciseName || "Unnamed Exercise"}
+                    </p>
+
+                    <p className="mt-1 text-sm font-semibold text-slate-500">
+                      {exercise.plannedSets || "N/A"} sets x{" "}
+                      {exercise.plannedReps || "N/A"} reps
+                      {exercise.plannedRest
+                        ? ` • Rest: ${exercise.plannedRest}`
+                        : ""}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={goBackStep}
+                disabled={activeStepIndex === 0}
+                className="w-full rounded-2xl border border-sky-100 bg-white px-5 py-4 text-sm font-black text-slate-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-1/3"
+              >
+                Back
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowSectionIntro(false)}
+                className="w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black text-white shadow-sm hover:bg-blue-700 sm:w-2/3"
+              >
+                Start {activeExercise.section}
+              </button>
+            </div>
+          </div>
+        </section>
+      </ClientLayout>
+    );
+  }
+
   return (
     <ClientLayout unreadMessages={unreadMessages}>
       <section className="mb-4 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
-        <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-5 text-white sm:px-6 sm:py-8 md:px-8">
+        <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-4 py-5 text-white sm:px-6 sm:py-8 md:px-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
@@ -1530,162 +1672,168 @@ export default function StartWorkout() {
             </div>
           </section>
 
-          <section className="rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6 md:p-8">
-            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-              <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
-                  Current Exercise
-                </p>
+          <section className="overflow-hidden rounded-[2rem] border border-sky-100 bg-white shadow-sm">
+            <div className="bg-gradient-to-br from-white via-sky-50 to-blue-50 p-5 sm:p-8">
+              <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                    Current Movement
+                  </p>
 
-                <h2 className="mt-2 break-words text-3xl font-black text-slate-900 sm:text-4xl">
-                  {activeExercise.exerciseName || "Unnamed Exercise"}
-                </h2>
+                  <h2 className="mt-2 break-words text-3xl font-black leading-tight text-slate-900 sm:text-5xl">
+                    {activeExercise.exerciseName || "Unnamed Exercise"}
+                  </h2>
 
-                <p className="mt-3 text-sm leading-6 text-slate-500 sm:text-base">
-                  Complete each set, rest when prompted, then move to the next
-                  exercise.
-                </p>
+                  <p className="mt-3 text-sm leading-6 text-slate-500 sm:text-base">
+                    Stay focused on this movement. Complete the set, rest, then
+                    continue.
+                  </p>
+                </div>
+
+                {activeExercise.videoLink && (
+                  <a
+                    href={activeExercise.videoLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-center text-sm font-black text-white shadow-sm hover:bg-blue-700 sm:w-auto"
+                  >
+                    Watch Video
+                  </a>
+                )}
+              </div>
+            </div>
+
+            <div className="p-5 sm:p-8">
+              <div className="grid gap-3 sm:grid-cols-4">
+                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Set
+                  </p>
+
+                  <p className="mt-2 text-2xl font-black text-slate-900">
+                    {activeSetNumber} of {currentTotalSets}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Reps
+                  </p>
+
+                  <p className="mt-2 text-2xl font-black text-slate-900">
+                    {activeExercise.plannedReps || "N/A"}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Weight
+                  </p>
+
+                  <p className="mt-2 text-2xl font-black text-slate-900">
+                    {activeExercise.plannedWeight || "N/A"}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Rest
+                  </p>
+
+                  <p className="mt-2 text-2xl font-black text-slate-900">
+                    {activeExercise.plannedRest || "60 sec"}
+                  </p>
+                </div>
               </div>
 
-              {activeExercise.videoLink && (
-                <a
-                  href={activeExercise.videoLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-center text-sm font-black text-white shadow-sm hover:bg-blue-700 sm:w-auto"
+              <div className="mt-6 rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-black text-slate-700">
+                    Set Progress
+                  </p>
+
+                  <p className="text-sm font-black text-blue-700">
+                    {currentCompletedSets} / {currentTotalSets} sets
+                  </p>
+                </div>
+
+                <div className="mt-3 h-3 rounded-full bg-white">
+                  <div
+                    className="h-3 rounded-full bg-blue-600 transition-all"
+                    style={{ width: `${setProgressPercent}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-sm font-black text-slate-700">
+                    Difficulty
+                  </label>
+
+                  <select
+                    value={activeExercise.difficulty}
+                    onChange={(event) =>
+                      updateDifficulty(activeOriginalIndex, event.target.value)
+                    }
+                    disabled={isSubmitting}
+                    className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <option value="">Select difficulty</option>
+                    <option value="Easy">Easy</option>
+                    <option value="Moderate">Moderate</option>
+                    <option value="Hard">Hard</option>
+                    <option value="Could not complete">
+                      Could not complete
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-black text-slate-700">
+                    Exercise Notes
+                  </label>
+
+                  <input
+                    value={activeExercise.notes}
+                    onChange={(event) =>
+                      updateNotes(activeOriginalIndex, event.target.value)
+                    }
+                    disabled={isSubmitting}
+                    placeholder="Optional note for your trainer"
+                    className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={goBackStep}
+                  disabled={activeStepIndex === 0 && activeSetNumber === 1}
+                  className="w-full rounded-2xl border border-sky-100 bg-white px-5 py-4 text-sm font-black text-slate-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-1/3"
                 >
-                  Watch Video
-                </a>
-              )}
-            </div>
+                  Back
+                </button>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-4">
-              <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                  Set
-                </p>
-
-                <p className="mt-2 text-2xl font-black text-slate-900">
-                  {activeSetNumber} of {currentTotalSets}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                  Reps
-                </p>
-
-                <p className="mt-2 text-2xl font-black text-slate-900">
-                  {activeExercise.plannedReps || "N/A"}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                  Weight
-                </p>
-
-                <p className="mt-2 text-2xl font-black text-slate-900">
-                  {activeExercise.plannedWeight || "N/A"}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                  Rest
-                </p>
-
-                <p className="mt-2 text-2xl font-black text-slate-900">
-                  {activeExercise.plannedRest || "60 sec"}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 rounded-2xl border border-sky-100 bg-sky-50 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-black text-slate-700">
-                  Set Progress
-                </p>
-
-                <p className="text-sm font-black text-blue-700">
-                  {currentCompletedSets} / {currentTotalSets} sets
-                </p>
-              </div>
-
-              <div className="mt-3 h-3 rounded-full bg-white">
-                <div
-                  className="h-3 rounded-full bg-blue-600 transition-all"
-                  style={{ width: `${setProgressPercent}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-black text-slate-700">
-                  Difficulty
-                </label>
-
-                <select
-                  value={activeExercise.difficulty}
-                  onChange={(event) =>
-                    updateDifficulty(activeOriginalIndex, event.target.value)
-                  }
+                <button
+                  type="button"
+                  onClick={skipCurrentExercise}
                   disabled={isSubmitting}
-                  className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full rounded-2xl border border-orange-100 bg-orange-50 px-5 py-4 text-sm font-black text-orange-700 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-1/3"
                 >
-                  <option value="">Select difficulty</option>
-                  <option value="Easy">Easy</option>
-                  <option value="Moderate">Moderate</option>
-                  <option value="Hard">Hard</option>
-                  <option value="Could not complete">Could not complete</option>
-                </select>
-              </div>
+                  Skip Exercise
+                </button>
 
-              <div>
-                <label className="mb-2 block text-sm font-black text-slate-700">
-                  Exercise Notes
-                </label>
-
-                <input
-                  value={activeExercise.notes}
-                  onChange={(event) =>
-                    updateNotes(activeOriginalIndex, event.target.value)
-                  }
+                <button
+                  type="button"
+                  onClick={completeCurrentSet}
                   disabled={isSubmitting}
-                  placeholder="Optional note for your trainer"
-                  className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
-                />
+                  className="w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-1/3"
+                >
+                  Complete Set
+                </button>
               </div>
-            </div>
-
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <button
-                type="button"
-                onClick={goBackStep}
-                disabled={activeStepIndex === 0 && activeSetNumber === 1}
-                className="w-full rounded-2xl border border-sky-100 bg-white px-5 py-4 text-sm font-black text-slate-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-1/3"
-              >
-                Back
-              </button>
-
-              <button
-                type="button"
-                onClick={skipCurrentExercise}
-                disabled={isSubmitting}
-                className="w-full rounded-2xl border border-orange-100 bg-orange-50 px-5 py-4 text-sm font-black text-orange-700 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-1/3"
-              >
-                Skip Exercise
-              </button>
-
-              <button
-                type="button"
-                onClick={completeCurrentSet}
-                disabled={isSubmitting}
-                className="w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-1/3"
-              >
-                Complete Set
-              </button>
             </div>
           </section>
         </>
