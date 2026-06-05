@@ -213,6 +213,38 @@ function getWorkoutSectionCount(workout: WorkoutForm) {
   ).length;
 }
 
+function getExerciseSummary(exercise: ExerciseForm) {
+  const parts = [
+    exercise.sets ? `${exercise.sets} set${exercise.sets.trim() === "1" ? "" : "s"}` : "",
+    exercise.reps ? exercise.reps : "",
+    exercise.weight ? exercise.weight : "",
+    exercise.rest ? `${exercise.rest} rest` : "",
+  ].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(" • ") : "No sets/reps/rest added";
+}
+
+function getWorkoutPreviewIssues(workout: WorkoutForm) {
+  const exercises = workout.exercises.filter(
+    (exercise) => exercise.exerciseName.trim() !== ""
+  );
+
+  return {
+    missingRest: exercises.filter((exercise) => exercise.rest.trim() === "")
+      .length,
+    missingVideo: exercises.filter(
+      (exercise) => exercise.videoLink.trim() === ""
+    ).length,
+    missingNotes: exercises.filter(
+      (exercise) => exercise.trainerNotes.trim() === ""
+    ).length,
+    missingSets: exercises.filter((exercise) => exercise.sets.trim() === "")
+      .length,
+    missingReps: exercises.filter((exercise) => exercise.reps.trim() === "")
+      .length,
+  };
+}
+
 export default function CreateProgram() {
   const saveDraftTimerRef = useRef<number | null>(null);
 
@@ -2099,13 +2131,32 @@ export default function CreateProgram() {
             </p>
           )}
 
-          <button
-            type="submit"
-            disabled={isSaving}
-            className="mt-6 w-full rounded-2xl bg-blue-600 px-5 py-4 font-black text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isSaving ? "Saving Program..." : "Save Program Week / Add to Week"}
-          </button>
+          <div className="mt-6 grid gap-3 md:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setShowPreview(true)}
+              className="w-full rounded-2xl border border-blue-100 bg-white px-5 py-4 font-black text-blue-700 shadow-sm transition hover:bg-blue-50"
+            >
+              Preview Client Experience
+            </button>
+
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="w-full rounded-2xl bg-blue-600 px-5 py-4 font-black text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSaving ? "Saving Program..." : "Save Program Week / Add to Week"}
+            </button>
+          </div>
+
+          {showPreview && (
+            <WorkoutPreviewModal
+              workouts={workouts}
+              weekNumber={weekNumber}
+              selectedClientName={selectedClient?.full_name || ""}
+              onClose={() => setShowPreview(false)}
+            />
+          )}
         </form>
       </section>
     </main>
@@ -2481,6 +2532,252 @@ function SortableExerciseCard({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+
+function WorkoutPreviewModal({
+  workouts,
+  weekNumber,
+  selectedClientName,
+  onClose,
+}: {
+  workouts: WorkoutForm[];
+  weekNumber: string;
+  selectedClientName: string;
+  onClose: () => void;
+}) {
+  const validWorkouts = workouts.filter(
+    (workout) =>
+      workout.title.trim() !== "" ||
+      workout.exercises.some((exercise) => exercise.exerciseName.trim() !== "")
+  );
+
+  const totalExercises = validWorkouts.reduce(
+    (total, workout) => total + getWorkoutExerciseCount(workout),
+    0
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/60 px-4 py-6 backdrop-blur-sm">
+      <div className="w-full max-w-5xl overflow-hidden rounded-[2rem] bg-white shadow-2xl">
+        <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-5 py-6 text-white sm:px-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-100">
+                Client Experience Preview
+              </p>
+
+              <h2 className="mt-2 text-3xl font-black sm:text-4xl">
+                Week {weekNumber || "1"} Preview
+              </h2>
+
+              <p className="mt-2 text-sm font-semibold leading-6 text-blue-50">
+                {selectedClientName
+                  ? `Previewing how ${selectedClientName} will experience this program.`
+                  : "Preview how the client will experience this program."}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-2xl bg-white/15 px-4 py-3 text-sm font-black text-white ring-1 ring-white/25 transition hover:bg-white/25"
+            >
+              Close
+            </button>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl bg-white/15 p-4 ring-1 ring-white/20">
+              <p className="text-xs font-bold uppercase tracking-wide text-blue-100">
+                Workouts
+              </p>
+              <p className="mt-1 text-2xl font-black">{validWorkouts.length}</p>
+            </div>
+
+            <div className="rounded-2xl bg-white/15 p-4 ring-1 ring-white/20">
+              <p className="text-xs font-bold uppercase tracking-wide text-blue-100">
+                Exercises
+              </p>
+              <p className="mt-1 text-2xl font-black">{totalExercises}</p>
+            </div>
+
+            <div className="rounded-2xl bg-white/15 p-4 ring-1 ring-white/20">
+              <p className="text-xs font-bold uppercase tracking-wide text-blue-100">
+                Mode
+              </p>
+              <p className="mt-1 text-2xl font-black">Guided</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-h-[75vh] overflow-y-auto p-5 sm:p-8">
+          {validWorkouts.length === 0 ? (
+            <div className="rounded-3xl border border-red-100 bg-red-50 p-5">
+              <h3 className="text-xl font-black text-red-700">
+                Nothing to preview yet
+              </h3>
+
+              <p className="mt-2 text-sm font-semibold leading-6 text-red-600">
+                Add a workout title and at least one exercise before previewing.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {validWorkouts.map((workout, workoutIndex) => {
+                const issues = getWorkoutPreviewIssues(workout);
+
+                return (
+                  <div
+                    key={workout.formId}
+                    className="overflow-hidden rounded-[1.75rem] border border-sky-100 bg-sky-50 shadow-sm"
+                  >
+                    <div className="border-b border-sky-100 bg-white p-5">
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                        Workout {workoutIndex + 1}
+                      </p>
+
+                      <h3 className="mt-1 text-2xl font-black text-slate-900">
+                        {workout.title.trim() || "Untitled Workout"}
+                      </h3>
+
+                      <p className="mt-2 text-sm font-semibold text-slate-500">
+                        {getWorkoutExerciseCount(workout)} exercises • {" "}
+                        {getWorkoutSectionCount(workout)} sections
+                      </p>
+                    </div>
+
+                    <div className="p-5">
+                      {(issues.missingSets > 0 ||
+                        issues.missingReps > 0 ||
+                        issues.missingRest > 0 ||
+                        issues.missingVideo > 0 ||
+                        issues.missingNotes > 0) && (
+                        <div className="mb-5 rounded-2xl border border-amber-100 bg-amber-50 p-4">
+                          <p className="text-sm font-black text-amber-700">
+                            Preview Checklist
+                          </p>
+
+                          <div className="mt-2 grid gap-2 text-sm font-semibold text-amber-700 sm:grid-cols-2">
+                            {issues.missingSets > 0 && (
+                              <p>• {issues.missingSets} missing sets</p>
+                            )}
+                            {issues.missingReps > 0 && (
+                              <p>• {issues.missingReps} missing reps/time</p>
+                            )}
+                            {issues.missingRest > 0 && (
+                              <p>• {issues.missingRest} missing rest time</p>
+                            )}
+                            {issues.missingVideo > 0 && (
+                              <p>• {issues.missingVideo} missing video link</p>
+                            )}
+                            {issues.missingNotes > 0 && (
+                              <p>• {issues.missingNotes} missing trainer notes</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-5">
+                        {WORKOUT_SECTIONS.map((section) => {
+                          const sectionExercises = workout.exercises.filter(
+                            (exercise) =>
+                              exercise.section === section &&
+                              exercise.exerciseName.trim() !== ""
+                          );
+
+                          if (sectionExercises.length === 0) return null;
+
+                          return (
+                            <div
+                              key={section}
+                              className="rounded-[1.5rem] border border-sky-100 bg-white p-4"
+                            >
+                              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                                    Section Intro
+                                  </p>
+
+                                  <h4 className="mt-1 text-xl font-black text-slate-900">
+                                    {section}
+                                  </h4>
+                                </div>
+
+                                <span className="w-fit rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-sky-100">
+                                  {sectionExercises.length} movement
+                                  {sectionExercises.length === 1 ? "" : "s"}
+                                </span>
+                              </div>
+
+                              <div className="space-y-3">
+                                {sectionExercises.map((exercise, index) => (
+                                  <div
+                                    key={exercise.formId}
+                                    className="rounded-2xl border border-sky-100 bg-sky-50 p-4"
+                                  >
+                                    <div className="flex gap-3">
+                                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-sm font-black text-blue-700 ring-1 ring-sky-100">
+                                        {index + 1}
+                                      </div>
+
+                                      <div className="min-w-0 flex-1">
+                                        <p className="break-words font-black text-slate-900">
+                                          {exercise.exerciseName}
+                                        </p>
+
+                                        <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">
+                                          {getExerciseSummary(exercise)}
+                                        </p>
+
+                                        {exercise.trainerNotes && (
+                                          <p className="mt-2 text-sm leading-6 text-slate-600">
+                                            Trainer note: {exercise.trainerNotes}
+                                          </p>
+                                        )}
+
+                                        {exercise.videoLink && (
+                                          <p className="mt-2 text-xs font-black uppercase tracking-wide text-blue-600">
+                                            Video attached
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full rounded-2xl border border-sky-100 bg-white px-5 py-4 text-sm font-black text-slate-700 transition hover:bg-sky-50"
+            >
+              Keep Editing
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black text-white transition hover:bg-blue-700"
+            >
+              Looks Good
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
