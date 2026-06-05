@@ -86,6 +86,7 @@ type GuidedStep = {
 
 function normalizeSection(section: string | null | undefined) {
   const cleaned = (section || "").trim();
+
   if (!cleaned) return "Other";
 
   const lower = cleaned.toLowerCase();
@@ -145,9 +146,11 @@ function parseSets(value: string) {
   }
 
   const match = value.match(/\d+/);
+
   if (!match) return 1;
 
   const parsed = Number(match[0]);
+
   if (Number.isNaN(parsed) || parsed <= 0) return 1;
 
   return Math.round(parsed);
@@ -162,6 +165,7 @@ function parseRestSeconds(value: string) {
   if (!match) return 60;
 
   const number = Number(match[0]);
+
   if (Number.isNaN(number) || number <= 0) return 60;
 
   if (lower.includes("min")) {
@@ -1147,54 +1151,52 @@ export default function StartWorkout() {
   if (showFinalReview) {
     return (
       <ClientLayout unreadMessages={unreadMessages}>
-        <section className="mb-4 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
-          <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-4 py-6 text-white sm:px-6 sm:py-8 md:px-8">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
+        <section className="mb-4 overflow-hidden rounded-[1.5rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
+          <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-4 py-5 text-white sm:px-6 sm:py-8">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100">
                   Final Review
                 </p>
 
-                <h1 className="mt-2 break-words text-2xl font-black leading-tight sm:mt-3 sm:text-4xl">
+                <h1 className="mt-2 line-clamp-2 break-words text-2xl font-black leading-tight sm:text-4xl">
                   {workout.title}
                 </h1>
 
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
-                  Add your overall notes, complete the pain check, then submit
-                  your workout.
+                <p className="mt-2 max-w-xl text-sm leading-6 text-blue-50">
+                  Add notes, complete the pain check, then submit.
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={goBackStep}
-                className="w-full rounded-2xl bg-white/15 px-4 py-3 text-center text-sm font-black text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto"
+                className="shrink-0 rounded-2xl bg-white/15 px-3 py-2 text-xs font-black text-white ring-1 ring-white/25 backdrop-blur transition hover:bg-white/25"
               >
-                Back to Workout
+                Back
               </button>
             </div>
           </div>
 
-          <div className="p-4 sm:p-6 md:p-8">
-            <div className="rounded-[1.5rem] border border-sky-100 bg-sky-50 p-4 sm:rounded-3xl sm:p-6">
-              <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div className="p-4 sm:p-6">
+            <div className="rounded-[1.25rem] border border-sky-100 bg-sky-50 p-4 sm:rounded-3xl sm:p-5">
+              <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                    Workout Progress
+                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                    Progress
                   </p>
 
-                  <h2 className="mt-2 text-xl font-black text-slate-900 sm:text-2xl">
-                    {completedCount} / {loggedExercises.length} exercises
-                    completed
+                  <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+                    {completedCount} / {loggedExercises.length}
                   </h2>
                 </div>
 
-                <div className="w-fit rounded-full bg-white px-4 py-2 text-sm font-black text-blue-700 ring-1 ring-sky-100">
-                  {completionPercent}% complete
+                <div className="rounded-full bg-white px-4 py-2 text-sm font-black text-blue-700 ring-1 ring-sky-100">
+                  {completionPercent}%
                 </div>
               </div>
 
-              <div className="mt-5 h-3 rounded-full bg-white">
+              <div className="mt-4 h-3 rounded-full bg-white">
                 <div
                   className="h-3 rounded-full bg-blue-600 transition-all"
                   style={{ width: `${completionPercent}%` }}
@@ -1434,32 +1436,27 @@ export default function StartWorkout() {
 
     return (
       <ClientLayout unreadMessages={unreadMessages}>
-        <section className="overflow-hidden rounded-[2rem] border border-sky-100 bg-white shadow-sm">
-          <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-5 py-8 text-white sm:px-8 sm:py-12">
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-200">
+        <section className="overflow-hidden rounded-[1.5rem] border border-sky-100 bg-white shadow-sm sm:rounded-[2rem]">
+          <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-5 py-7 text-white sm:px-8 sm:py-12">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-200">
               Up Next
             </p>
 
-            <h1 className="mt-4 text-4xl font-black leading-tight sm:text-6xl">
+            <h1 className="mt-3 text-4xl font-black leading-tight sm:text-6xl">
               {activeExercise.section}
             </h1>
 
-            <p className="mt-4 max-w-xl text-sm font-semibold leading-6 text-blue-100 sm:text-base">
-              You’ll move through this section exercise by exercise, set by set.
-              Complete each set, follow the rest timer, and keep moving.
+            <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-blue-100 sm:text-base">
+              Preview the section, then move through each movement set by set.
             </p>
 
-            <div className="mt-6 flex flex-wrap gap-3">
-              <span className="rounded-full bg-white/15 px-4 py-2 text-sm font-black text-white ring-1 ring-white/20">
+            <div className="mt-5 flex flex-wrap gap-2">
+              <span className="rounded-full bg-white/15 px-3 py-2 text-xs font-black text-white ring-1 ring-white/20">
                 Section {currentSectionPosition} of {groupedExercises.length}
               </span>
 
-              <span className="rounded-full bg-white/15 px-4 py-2 text-sm font-black text-white ring-1 ring-white/20">
+              <span className="rounded-full bg-white/15 px-3 py-2 text-xs font-black text-white ring-1 ring-white/20">
                 {sectionExercises.length} movements
-              </span>
-
-              <span className="rounded-full bg-white/15 px-4 py-2 text-sm font-black text-white ring-1 ring-white/20">
-                Guided Mode
               </span>
             </div>
           </div>
@@ -1467,7 +1464,7 @@ export default function StartWorkout() {
           <div className="p-5 sm:p-8">
             <div className="mb-5 flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-600">
                   Section Preview
                 </p>
 
@@ -1485,9 +1482,9 @@ export default function StartWorkout() {
               {sectionExercises.map(({ exercise }, index) => (
                 <div
                   key={exercise.exerciseId}
-                  className="flex items-center gap-4 rounded-3xl border border-sky-100 bg-sky-50 p-4"
+                  className="flex items-center gap-4 rounded-2xl border border-sky-100 bg-sky-50 p-4"
                 >
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-sm font-black text-blue-700 ring-1 ring-sky-100">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-sm font-black text-blue-700 ring-1 ring-sky-100">
                     {index + 1}
                   </div>
 
@@ -1508,7 +1505,7 @@ export default function StartWorkout() {
               ))}
             </div>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
                 onClick={goBackStep}
@@ -1534,25 +1531,24 @@ export default function StartWorkout() {
 
   return (
     <ClientLayout unreadMessages={unreadMessages}>
-      <section className="mb-4 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
-        <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-4 py-5 text-white sm:px-6 sm:py-8 md:px-8">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
+      <section className="mb-5 overflow-hidden rounded-[1.5rem] border border-sky-100 bg-white shadow-sm sm:rounded-[2rem]">
+        <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-4 py-5 text-white sm:px-6 sm:py-7">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100">
                 {isRepeatMode ? "Repeat Guided Workout" : "Guided Workout"}
               </p>
 
-              <h1 className="mt-2 break-words text-2xl font-black leading-tight sm:mt-3 sm:text-4xl">
+              <h1 className="mt-2 line-clamp-2 break-words text-2xl font-black leading-tight sm:text-4xl">
                 {workout.title}
               </h1>
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
-                Follow your workout section by section, exercise by exercise,
-                and set by set.
+              <p className="mt-2 max-w-xl text-sm leading-6 text-blue-50">
+                Follow each section, movement, set, and rest timer.
               </p>
 
               {isRepeatMode && (
-                <span className="mt-3 inline-flex w-fit rounded-full bg-white/20 px-3 py-1 text-xs font-black text-white ring-1 ring-white/30">
+                <span className="mt-3 inline-flex w-fit rounded-full bg-white/15 px-3 py-1 text-xs font-black text-white ring-1 ring-white/20">
                   Repeat Workout
                 </span>
               )}
@@ -1560,33 +1556,32 @@ export default function StartWorkout() {
 
             <Link
               to="/client-plan"
-              className="w-full rounded-2xl bg-white/15 px-4 py-3 text-center text-sm font-black text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto"
+              className="shrink-0 rounded-2xl bg-white/15 px-3 py-2 text-xs font-black text-white ring-1 ring-white/25 backdrop-blur transition hover:bg-white/25"
             >
-              Exit to My Plan
+              Exit
             </Link>
           </div>
         </div>
 
-        <div className="p-4 sm:p-6 md:p-8">
-          <div className="rounded-[1.5rem] border border-sky-100 bg-sky-50 p-4 sm:rounded-3xl sm:p-6">
-            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div className="p-4 sm:p-6">
+          <div className="rounded-[1.25rem] border border-sky-100 bg-sky-50 p-4 sm:rounded-3xl sm:p-5">
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                  Workout Progress
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                  Progress
                 </p>
 
-                <h2 className="mt-2 text-xl font-black text-slate-900 sm:text-2xl">
-                  {completedCount} / {loggedExercises.length} exercises
-                  completed
+                <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+                  {completedCount} / {loggedExercises.length}
                 </h2>
               </div>
 
-              <div className="w-fit rounded-full bg-white px-4 py-2 text-sm font-black text-blue-700 ring-1 ring-sky-100">
-                {completionPercent}% complete
+              <div className="rounded-full bg-white px-4 py-2 text-sm font-black text-blue-700 ring-1 ring-sky-100">
+                {completionPercent}%
               </div>
             </div>
 
-            <div className="mt-5 h-3 rounded-full bg-white">
+            <div className="mt-4 h-3 rounded-full bg-white">
               <div
                 className="h-3 rounded-full bg-blue-600 transition-all"
                 style={{ width: `${completionPercent}%` }}
@@ -1594,21 +1589,21 @@ export default function StartWorkout() {
             </div>
 
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-bold text-slate-600">
+              <p className="text-sm font-bold leading-6 text-slate-600">
                 {isRepeatMode
-                  ? "Repeat workout progress starts fresh each time."
+                  ? "Fresh repeat workout session."
                   : isSavingDraft
                   ? "Saving progress..."
                   : lastSavedLabel
-                  ? `Progress saved across devices at ${lastSavedLabel}.`
-                  : "Progress will save automatically as you make changes."}
+                  ? `Saved at ${lastSavedLabel}.`
+                  : "Progress saves automatically."}
               </p>
 
               <button
                 type="button"
                 onClick={resetWorkoutProgress}
                 disabled={isSubmitting}
-                className="rounded-xl border border-red-100 bg-white px-4 py-2 text-sm font-black text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm font-black text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Clear Progress
               </button>
@@ -1642,25 +1637,25 @@ export default function StartWorkout() {
         </section>
       ) : (
         <>
-          <section className="mb-4 rounded-[1.5rem] border border-blue-100 bg-blue-600 p-5 text-white shadow-sm sm:mb-6 sm:rounded-3xl sm:p-7">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-100">
+          <section className="mb-4 rounded-[1.5rem] border border-blue-100 bg-blue-600 p-4 text-white shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-100">
                   Section {currentSectionPosition} of {groupedExercises.length}
                 </p>
 
-                <h2 className="mt-2 text-2xl font-black">
+                <h2 className="mt-1 break-words text-2xl font-black">
                   {activeExercise.section}
                 </h2>
 
-                <p className="mt-2 text-sm font-semibold text-blue-50">
+                <p className="mt-1 text-sm font-semibold text-blue-50">
                   Exercise {currentExerciseInSectionPosition} of{" "}
                   {totalExercisesInCurrentSection}
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-white/15 px-4 py-3 text-sm font-black ring-1 ring-white/20">
-                Overall: {activeStepIndex + 1} / {guidedSteps.length}
+              <div className="shrink-0 rounded-2xl bg-white/15 px-3 py-2 text-xs font-black ring-1 ring-white/20 sm:px-4 sm:py-3 sm:text-sm">
+                {activeStepIndex + 1}/{guidedSteps.length}
               </div>
             </div>
           </section>
@@ -1678,8 +1673,7 @@ export default function StartWorkout() {
                   </h2>
 
                   <p className="mt-3 text-base leading-7 text-slate-500 sm:text-base sm:leading-6">
-                    Stay focused on this movement. Complete the set, rest, then
-                    continue.
+                    Complete the set, rest if needed, then continue.
                   </p>
                 </div>
 
