@@ -249,7 +249,20 @@ function inferExerciseType(repsValue?: string | null): ExerciseType {
 }
 
 function normalizeExerciseName(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, " ");
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => {
+      if (word.length > 3 && word.endsWith("s")) {
+        return word.slice(0, -1);
+      }
+
+      return word;
+    })
+    .join(" ");
 }
 
 function getWorkoutExerciseCount(workout: WorkoutForm) {
@@ -527,12 +540,12 @@ export default function CreateProgram() {
       .select("id, workout_title, created_at")
       .eq("client_user_id", clientUserId)
       .order("created_at", { ascending: false })
-      .limit(100);
+      .limit(150);
 
     if (submissionsError) {
       console.error(submissionsError);
       setStatusMessage(
-        "Could not load this client's exercise history: " +
+        "Could not load this client's submitted exercise history: " +
           submissionsError.message
       );
       setExerciseHistoryByName({});
@@ -560,7 +573,7 @@ export default function CreateProgram() {
     if (exercisesError) {
       console.error(exercisesError);
       setStatusMessage(
-        "Workout history loaded, but exercise details could not load: " +
+        "Submitted workouts loaded, but submitted exercise details could not load: " +
           exercisesError.message
       );
       setExerciseHistoryByName({});
@@ -599,7 +612,7 @@ export default function CreateProgram() {
 
       historyMap[key] = {
         exerciseName: exerciseName || "Unnamed Exercise",
-        workoutTitle: parentSubmission.workout_title || "Completed Workout",
+        workoutTitle: parentSubmission.workout_title || "Submitted Workout",
         completedAt: parentSubmission.created_at,
         sets: exercise.planned_sets || "",
         reps: exercise.planned_reps || "",
@@ -617,7 +630,33 @@ export default function CreateProgram() {
   function getExerciseHistory(exerciseName: string) {
     const key = normalizeExerciseName(exerciseName);
 
-    return exerciseHistoryByName[key] || null;
+    if (!key) return null;
+
+    if (exerciseHistoryByName[key]) {
+      return exerciseHistoryByName[key];
+    }
+
+    const keyWords = key.split(" ").filter((word) => word.length > 2);
+
+    const fuzzyMatch = Object.entries(exerciseHistoryByName).find(
+      ([historyKey]) => {
+        if (historyKey.includes(key) || key.includes(historyKey)) return true;
+
+        const historyWords = historyKey
+          .split(" ")
+          .filter((word) => word.length > 2);
+
+        if (keyWords.length === 0 || historyWords.length === 0) return false;
+
+        const overlapCount = keyWords.filter((word) =>
+          historyWords.includes(word)
+        ).length;
+
+        return overlapCount / keyWords.length >= 0.67;
+      }
+    );
+
+    return fuzzyMatch?.[1] || null;
   }
 
   async function loadHistoricalTemplates() {
@@ -1735,13 +1774,38 @@ export default function CreateProgram() {
 
           {selectedClient && (
             <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4">
-              <p className="text-sm font-black text-blue-700">Target Client</p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-black text-blue-700">
+                    Target Client
+                  </p>
 
-              <p className="mt-1 text-sm font-semibold leading-6 text-slate-700">
-                This workout/week will be saved to {selectedClient.full_name} —{" "}
-                {selectedClient.client_id}. If Week {weekNumber} already exists,
-                the workout will be added into that week.
-              </p>
+                  <p className="mt-1 text-sm font-semibold leading-6 text-slate-700">
+                    This workout/week will be saved to {selectedClient.full_name} —{" "}
+                    {selectedClient.client_id}. If Week {weekNumber} already exists,
+                    the workout will be added into that week.
+                  </p>
+
+                  <p className="mt-2 text-xs font-bold text-blue-700">
+                    {isLoadingExerciseHistory
+                      ? "Loading submitted exercise history..."
+                      : `${Object.keys(exerciseHistoryByName).length} submitted exercise result${
+                          Object.keys(exerciseHistoryByName).length === 1
+                            ? ""
+                            : "s"
+                        } loaded for this client.`}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => loadClientExerciseHistory(selectedClient.id)}
+                  disabled={isLoadingExerciseHistory}
+                  className="rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm font-black text-blue-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Refresh Submitted History
+                </button>
+              </div>
             </div>
           )}
 
@@ -2509,6 +2573,29 @@ function SortableExerciseCard({
                   Note: {exercise.trainerNotes}
                 </p>
               )}
+
+              {exerciseHistory && !isExpanded && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedExerciseHistory(exerciseHistory)}
+                  className="mt-3 w-full rounded-2xl border border-amber-100 bg-amber-50 p-3 text-left transition hover:bg-amber-100"
+                >
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-700">
+                    Last Submitted Result
+                  </p>
+
+                  <p className="mt-1 text-sm font-black text-slate-900">
+                    {formatDate(exerciseHistory.completedAt)} • {exerciseHistory.sets || "N/A"} sets • {exerciseHistory.reps || "N/A"}
+                    {exerciseHistory.weight ? ` • ${exerciseHistory.weight}` : ""}
+                  </p>
+
+                  {exerciseHistory.notes && (
+                    <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-slate-600">
+                      Client note: {exerciseHistory.notes}
+                    </p>
+                  )}
+                </button>
+              )}
             </div>
           </div>
 
@@ -2665,7 +2752,7 @@ function SortableExerciseCard({
                 <div className="mt-3 rounded-2xl border border-amber-100 bg-amber-50 p-3">
                   {isLoadingExerciseHistory ? (
                     <p className="text-xs font-bold text-amber-700">
-                      Loading previous result...
+                      Loading submitted result...
                     </p>
                   ) : exerciseHistory ? (
                     <button
@@ -2674,7 +2761,7 @@ function SortableExerciseCard({
                       className="w-full text-left"
                     >
                       <p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-700">
-                        Previous Result Found
+                        Last Submitted Result Found
                       </p>
 
                       <p className="mt-1 text-sm font-black text-slate-900">
@@ -2687,7 +2774,7 @@ function SortableExerciseCard({
                     </button>
                   ) : (
                     <p className="text-xs font-bold text-slate-500">
-                      No previous result found for this exercise.
+                      No submitted result found for this exercise yet.
                     </p>
                   )}
                 </div>
@@ -2828,7 +2915,7 @@ function ExerciseHistoryModal({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
-              Last Exercise Result
+              Last Submitted Exercise
             </p>
 
             <h2 className="mt-2 text-2xl font-black text-slate-900">
