@@ -60,10 +60,13 @@ type ExerciseLibraryItem = {
   tags: string[] | null;
 };
 
+type ExerciseType = "reps" | "timed";
+
 type ExerciseForm = {
   formId: string;
   section: string;
   exerciseName: string;
+  exerciseType: ExerciseType;
   sets: string;
   reps: string;
   weight: string;
@@ -156,6 +159,37 @@ type HistoricalWorkoutTemplate = {
   client_historical_workout_exercises: HistoricalExercise[];
 };
 
+type CompletedWorkoutSubmission = {
+  id: string;
+  workout_title: string | null;
+  created_at: string;
+};
+
+type CompletedWorkoutExercise = {
+  id: string;
+  submission_id: string;
+  exercise_name: string | null;
+  planned_sets: string | null;
+  planned_reps: string | null;
+  planned_weight: string | null;
+  planned_rest: string | null;
+  completed: boolean | null;
+  difficulty: string | null;
+  notes: string | null;
+};
+
+type ExerciseHistoryItem = {
+  exerciseName: string;
+  workoutTitle: string;
+  completedAt: string;
+  sets: string;
+  reps: string;
+  weight: string;
+  rest: string;
+  difficulty: string;
+  notes: string;
+};
+
 function makeId() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
@@ -169,6 +203,7 @@ function blankExercise(section = "Warm-Up"): ExerciseForm {
     formId: makeId(),
     section,
     exerciseName: "",
+    exerciseType: "reps",
     sets: "",
     reps: "",
     weight: "",
@@ -196,6 +231,25 @@ function formatDate(dateValue?: string | null) {
   }
 
   return date.toLocaleDateString();
+}
+
+function inferExerciseType(repsValue?: string | null): ExerciseType {
+  const value = (repsValue || "").toLowerCase();
+
+  if (
+    value.includes("sec") ||
+    value.includes("second") ||
+    value.includes("min") ||
+    value.includes("minute")
+  ) {
+    return "timed";
+  }
+
+  return "reps";
+}
+
+function normalizeExerciseName(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 function getWorkoutExerciseCount(workout: WorkoutForm) {
@@ -288,6 +342,15 @@ export default function CreateProgram() {
   const [isLoadingHistoricalTemplates, setIsLoadingHistoricalTemplates] =
     useState(false);
 
+
+  const [exerciseHistoryByName, setExerciseHistoryByName] = useState<
+    Record<string, ExerciseHistoryItem>
+  >({});
+  const [selectedExerciseHistory, setSelectedExerciseHistory] =
+    useState<ExerciseHistoryItem | null>(null);
+  const [isLoadingExerciseHistory, setIsLoadingExerciseHistory] =
+    useState(false);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -315,12 +378,15 @@ export default function CreateProgram() {
   useEffect(() => {
     if (selectedClientId) {
       loadNextWeekNumber(selectedClientId);
+      loadClientExerciseHistory(selectedClientId);
       setCopySourceClientId(selectedClientId);
     } else {
       setWeekNumber("1");
       setCopySourceClientId("");
       setExistingWorkouts([]);
       setSelectedWorkoutToCopy("");
+      setExerciseHistoryByName({});
+      setSelectedExerciseHistory(null);
     }
   }, [selectedClientId]);
 
@@ -450,6 +516,108 @@ export default function CreateProgram() {
     }
 
     setClients(data || []);
+  }
+
+  async function loadClientExerciseHistory(clientUserId: string) {
+    setIsLoadingExerciseHistory(true);
+    setSelectedExerciseHistory(null);
+
+    const { data: submissionsData, error: submissionsError } = await supabase
+      .from("workout_submissions")
+      .select("id, workout_title, created_at")
+      .eq("client_user_id", clientUserId)
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (submissionsError) {
+      console.error(submissionsError);
+      setStatusMessage(
+        "Could not load this client's exercise history: " +
+          submissionsError.message
+      );
+      setExerciseHistoryByName({});
+      setIsLoadingExerciseHistory(false);
+      return;
+    }
+
+    const submissions = (submissionsData || []) as CompletedWorkoutSubmission[];
+
+    if (submissions.length === 0) {
+      setExerciseHistoryByName({});
+      setIsLoadingExerciseHistory(false);
+      return;
+    }
+
+    const submissionIds = submissions.map((submission) => submission.id);
+
+    const { data: exercisesData, error: exercisesError } = await supabase
+      .from("workout_submission_exercises")
+      .select(
+        "id, submission_id, exercise_name, planned_sets, planned_reps, planned_weight, planned_rest, completed, difficulty, notes"
+      )
+      .in("submission_id", submissionIds);
+
+    if (exercisesError) {
+      console.error(exercisesError);
+      setStatusMessage(
+        "Workout history loaded, but exercise details could not load: " +
+          exercisesError.message
+      );
+      setExerciseHistoryByName({});
+      setIsLoadingExerciseHistory(false);
+      return;
+    }
+
+    const submissionById = new Map(
+      submissions.map((submission) => [submission.id, submission])
+    );
+
+    const submissionOrder = new Map(
+      submissions.map((submission, index) => [submission.id, index])
+    );
+
+    const sortedExercises = [
+      ...((exercisesData || []) as CompletedWorkoutExercise[]),
+    ].sort((a, b) => {
+      const aIndex = submissionOrder.get(a.submission_id) ?? 9999;
+      const bIndex = submissionOrder.get(b.submission_id) ?? 9999;
+
+      return aIndex - bIndex;
+    });
+
+    const historyMap: Record<string, ExerciseHistoryItem> = {};
+
+    sortedExercises.forEach((exercise) => {
+      const exerciseName = exercise.exercise_name || "";
+      const key = normalizeExerciseName(exerciseName);
+
+      if (!key || historyMap[key]) return;
+
+      const parentSubmission = submissionById.get(exercise.submission_id);
+
+      if (!parentSubmission) return;
+
+      historyMap[key] = {
+        exerciseName: exerciseName || "Unnamed Exercise",
+        workoutTitle: parentSubmission.workout_title || "Completed Workout",
+        completedAt: parentSubmission.created_at,
+        sets: exercise.planned_sets || "",
+        reps: exercise.planned_reps || "",
+        weight: exercise.planned_weight || "",
+        rest: exercise.planned_rest || "",
+        difficulty: exercise.difficulty || "",
+        notes: exercise.notes || "",
+      };
+    });
+
+    setExerciseHistoryByName(historyMap);
+    setIsLoadingExerciseHistory(false);
+  }
+
+  function getExerciseHistory(exerciseName: string) {
+    const key = normalizeExerciseName(exerciseName);
+
+    return exerciseHistoryByName[key] || null;
   }
 
   async function loadHistoricalTemplates() {
@@ -708,6 +876,7 @@ export default function CreateProgram() {
               formId: makeId(),
               section: exercise.section || "Resistance Training",
               exerciseName: exercise.exercise_name || "",
+              exerciseType: inferExerciseType(exercise.reps),
               sets: exercise.sets || "",
               reps: exercise.reps || "",
               weight: exercise.weight || "",
@@ -787,6 +956,7 @@ export default function CreateProgram() {
                   exerciseName ||
                   fallbackLine ||
                   (section ? `${section} Exercise` : "Imported Exercise"),
+                exerciseType: inferExerciseType(exercise.reps),
                 sets: exercise.sets || "",
                 reps: exercise.reps || "",
                 weight: exercise.weight || "",
@@ -891,6 +1061,7 @@ export default function CreateProgram() {
                 exercise.section ||
                 "Resistance Training",
               exerciseName: libraryExercise.exercise_name || exercise.exerciseName,
+              exerciseType: inferExerciseType(libraryExercise.default_reps),
               sets: libraryExercise.default_sets || exercise.sets,
               reps: libraryExercise.default_reps || exercise.reps,
               weight: libraryExercise.default_weight || exercise.weight,
@@ -1124,6 +1295,8 @@ export default function CreateProgram() {
                     formId: exercise.formId || makeId(),
                     section: exercise.section || "Resistance Training",
                     exerciseName: exercise.exerciseName || "",
+                    exerciseType:
+                      exercise.exerciseType || inferExerciseType(exercise.reps),
                     sets: exercise.sets || "",
                     reps: exercise.reps || "",
                     weight: exercise.weight || "",
@@ -2109,6 +2282,13 @@ export default function CreateProgram() {
                                         saveExerciseToLibrary={
                                           saveExerciseToLibrary
                                         }
+                                        getExerciseHistory={getExerciseHistory}
+                                        setSelectedExerciseHistory={
+                                          setSelectedExerciseHistory
+                                        }
+                                        isLoadingExerciseHistory={
+                                          isLoadingExerciseHistory
+                                        }
                                       />
                                     )
                                   )}
@@ -2155,6 +2335,13 @@ export default function CreateProgram() {
               weekNumber={weekNumber}
               selectedClientName={selectedClient?.full_name || ""}
               onClose={() => setShowPreview(false)}
+            />
+          )}
+
+          {selectedExerciseHistory && (
+            <ExerciseHistoryModal
+              history={selectedExerciseHistory}
+              onClose={() => setSelectedExerciseHistory(null)}
             />
           )}
         </form>
@@ -2213,6 +2400,9 @@ function SortableExerciseCard({
   isLoadingExerciseLibrary,
   applyExerciseFromLibrary,
   saveExerciseToLibrary,
+  getExerciseHistory,
+  setSelectedExerciseHistory,
+  isLoadingExerciseHistory,
 }: {
   exercise: ExerciseForm;
   exerciseIndex: number;
@@ -2239,6 +2429,9 @@ function SortableExerciseCard({
     libraryExerciseId: string
   ) => void;
   saveExerciseToLibrary: (exercise: ExerciseForm) => void;
+  getExerciseHistory: (exerciseName: string) => ExerciseHistoryItem | null;
+  setSelectedExerciseHistory: (history: ExerciseHistoryItem | null) => void;
+  isLoadingExerciseHistory: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(
     exercise.exerciseName.trim() === ""
@@ -2259,6 +2452,9 @@ function SortableExerciseCard({
   };
 
   const hasExerciseName = exercise.exerciseName.trim() !== "";
+  const exerciseHistory = hasExerciseName
+    ? getExerciseHistory(exercise.exerciseName)
+    : null;
 
   const summaryParts = [
     exercise.section,
@@ -2450,19 +2646,53 @@ function SortableExerciseCard({
               </select>
             </div>
 
-            <Input
-              label="Exercise Name"
-              value={exercise.exerciseName}
-              onChange={(value) =>
-                updateExercise(
-                  workoutIndex,
-                  exerciseIndex,
-                  "exerciseName",
-                  value
-                )
-              }
-              placeholder="Band Pull Aparts"
-            />
+            <div>
+              <Input
+                label="Exercise Name"
+                value={exercise.exerciseName}
+                onChange={(value) =>
+                  updateExercise(
+                    workoutIndex,
+                    exerciseIndex,
+                    "exerciseName",
+                    value
+                  )
+                }
+                placeholder="Band Pull Aparts"
+              />
+
+              {exercise.exerciseName.trim() && (
+                <div className="mt-3 rounded-2xl border border-amber-100 bg-amber-50 p-3">
+                  {isLoadingExerciseHistory ? (
+                    <p className="text-xs font-bold text-amber-700">
+                      Loading previous result...
+                    </p>
+                  ) : exerciseHistory ? (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedExerciseHistory(exerciseHistory)}
+                      className="w-full text-left"
+                    >
+                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-700">
+                        Previous Result Found
+                      </p>
+
+                      <p className="mt-1 text-sm font-black text-slate-900">
+                        {formatDate(exerciseHistory.completedAt)} • {exerciseHistory.weight || "No weight"}
+                      </p>
+
+                      <p className="mt-1 text-xs font-semibold leading-5 text-slate-600">
+                        Click to view sets, reps/time, weight, difficulty, and notes.
+                      </p>
+                    </button>
+                  ) : (
+                    <p className="text-xs font-bold text-slate-500">
+                      No previous result found for this exercise.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
 
             <Input
               label="Sets"
@@ -2473,13 +2703,61 @@ function SortableExerciseCard({
               placeholder="2"
             />
 
+            <div>
+              <label className="mb-2 block text-sm font-black text-slate-700">
+                Exercise Type
+              </label>
+
+              <div className="grid grid-cols-2 gap-2 rounded-2xl border border-sky-100 bg-white p-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateExercise(
+                      workoutIndex,
+                      exerciseIndex,
+                      "exerciseType",
+                      "reps"
+                    )
+                  }
+                  className={`rounded-xl px-3 py-2 text-sm font-black transition ${
+                    exercise.exerciseType === "reps"
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "bg-sky-50 text-slate-600 hover:bg-blue-50"
+                  }`}
+                >
+                  Reps
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateExercise(
+                      workoutIndex,
+                      exerciseIndex,
+                      "exerciseType",
+                      "timed"
+                    )
+                  }
+                  className={`rounded-xl px-3 py-2 text-sm font-black transition ${
+                    exercise.exerciseType === "timed"
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "bg-sky-50 text-slate-600 hover:bg-blue-50"
+                  }`}
+                >
+                  Timed
+                </button>
+              </div>
+            </div>
+
             <Input
-              label="Reps / Time"
+              label={exercise.exerciseType === "timed" ? "Time" : "Reps"}
               value={exercise.reps}
               onChange={(value) =>
                 updateExercise(workoutIndex, exerciseIndex, "reps", value)
               }
-              placeholder="10 reps or 30 sec"
+              placeholder={
+                exercise.exerciseType === "timed" ? "30 sec or 1 min" : "10 reps"
+              }
             />
 
             <Input
@@ -2532,6 +2810,85 @@ function SortableExerciseCard({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+
+function ExerciseHistoryModal({
+  history,
+  onClose,
+}: {
+  history: ExerciseHistoryItem;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6">
+      <div className="w-full max-w-lg rounded-[2rem] border border-sky-100 bg-white p-5 shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
+              Last Exercise Result
+            </p>
+
+            <h2 className="mt-2 text-2xl font-black text-slate-900">
+              {history.exerciseName}
+            </h2>
+
+            <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">
+              {formatDate(history.completedAt)} • {history.workoutTitle}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-600 hover:bg-slate-50"
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <HistoryStat label="Sets" value={history.sets || "N/A"} />
+          <HistoryStat label="Reps / Time" value={history.reps || "N/A"} />
+          <HistoryStat label="Weight" value={history.weight || "N/A"} />
+          <HistoryStat label="Rest" value={history.rest || "N/A"} />
+        </div>
+
+        {history.difficulty && (
+          <div className="mt-4 rounded-2xl border border-orange-100 bg-orange-50 p-4">
+            <p className="text-xs font-black uppercase text-orange-700">
+              Client Difficulty
+            </p>
+            <p className="mt-1 text-sm font-bold text-orange-800">
+              {history.difficulty}
+            </p>
+          </div>
+        )}
+
+        {history.notes && (
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs font-black uppercase text-slate-500">
+              Client Notes
+            </p>
+            <p className="mt-1 text-sm leading-6 text-slate-700">
+              {history.notes}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function HistoryStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-sky-50 p-4">
+      <p className="text-xs font-black uppercase text-slate-500">{label}</p>
+      <p className="mt-1 break-words text-lg font-black text-slate-900">
+        {value}
+      </p>
     </div>
   );
 }
