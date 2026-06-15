@@ -1,3 +1,4 @@
+// FIX VERSION: submitted_at exercise history lookup - generated for Adriel
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -162,7 +163,7 @@ type HistoricalWorkoutTemplate = {
 type CompletedWorkoutSubmission = {
   id: string;
   workout_title: string | null;
-  created_at: string;
+  submitted_at: string;
 };
 
 type CompletedWorkoutExercise = {
@@ -537,9 +538,9 @@ export default function CreateProgram() {
 
     const { data: submissionsData, error: submissionsError } = await supabase
       .from("workout_submissions")
-      .select("id, workout_title, created_at")
+      .select("id, workout_title, submitted_at")
       .eq("client_user_id", clientUserId)
-      .order("created_at", { ascending: false })
+      .order("submitted_at", { ascending: false })
       .limit(150);
 
     if (submissionsError) {
@@ -613,7 +614,7 @@ export default function CreateProgram() {
       historyMap[key] = {
         exerciseName: exerciseName || "Unnamed Exercise",
         workoutTitle: parentSubmission.workout_title || "Submitted Workout",
-        completedAt: parentSubmission.created_at,
+        completedAt: parentSubmission.submitted_at,
         sets: exercise.planned_sets || "",
         reps: exercise.planned_reps || "",
         weight: exercise.planned_weight || "",
