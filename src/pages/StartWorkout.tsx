@@ -175,6 +175,36 @@ function parseRestSeconds(value: string) {
   return number;
 }
 
+function parseExerciseDurationSeconds(value: string) {
+  if (!value) return 0;
+
+  const lower = value.toLowerCase();
+
+  const minuteMatch = lower.match(/(\d+)\s*(min|mins|minute|minutes)/);
+  if (minuteMatch) {
+    const minutes = Number(minuteMatch[1]);
+    return Number.isNaN(minutes) ? 0 : minutes * 60;
+  }
+
+  const secondMatch = lower.match(/(\d+)\s*(sec|secs|second|seconds|s)\b/);
+  if (secondMatch) {
+    const seconds = Number(secondMatch[1]);
+    return Number.isNaN(seconds) ? 0 : seconds;
+  }
+
+  return 0;
+}
+
+function getTimedExerciseSeconds(exercise: LoggedExercise | undefined) {
+  if (!exercise) return 0;
+
+  return parseExerciseDurationSeconds(exercise.plannedReps);
+}
+
+function isTimedExercise(exercise: LoggedExercise | undefined) {
+  return getTimedExerciseSeconds(exercise) > 0;
+}
+
 function formatSeconds(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -203,6 +233,8 @@ export default function StartWorkout() {
 
   const [isResting, setIsResting] = useState(false);
   const [restSeconds, setRestSeconds] = useState(60);
+  const [exerciseSeconds, setExerciseSeconds] = useState(0);
+  const [isExerciseTimerRunning, setIsExerciseTimerRunning] = useState(false);
 
   const [showSectionIntro, setShowSectionIntro] = useState(true);
   const [showFinalReview, setShowFinalReview] = useState(false);
@@ -253,7 +285,26 @@ export default function StartWorkout() {
   }, [isResting, restSeconds]);
 
   useEffect(() => {
+    if (!isExerciseTimerRunning) return;
+
+    if (exerciseSeconds <= 0) {
+      setIsExerciseTimerRunning(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setExerciseSeconds((currentSeconds) => Math.max(0, currentSeconds - 1));
+    }, 1000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isExerciseTimerRunning, exerciseSeconds]);
+
+  useEffect(() => {
     setShowExerciseDetails(false);
+    setIsExerciseTimerRunning(false);
+    setExerciseSeconds(0);
   }, [activeStepIndex, activeSetNumber]);
 
   useEffect(() => {
@@ -441,6 +492,8 @@ export default function StartWorkout() {
     setActiveSetNumber(1);
     setIsResting(false);
     setRestSeconds(60);
+    setIsExerciseTimerRunning(false);
+    setExerciseSeconds(0);
     setShowSectionIntro(true);
     setShowFinalReview(false);
     setShowExerciseDetails(false);
@@ -706,6 +759,8 @@ export default function StartWorkout() {
     setActiveSetNumber(1);
     setIsResting(false);
     setRestSeconds(60);
+    setIsExerciseTimerRunning(false);
+    setExerciseSeconds(0);
     setShowSectionIntro(true);
     setShowFinalReview(false);
     setShowExerciseDetails(false);
@@ -788,8 +843,40 @@ export default function StartWorkout() {
     }
   }
 
+  function startExerciseTimer() {
+    if (!activeExercise) return;
+
+    const seconds = getTimedExerciseSeconds(activeExercise);
+    if (seconds <= 0) return;
+
+    setExerciseSeconds((currentSeconds) => currentSeconds || seconds);
+    setIsExerciseTimerRunning(true);
+  }
+
+  function pauseExerciseTimer() {
+    setIsExerciseTimerRunning(false);
+  }
+
+  function resetExerciseTimer() {
+    if (!activeExercise) return;
+
+    setIsExerciseTimerRunning(false);
+    setExerciseSeconds(getTimedExerciseSeconds(activeExercise));
+  }
+
+  function adjustRestSeconds(amount: number) {
+    setRestSeconds((currentSeconds) => Math.max(0, currentSeconds + amount));
+  }
+
+  function skipRest() {
+    finishRest();
+  }
+
   function completeCurrentSet() {
     if (!activeExercise) return;
+
+    setIsExerciseTimerRunning(false);
+    setExerciseSeconds(0);
 
     const nextCompletedSetCount = Math.max(
       currentCompletedSets,
@@ -816,10 +903,16 @@ export default function StartWorkout() {
 
   function finishRest() {
     setIsResting(false);
+    setRestSeconds(0);
     setActiveSetNumber((currentSet) => currentSet + 1);
   }
 
   function moveToNextExercise() {
+    setIsResting(false);
+    setRestSeconds(0);
+    setIsExerciseTimerRunning(false);
+    setExerciseSeconds(0);
+
     const hasNextExercise = activeStepIndex < guidedSteps.length - 1;
 
     if (hasNextExercise) {
@@ -850,6 +943,8 @@ export default function StartWorkout() {
 
     if (!confirmed) return;
 
+    setIsExerciseTimerRunning(false);
+    setExerciseSeconds(0);
     markExerciseIncomplete(activeOriginalIndex);
     moveToNextExercise();
   }
@@ -1133,19 +1228,35 @@ export default function StartWorkout() {
               </p>
             </div>
 
-            <div className="mx-auto mt-8 flex max-w-md flex-col gap-3 sm:flex-row">
+            <div className="mx-auto mt-8 grid max-w-md grid-cols-2 gap-3 sm:grid-cols-4">
               <button
                 type="button"
                 onClick={goBackStep}
-                className="w-full rounded-2xl border border-white/20 bg-white/10 px-5 py-4 text-sm font-black text-white hover:bg-white/20"
+                className="rounded-2xl border border-white/20 bg-white/10 px-4 py-4 text-sm font-black text-white hover:bg-white/20"
               >
                 Back
               </button>
 
               <button
                 type="button"
-                onClick={finishRest}
-                className="w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black text-white hover:bg-blue-700"
+                onClick={() => adjustRestSeconds(-10)}
+                className="rounded-2xl border border-white/20 bg-white/10 px-4 py-4 text-sm font-black text-white hover:bg-white/20"
+              >
+                -10 sec
+              </button>
+
+              <button
+                type="button"
+                onClick={() => adjustRestSeconds(10)}
+                className="rounded-2xl border border-white/20 bg-white/10 px-4 py-4 text-sm font-black text-white hover:bg-white/20"
+              >
+                +10 sec
+              </button>
+
+              <button
+                type="button"
+                onClick={skipRest}
+                className="rounded-2xl bg-blue-600 px-4 py-4 text-sm font-black text-white hover:bg-blue-700"
               >
                 Skip Rest
               </button>
@@ -1659,6 +1770,65 @@ export default function StartWorkout() {
                     </p>
                   </div>
                 </div>
+
+                {isTimedExercise(activeExercise) && (
+                  <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wide text-blue-600">
+                          Timed Exercise
+                        </p>
+
+                        <p className="mt-1 text-sm font-bold text-slate-600">
+                          Use this countdown for set {activeSetNumber}.
+                        </p>
+                      </div>
+
+                      <p className="text-4xl font-black text-blue-700">
+                        {formatSeconds(
+                          exerciseSeconds || getTimedExerciseSeconds(activeExercise)
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-3 gap-3">
+                      {!isExerciseTimerRunning ? (
+                        <button
+                          type="button"
+                          onClick={startExerciseTimer}
+                          className="rounded-2xl bg-blue-600 px-3 py-3 text-sm font-black text-white hover:bg-blue-700"
+                        >
+                          Start
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={pauseExerciseTimer}
+                          className="rounded-2xl bg-slate-900 px-3 py-3 text-sm font-black text-white hover:bg-slate-950"
+                        >
+                          Pause
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={resetExerciseTimer}
+                        className="rounded-2xl border border-blue-100 bg-white px-3 py-3 text-sm font-black text-blue-700 hover:bg-blue-100"
+                      >
+                        Reset
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={completeCurrentSet}
+                        disabled={isSubmitting}
+                        className="rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-3 text-sm font-black text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="mt-5 rounded-2xl border border-sky-100 bg-sky-50 p-4">
                   <div className="flex items-center justify-between gap-3">
