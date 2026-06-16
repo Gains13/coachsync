@@ -220,6 +220,9 @@ export default function StartWorkout() {
   const isRepeatMode = searchParams.get("repeat") === "true";
 
   const saveTimerRef = useRef<number | null>(null);
+  const restCountdownSpokenRef = useRef<number | null>(null);
+  const exerciseCountdownSpokenRef = useRef<number | null>(null);
+  const preStartSpokenRef = useRef<number | null>(null);
 
   const [currentUserId, setCurrentUserId] = useState("");
   const [workout, setWorkout] = useState<PlanWorkout | null>(null);
@@ -235,6 +238,9 @@ export default function StartWorkout() {
   const [restSeconds, setRestSeconds] = useState(60);
   const [exerciseSeconds, setExerciseSeconds] = useState(0);
   const [isExerciseTimerRunning, setIsExerciseTimerRunning] = useState(false);
+  const [audioCountdownEnabled, setAudioCountdownEnabled] = useState(true);
+  const [isPreStartRunning, setIsPreStartRunning] = useState(false);
+  const [preStartSeconds, setPreStartSeconds] = useState(0);
 
   const [showSectionIntro, setShowSectionIntro] = useState(true);
   const [showFinalReview, setShowFinalReview] = useState(false);
@@ -275,6 +281,15 @@ export default function StartWorkout() {
       return;
     }
 
+    if (
+      restSeconds <= 5 &&
+      restSeconds > 0 &&
+      restCountdownSpokenRef.current !== restSeconds
+    ) {
+      restCountdownSpokenRef.current = restSeconds;
+      playAudioCountdown(restSeconds);
+    }
+
     const timer = window.setTimeout(() => {
       setRestSeconds((currentSeconds) => currentSeconds - 1);
     }, 1000);
@@ -292,6 +307,15 @@ export default function StartWorkout() {
       return;
     }
 
+    if (
+      exerciseSeconds <= 5 &&
+      exerciseSeconds > 0 &&
+      exerciseCountdownSpokenRef.current !== exerciseSeconds
+    ) {
+      exerciseCountdownSpokenRef.current = exerciseSeconds;
+      playAudioCountdown(exerciseSeconds);
+    }
+
     const timer = window.setTimeout(() => {
       setExerciseSeconds((currentSeconds) => Math.max(0, currentSeconds - 1));
     }, 1000);
@@ -305,6 +329,10 @@ export default function StartWorkout() {
     setShowExerciseDetails(false);
     setIsExerciseTimerRunning(false);
     setExerciseSeconds(0);
+    setIsPreStartRunning(false);
+    setPreStartSeconds(0);
+    preStartSpokenRef.current = null;
+    exerciseCountdownSpokenRef.current = null;
   }, [activeStepIndex, activeSetNumber]);
 
   useEffect(() => {
@@ -408,6 +436,41 @@ export default function StartWorkout() {
   const activeExercise = activeStep?.exercise;
   const activeOriginalIndex = activeStep?.originalIndex ?? 0;
 
+  useEffect(() => {
+    if (!isPreStartRunning) return;
+
+    if (preStartSeconds <= 0) {
+      setIsPreStartRunning(false);
+      preStartSpokenRef.current = null;
+      speakAudio("Start");
+
+      if (activeExercise) {
+        const seconds = getTimedExerciseSeconds(activeExercise);
+
+        if (seconds > 0) {
+          exerciseCountdownSpokenRef.current = null;
+          setExerciseSeconds(seconds);
+          setIsExerciseTimerRunning(true);
+        }
+      }
+
+      return;
+    }
+
+    if (preStartSpokenRef.current !== preStartSeconds) {
+      preStartSpokenRef.current = preStartSeconds;
+      speakAudio(String(preStartSeconds));
+    }
+
+    const timer = window.setTimeout(() => {
+      setPreStartSeconds((currentSeconds) => Math.max(0, currentSeconds - 1));
+    }, 1000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isPreStartRunning, preStartSeconds, activeExercise, audioCountdownEnabled]);
+
   const currentTotalSets = activeExercise
     ? parseSets(activeExercise.plannedSets)
     : 1;
@@ -472,6 +535,65 @@ export default function StartWorkout() {
         minute: "2-digit",
       })
     : "";
+
+  function speakAudio(text: string) {
+    if (!audioCountdownEnabled) return;
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+
+    try {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.08;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    } catch (error) {
+      console.error("Audio cue failed:", error);
+    }
+  }
+
+  function playAudioCountdown(seconds: number) {
+    if (seconds < 1 || seconds > 5) return;
+
+    speakAudio(String(seconds));
+  }
+
+  function playCompletedSound() {
+    if (!audioCountdownEnabled || typeof window === "undefined") return;
+
+    try {
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+
+      if (!AudioContextClass) return;
+
+      const audioContext = new AudioContextClass();
+      const now = audioContext.currentTime;
+
+      [660, 880].forEach((frequency, index) => {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+
+        oscillator.type = "sine";
+        oscillator.frequency.value = frequency;
+
+        gain.gain.setValueAtTime(0.0001, now + index * 0.12);
+        gain.gain.exponentialRampToValueAtTime(0.25, now + index * 0.12 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + index * 0.12 + 0.16);
+
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+
+        oscillator.start(now + index * 0.12);
+        oscillator.stop(now + index * 0.12 + 0.18);
+      });
+    } catch (error) {
+      console.error("Completion sound failed:", error);
+    }
+  }
 
   async function loadWorkout() {
     setIsLoading(true);
@@ -849,17 +971,28 @@ export default function StartWorkout() {
     const seconds = getTimedExerciseSeconds(activeExercise);
     if (seconds <= 0) return;
 
-    setExerciseSeconds((currentSeconds) => currentSeconds || seconds);
-    setIsExerciseTimerRunning(true);
+    setIsExerciseTimerRunning(false);
+    setExerciseSeconds(seconds);
+    preStartSpokenRef.current = null;
+    exerciseCountdownSpokenRef.current = null;
+    setPreStartSeconds(3);
+    setIsPreStartRunning(true);
   }
 
   function pauseExerciseTimer() {
+    setIsPreStartRunning(false);
+    setPreStartSeconds(0);
+    preStartSpokenRef.current = null;
     setIsExerciseTimerRunning(false);
   }
 
   function resetExerciseTimer() {
     if (!activeExercise) return;
 
+    preStartSpokenRef.current = null;
+    exerciseCountdownSpokenRef.current = null;
+    setIsPreStartRunning(false);
+    setPreStartSeconds(0);
     setIsExerciseTimerRunning(false);
     setExerciseSeconds(getTimedExerciseSeconds(activeExercise));
   }
@@ -875,6 +1008,10 @@ export default function StartWorkout() {
   function completeCurrentSet() {
     if (!activeExercise) return;
 
+    playCompletedSound();
+    setIsPreStartRunning(false);
+    setPreStartSeconds(0);
+    preStartSpokenRef.current = null;
     setIsExerciseTimerRunning(false);
     setExerciseSeconds(0);
 
@@ -897,17 +1034,24 @@ export default function StartWorkout() {
     }
 
     const nextRestSeconds = parseRestSeconds(activeExercise.plannedRest);
+    restCountdownSpokenRef.current = null;
     setRestSeconds(nextRestSeconds);
     setIsResting(true);
   }
 
   function finishRest() {
+    restCountdownSpokenRef.current = null;
     setIsResting(false);
     setRestSeconds(0);
     setActiveSetNumber((currentSet) => currentSet + 1);
   }
 
   function moveToNextExercise() {
+    restCountdownSpokenRef.current = null;
+    exerciseCountdownSpokenRef.current = null;
+    preStartSpokenRef.current = null;
+    setIsPreStartRunning(false);
+    setPreStartSeconds(0);
     setIsResting(false);
     setRestSeconds(0);
     setIsExerciseTimerRunning(false);
@@ -1211,6 +1355,14 @@ export default function StartWorkout() {
             <p className="mt-5 text-sm font-semibold leading-6 text-slate-300 sm:text-base">
               Next up: Set {activeSetNumber + 1} of {currentTotalSets}
             </p>
+
+            <button
+              type="button"
+              onClick={() => setAudioCountdownEnabled((current) => !current)}
+              className="mt-4 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-black text-white hover:bg-white/20"
+            >
+              Audio Countdown: {audioCountdownEnabled ? "On" : "Off"}
+            </button>
 
             <div className="mx-auto mt-6 max-w-md rounded-3xl border border-white/10 bg-white/10 p-5 text-left shadow-2xl backdrop-blur">
               <p className="text-xs font-bold uppercase tracking-wide text-blue-200">
@@ -1782,6 +1934,16 @@ export default function StartWorkout() {
                         <p className="mt-1 text-sm font-bold text-slate-600">
                           Use this countdown for set {activeSetNumber}.
                         </p>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setAudioCountdownEnabled((current) => !current)
+                          }
+                          className="mt-2 rounded-full border border-blue-100 bg-white px-3 py-1 text-[11px] font-black text-blue-700 hover:bg-blue-100"
+                        >
+                          Audio: {audioCountdownEnabled ? "On" : "Off"}
+                        </button>
                       </div>
 
                       <p className="text-4xl font-black text-blue-700">
@@ -1791,14 +1953,27 @@ export default function StartWorkout() {
                       </p>
                     </div>
 
+                    {isPreStartRunning && (
+                      <div className="mt-4 rounded-2xl border border-blue-100 bg-white p-4 text-center">
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-blue-600">
+                          Starting In
+                        </p>
+
+                        <p className="mt-1 text-4xl font-black text-blue-700">
+                          {preStartSeconds > 0 ? preStartSeconds : "Start"}
+                        </p>
+                      </div>
+                    )}
+
                     <div className="mt-4 grid grid-cols-3 gap-3">
                       {!isExerciseTimerRunning ? (
                         <button
                           type="button"
                           onClick={startExerciseTimer}
-                          className="rounded-2xl bg-blue-600 px-3 py-3 text-sm font-black text-white hover:bg-blue-700"
+                          disabled={isPreStartRunning}
+                          className="rounded-2xl bg-blue-600 px-3 py-3 text-sm font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          Start
+                          {isPreStartRunning ? "Starting..." : "Start"}
                         </button>
                       ) : (
                         <button
