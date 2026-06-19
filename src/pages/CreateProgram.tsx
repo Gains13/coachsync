@@ -313,6 +313,169 @@ function getWorkoutPreviewIssues(workout: WorkoutForm) {
   };
 }
 
+const SMART_IMPORT_SECTION_MATCHES: { label: string; section: string }[] = [
+  { label: "warm-up", section: "Warm-Up" },
+  { label: "warm up", section: "Warm-Up" },
+  { label: "warmup", section: "Warm-Up" },
+  { label: "activation", section: "Activation / Core / Balance" },
+  { label: "core", section: "Activation / Core / Balance" },
+  { label: "balance", section: "Activation / Core / Balance" },
+  { label: "saq", section: "SAQ / Skill Development" },
+  { label: "skill development", section: "SAQ / Skill Development" },
+  { label: "resistance training", section: "Resistance Training" },
+  { label: "resistance", section: "Resistance Training" },
+  { label: "cool-down", section: "Cool-Down" },
+  { label: "cool down", section: "Cool-Down" },
+  { label: "cooldown", section: "Cool-Down" },
+];
+
+function getSmartImportSection(line: string) {
+  const normalized = normalizeExerciseName(line);
+
+  const directMatch = SMART_IMPORT_SECTION_MATCHES.find(
+    (item) => normalized === normalizeExerciseName(item.label)
+  );
+
+  if (directMatch) return directMatch.section;
+
+  const containsMatch = SMART_IMPORT_SECTION_MATCHES.find((item) =>
+    normalized.includes(normalizeExerciseName(item.label))
+  );
+
+  return containsMatch?.section || "";
+}
+
+function isSmartImportHeaderLine(line: string) {
+  const normalized = normalizeExerciseName(line);
+
+  if (!normalized) return true;
+
+  const skipWords = [
+    "exercise set range tempo weight rest note",
+    "exercise sets week",
+    "progressive overload",
+    "6 week",
+    "phase",
+    "client name",
+    "resttttt",
+  ];
+
+  return skipWords.some((word) => normalized.includes(normalizeExerciseName(word)));
+}
+
+function splitSmartImportRow(line: string) {
+  return line
+    .split(/\t| {2,}/g)
+    .map((cell) => cell.trim())
+    .filter(Boolean);
+}
+
+function parseSmartImportExerciseLine(
+  line: string,
+  section: string
+): ExerciseForm | null {
+  const cleanedLine = line.trim();
+
+  if (!cleanedLine || isSmartImportHeaderLine(cleanedLine)) return null;
+
+  const cells = splitSmartImportRow(cleanedLine);
+
+  if (cells.length >= 3 && /^\d+$/.test(cells[1])) {
+    const exerciseName = cells[0];
+    const sets = cells[1] || "";
+    const reps = cells[2] || "";
+    const weight = cells[3] || "";
+    const rest = cells[4] || "";
+    const trainerNotes = cells.slice(5).join(" ");
+
+    if (!exerciseName || normalizeExerciseName(exerciseName) === "exercise") {
+      return null;
+    }
+
+    return {
+      ...blankExercise(section),
+      exerciseName,
+      exerciseType: inferExerciseType(reps),
+      sets,
+      reps,
+      weight: /^none$/i.test(weight) ? "" : weight,
+      rest: /^none$/i.test(rest) ? "" : rest,
+      trainerNotes,
+    };
+  }
+
+  const regexMatch = cleanedLine.match(
+    /^(.+?)\s+(\d+)\s+(.+?)(?:\s+(none|bodyweight|\d+(?:\.\d+)?\s*(?:lb|lbs|kg|pounds?|med(?:icine)?\s*ball|stability\s*ball)))?(?:\s+(none|\d+\s*(?:-|–|to)?\s*\d*\s*(?:sec|secs|s|min|mins|minutes)?))?(?:\s+(.*))?$/i
+  );
+
+  if (!regexMatch) return null;
+
+  const [, exerciseName, sets, reps, weight = "", rest = "", notes = ""] =
+    regexMatch;
+
+  if (!exerciseName || exerciseName.trim().length < 3) return null;
+
+  return {
+    ...blankExercise(section),
+    exerciseName: exerciseName.trim(),
+    exerciseType: inferExerciseType(reps),
+    sets: sets.trim(),
+    reps: reps.trim(),
+    weight: /^none$/i.test(weight.trim()) ? "" : weight.trim(),
+    rest: /^none$/i.test(rest.trim()) ? "" : rest.trim(),
+    trainerNotes: notes.trim(),
+  };
+}
+
+function parseSmartProgramText(rawText: string): WorkoutForm {
+  const lines = rawText
+    .replace(/\r/g, "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const titleLine =
+    lines.find((line) => /day\s*\d+/i.test(line)) || "Imported Workout";
+
+  const phaseLine = lines.find((line) => /phase/i.test(line));
+
+  const workoutTitle = phaseLine
+    ? `${titleLine.replace(/program$/i, "").trim()} - ${phaseLine}`
+    : titleLine;
+
+  let currentSection = "Warm-Up";
+  const importedExercises: ExerciseForm[] = [];
+
+  for (const line of lines) {
+    const normalized = normalizeExerciseName(line);
+
+    if (normalized.includes("progressive overload") || normalized.includes("6 week")) {
+      break;
+    }
+
+    const matchedSection = getSmartImportSection(line);
+
+    if (matchedSection && line.length < 80) {
+      currentSection = matchedSection;
+      continue;
+    }
+
+    if (isSmartImportHeaderLine(line)) continue;
+
+    const exercise = parseSmartImportExerciseLine(line, currentSection);
+
+    if (exercise) {
+      importedExercises.push(exercise);
+    }
+  }
+
+  return {
+    formId: makeId(),
+    title: workoutTitle,
+    exercises: importedExercises.length > 0 ? importedExercises : [blankExercise()],
+  };
+}
+
 export default function CreateProgram() {
   const saveDraftTimerRef = useRef<number | null>(null);
 
@@ -356,6 +519,9 @@ export default function CreateProgram() {
   const [isLoadingHistoricalTemplates, setIsLoadingHistoricalTemplates] =
     useState(false);
 
+  const [showSmartImporter, setShowSmartImporter] = useState(false);
+  const [smartImportText, setSmartImportText] = useState("");
+  const [smartImportMessage, setSmartImportMessage] = useState("");
 
   const [exerciseHistoryByName, setExerciseHistoryByName] = useState<
     Record<string, ExerciseHistoryItem>
@@ -871,6 +1037,34 @@ export default function CreateProgram() {
 
   function addWorkout() {
     setWorkouts((currentWorkouts) => [...currentWorkouts, blankWorkout()]);
+  }
+
+  function importSmartProgramText() {
+    setSmartImportMessage("");
+
+    if (!smartImportText.trim()) {
+      setSmartImportMessage("Paste the workout program text first.");
+      return;
+    }
+
+    const importedWorkout = parseSmartProgramText(smartImportText);
+    const importedExerciseCount = getWorkoutExerciseCount(importedWorkout);
+
+    if (importedExerciseCount === 0) {
+      setSmartImportMessage(
+        "I could not find exercises in that program text. Try copying the table text from Word or Google Docs and paste it again."
+      );
+      return;
+    }
+
+    addCopiedWorkoutToForm(importedWorkout);
+    setSmartImportText("");
+    setShowSmartImporter(false);
+    setStatusMessage(
+      `Imported "${importedWorkout.title}" with ${importedExerciseCount} exercise${
+        importedExerciseCount === 1 ? "" : "s"
+      }. Review it, then save the program week.`
+    );
   }
 
   function copySelectedWorkout() {
@@ -1809,6 +2003,76 @@ export default function CreateProgram() {
               </div>
             </div>
           )}
+
+          <div className="mt-5 rounded-[1.5rem] border border-indigo-100 bg-indigo-50 p-4 sm:p-5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-indigo-600">
+                  Smart Program Import
+                </p>
+
+                <h2 className="mt-1 text-xl font-black text-slate-900">
+                  Paste a program from Word or Google Docs
+                </h2>
+
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  Paste a workout table like Alex's NASM progression document,
+                  and CoachSync will build the exercise cards for you.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowSmartImporter((current) => !current)}
+                className="rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-black text-white transition hover:bg-indigo-700"
+              >
+                {showSmartImporter ? "Hide Importer" : "Open Importer"}
+              </button>
+            </div>
+
+            {showSmartImporter && (
+              <div className="mt-4 rounded-2xl border border-indigo-100 bg-white p-4">
+                <label className="mb-2 block text-sm font-black text-slate-700">
+                  Paste Program Text
+                </label>
+
+                <textarea
+                  value={smartImportText}
+                  onChange={(event) => setSmartImportText(event.target.value)}
+                  rows={10}
+                  placeholder={`Example:\nWarm-Up\nFoam Roll    1    30s    None    None\nActivation (core/balance)\nDead Bug    2    8-10 reps    None    10-15 sec\nResistance Training\nSeated Chest Press    2    12-15 reps    30 lbs    60-120 sec`}
+                  className="w-full rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
+                />
+
+                {smartImportMessage && (
+                  <p className="mt-3 rounded-2xl border border-amber-100 bg-amber-50 p-3 text-sm font-bold text-amber-700">
+                    {smartImportMessage}
+                  </p>
+                )}
+
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={importSmartProgramText}
+                    className="rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-black text-white transition hover:bg-indigo-700"
+                  >
+                    Import Into Program Builder
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSmartImportText("");
+                      setSmartImportMessage("");
+                    }}
+                    className="rounded-2xl border border-indigo-100 bg-white px-4 py-3 text-sm font-black text-indigo-700 transition hover:bg-indigo-50"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           {selectedClientId && (
             <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
