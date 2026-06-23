@@ -10,6 +10,7 @@ import { useEffect } from "react";
 
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 
 import ClientDashboard from "./pages/ClientDashboard";
@@ -81,7 +82,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/landing" element={<Landing />} />
-
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route

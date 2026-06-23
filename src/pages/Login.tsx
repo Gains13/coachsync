@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 
 export default function Login() {
@@ -120,6 +120,15 @@ export default function Login() {
               placeholder="Enter password"
               type="password"
             />
+
+            <div className="-mt-2 flex justify-end">
+              <Link
+                to="/forgot-password"
+                className="text-sm font-semibold text-blue-700 transition hover:text-blue-800"
+              >
+                Forgot password?
+              </Link>
+            </div>
 
             {statusMessage && (
               <p className="rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-medium text-slate-700">
