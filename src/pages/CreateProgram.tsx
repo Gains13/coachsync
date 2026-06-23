@@ -96,11 +96,6 @@ type ProgramDraftRow = {
   updated_at: string;
 };
 
-type SmartImportedWeek = {
-  weekNumber: number;
-  workouts: WorkoutForm[];
-};
-
 type ExistingExercise = {
   id: string;
   section: string | null;
@@ -481,144 +476,6 @@ function parseSmartProgramText(rawText: string): WorkoutForm {
   };
 }
 
-function getProgressionSection(line: string) {
-  const normalized = normalizeExerciseName(line);
-
-  if (normalized.includes("warm up") || normalized.includes("warmup")) {
-    return "Warm-Up";
-  }
-
-  if (
-    normalized.includes("core") ||
-    normalized.includes("activation") ||
-    normalized.includes("balance")
-  ) {
-    return "Activation / Core / Balance";
-  }
-
-  if (normalized.includes("saq") || normalized.includes("skill development")) {
-    return "SAQ / Skill Development";
-  }
-
-  if (normalized.includes("resistance training") || normalized.includes("resistance")) {
-    return "Resistance Training";
-  }
-
-  if (normalized.includes("cool down") || normalized.includes("cooldown")) {
-    return "Cool-Down";
-  }
-
-  return "";
-}
-
-function parseProgressionValue(value: string, fallbackWeight = "") {
-  const cleaned = value.replace(/[()]/g, " ").replace(/\s+/g, " ").trim();
-
-  if (!cleaned) {
-    return { reps: "", weight: fallbackWeight };
-  }
-
-  const weightMatch = cleaned.match(
-    /\b\d+(?:\.\d+)?\s*(?:lb|lbs|pound|pounds|kg)\b/i
-  );
-
-  const weight = weightMatch ? weightMatch[0].replace(/\s+/g, " ") : fallbackWeight;
-
-  const reps = cleaned
-    .replace(/\b\d+(?:\.\d+)?\s*(?:lb|lbs|pound|pounds|kg)\b/gi, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  return {
-    reps: reps || cleaned,
-    weight,
-  };
-}
-
-function parseSixWeekProgressionText(
-  rawText: string,
-  startingWeekNumber: number
-): SmartImportedWeek[] {
-  const lines = rawText
-    .replace(/\r/g, "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  const progressionStartIndex = lines.findIndex((line) => {
-    const normalized = normalizeExerciseName(line);
-
-    return normalized.includes("progressive overload") || normalized.includes("6 week");
-  });
-
-  if (progressionStartIndex === -1) return [];
-
-  const titleLine =
-    lines.find((line) => /day\s*\d+/i.test(line)) || "Imported Progression";
-
-  const phaseLine = lines.find((line) => /phase/i.test(line));
-
-  const baseTitle = phaseLine
-    ? `${titleLine.replace(/program$/i, "").trim()} - ${phaseLine}`
-    : titleLine;
-
-  const importedWeeks: SmartImportedWeek[] = Array.from({ length: 6 }, (_, index) => ({
-    weekNumber: startingWeekNumber + index,
-    workouts: [
-      {
-        formId: makeId(),
-        title: `Week ${startingWeekNumber + index} - ${baseTitle}`,
-        exercises: [],
-      },
-    ],
-  }));
-
-  let currentSection = "Warm-Up";
-
-  lines.slice(progressionStartIndex).forEach((line) => {
-    const sectionMatch = getProgressionSection(line);
-
-    if (sectionMatch && line.length < 90) {
-      currentSection = sectionMatch;
-      return;
-    }
-
-    const cells = splitSmartImportRow(line);
-
-    if (cells.length < 8) return;
-    if (!/^\d+$/.test(cells[1])) return;
-    if (normalizeExerciseName(cells[0]) === "exercise") return;
-
-    const exerciseName = cells[0];
-    const sets = cells[1];
-    const weekValues = cells.slice(2, 8);
-    const notes = cells.slice(8).join(" ");
-
-    let lastKnownWeight = "";
-
-    weekValues.forEach((weekValue, weekIndex) => {
-      const parsed = parseProgressionValue(weekValue, lastKnownWeight);
-
-      if (parsed.weight) {
-        lastKnownWeight = parsed.weight;
-      }
-
-      importedWeeks[weekIndex].workouts[0].exercises.push({
-        ...blankExercise(currentSection),
-        exerciseName,
-        exerciseType: inferExerciseType(parsed.reps),
-        sets,
-        reps: parsed.reps,
-        weight: parsed.weight,
-        rest: "",
-        trainerNotes: notes,
-      });
-    });
-  });
-
-  return importedWeeks.filter((week) => week.workouts[0].exercises.length > 0);
-}
-
 export default function CreateProgram() {
   const saveDraftTimerRef = useRef<number | null>(null);
 
@@ -665,7 +522,6 @@ export default function CreateProgram() {
   const [showSmartImporter, setShowSmartImporter] = useState(false);
   const [smartImportText, setSmartImportText] = useState("");
   const [smartImportMessage, setSmartImportMessage] = useState("");
-  const [smartImportedWeeks, setSmartImportedWeeks] = useState<SmartImportedWeek[]>([]);
 
   const [exerciseHistoryByName, setExerciseHistoryByName] = useState<
     Record<string, ExerciseHistoryItem>
@@ -1163,7 +1019,6 @@ export default function CreateProgram() {
       setCopySourceClientId("");
       setExistingWorkouts([]);
       setSelectedWorkoutToCopy("");
-      setSmartImportedWeeks([]);
     }
   }
 
@@ -1192,34 +1047,6 @@ export default function CreateProgram() {
       return;
     }
 
-    const startingWeekNumber = Number(weekNumber) > 0 ? Number(weekNumber) : 1;
-    const importedSixWeeks = parseSixWeekProgressionText(
-      smartImportText,
-      startingWeekNumber
-    );
-
-    if (importedSixWeeks.length === 6) {
-      setSmartImportedWeeks(importedSixWeeks);
-      setWorkouts(importedSixWeeks[0].workouts);
-      setWeekNumber(String(importedSixWeeks[0].weekNumber));
-      setSmartImportText("");
-      setShowSmartImporter(false);
-
-      const totalImportedExercises = importedSixWeeks.reduce(
-        (total, week) => total + week.workouts[0].exercises.length,
-        0
-      );
-
-      setStatusMessage(
-        `Imported a 6-week progression from Week ${importedSixWeeks[0].weekNumber} to Week ${
-          importedSixWeeks[5].weekNumber
-        } with ${totalImportedExercises} exercise entries. Review Week ${
-          importedSixWeeks[0].weekNumber
-        }, then use Save All Imported Weeks.`
-      );
-      return;
-    }
-
     const importedWorkout = parseSmartProgramText(smartImportText);
     const importedExerciseCount = getWorkoutExerciseCount(importedWorkout);
 
@@ -1230,7 +1057,6 @@ export default function CreateProgram() {
       return;
     }
 
-    setSmartImportedWeeks([]);
     addCopiedWorkoutToForm(importedWorkout);
     setSmartImportText("");
     setShowSmartImporter(false);
@@ -1831,190 +1657,6 @@ export default function CreateProgram() {
     setStatusMessage("Saved draft cleared for this client/week.");
   }
 
-  function getValidWorkoutsForSave(sourceWorkouts: WorkoutForm[]) {
-    return sourceWorkouts
-      .map((workout) => ({
-        ...workout,
-        title: workout.title.trim(),
-        exercises: workout.exercises
-          .map((exercise) => ({
-            ...exercise,
-            section: exercise.section.trim() || "Resistance Training",
-            exerciseName: exercise.exerciseName.trim(),
-            sets: exercise.sets.trim(),
-            reps: exercise.reps.trim(),
-            weight: exercise.weight.trim(),
-            rest: exercise.rest.trim(),
-            videoLink: exercise.videoLink.trim(),
-            trainerNotes: exercise.trainerNotes.trim(),
-          }))
-          .filter((exercise) => exercise.exerciseName !== ""),
-      }))
-      .filter((workout) => workout.title !== "" && workout.exercises.length > 0);
-  }
-
-  async function saveWorkoutsToWeek(
-    targetClientUserId: string,
-    targetWeekNumber: number,
-    targetWeekStatus: string,
-    sourceWorkouts: WorkoutForm[]
-  ) {
-    const validWorkouts = getValidWorkoutsForSave(sourceWorkouts);
-
-    if (validWorkouts.length === 0) {
-      throw new Error("No valid workouts found to save.");
-    }
-
-    const { data: existingWeek, error: existingWeekError } = await supabase
-      .from("client_plan_weeks")
-      .select("id")
-      .eq("client_user_id", targetClientUserId)
-      .eq("week_number", targetWeekNumber)
-      .maybeSingle();
-
-    if (existingWeekError) {
-      throw existingWeekError;
-    }
-
-    let weekId = existingWeek?.id || "";
-
-    if (!existingWeek) {
-      const { data: weekData, error: weekError } = await supabase
-        .from("client_plan_weeks")
-        .insert({
-          client_user_id: targetClientUserId,
-          week_number: targetWeekNumber,
-          status: targetWeekStatus,
-        })
-        .select("id")
-        .single();
-
-      if (weekError || !weekData) {
-        throw weekError || new Error("Could not create week.");
-      }
-
-      weekId = weekData.id;
-    }
-
-    const { data: currentWorkoutsForWeek, error: currentWorkoutsError } =
-      await supabase
-        .from("client_plan_workouts")
-        .select("workout_order")
-        .eq("week_id", weekId)
-        .order("workout_order", { ascending: false });
-
-    if (currentWorkoutsError) {
-      throw currentWorkoutsError;
-    }
-
-    const currentHighestWorkoutOrder =
-      currentWorkoutsForWeek && currentWorkoutsForWeek.length > 0
-        ? currentWorkoutsForWeek[0].workout_order || 0
-        : 0;
-
-    for (
-      let workoutIndex = 0;
-      workoutIndex < validWorkouts.length;
-      workoutIndex++
-    ) {
-      const workout = validWorkouts[workoutIndex];
-
-      const { data: workoutData, error: workoutError } = await supabase
-        .from("client_plan_workouts")
-        .insert({
-          week_id: weekId,
-          title: workout.title,
-          workout_order: currentHighestWorkoutOrder + workoutIndex + 1,
-        })
-        .select()
-        .single();
-
-      if (workoutError || !workoutData) {
-        throw workoutError || new Error(`Could not create workout ${workoutIndex + 1}.`);
-      }
-
-      const exerciseRows = workout.exercises.map((exercise, exerciseIndex) => ({
-        workout_id: workoutData.id,
-        section: exercise.section,
-        exercise_name: exercise.exerciseName,
-        sets: exercise.sets,
-        reps: exercise.reps,
-        weight: exercise.weight,
-        rest: exercise.rest,
-        video_link: exercise.videoLink,
-        trainer_notes: exercise.trainerNotes,
-        exercise_order: exerciseIndex + 1,
-      }));
-
-      const { error: exerciseError } = await supabase
-        .from("client_plan_exercises")
-        .insert(exerciseRows);
-
-      if (exerciseError) {
-        throw exerciseError;
-      }
-    }
-
-    await clearProgramDraft(String(targetWeekNumber));
-
-    return validWorkouts.length;
-  }
-
-  async function saveImportedSixWeekProgram() {
-    if (!selectedClientId) {
-      setStatusMessage("Please select a target client first.");
-      return;
-    }
-
-    if (smartImportedWeeks.length !== 6) {
-      setStatusMessage("Import a 6-week progression first.");
-      return;
-    }
-
-    setIsSaving(true);
-    setStatusMessage("Saving all 6 imported weeks...");
-
-    try {
-      let savedWorkoutCount = 0;
-
-      for (const importedWeek of smartImportedWeeks) {
-        savedWorkoutCount += await saveWorkoutsToWeek(
-          selectedClientId,
-          importedWeek.weekNumber,
-          weekStatus,
-          importedWeek.workouts
-        );
-      }
-
-      const firstWeek = smartImportedWeeks[0].weekNumber;
-      const lastWeek = smartImportedWeeks[smartImportedWeeks.length - 1].weekNumber;
-
-      setStatusMessage(
-        `Saved ${savedWorkoutCount} workout${
-          savedWorkoutCount === 1 ? "" : "s"
-        } across Weeks ${firstWeek}–${lastWeek}.`
-      );
-      setSmartImportedWeeks([]);
-      setWorkouts([blankWorkout()]);
-      setWeekNumber(String(lastWeek + 1));
-
-      if (copySourceClientId) {
-        await loadExistingWorkouts(copySourceClientId);
-      }
-
-      await loadHistoricalTemplates();
-    } catch (error) {
-      console.error(error);
-      setStatusMessage(
-        error instanceof Error
-          ? "Could not save all imported weeks: " + error.message
-          : "Could not save all imported weeks."
-      );
-    }
-
-    setIsSaving(false);
-  }
-
   async function saveProgram(event: FormEvent) {
     event.preventDefault();
 
@@ -2422,44 +2064,10 @@ export default function CreateProgram() {
                     onClick={() => {
                       setSmartImportText("");
                       setSmartImportMessage("");
-                      setSmartImportedWeeks([]);
                     }}
                     className="rounded-2xl border border-indigo-100 bg-white px-4 py-3 text-sm font-black text-indigo-700 transition hover:bg-indigo-50"
                   >
                     Clear
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {smartImportedWeeks.length === 6 && (
-              <div className="mt-4 rounded-2xl border border-emerald-100 bg-white p-4">
-                <p className="text-sm font-black text-emerald-700">
-                  6-week progression ready
-                </p>
-
-                <p className="mt-1 text-sm font-semibold leading-6 text-slate-700">
-                  Weeks {smartImportedWeeks[0].weekNumber}–{smartImportedWeeks[5].weekNumber} are staged.
-                  Week {smartImportedWeeks[0].weekNumber} is showing in the builder for review.
-                </p>
-
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={saveImportedSixWeekProgram}
-                    disabled={isSaving || !selectedClientId}
-                    className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    Save All Imported Weeks
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setSmartImportedWeeks([])}
-                    disabled={isSaving}
-                    className="rounded-2xl border border-emerald-100 bg-white px-4 py-3 text-sm font-black text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    Clear Imported Weeks
                   </button>
                 </div>
               </div>
