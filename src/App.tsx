@@ -1,9 +1,16 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 
 import ClientDashboard from "./pages/ClientDashboard";
 import ClientPlan from "./pages/ClientPlan";
@@ -31,7 +38,6 @@ import WorkoutTracker from "./pages/WorkoutTracker";
 import WorkoutHistory from "./pages/WorkoutHistory";
 import StartWorkout from "./pages/StartWorkout";
 import CompletedWorkout from "./pages/CompletedWorkout";
-import ResetPassword from "./pages/ResetPassword";
 
 type UserRole = "trainer" | "client";
 
@@ -75,6 +81,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/landing" element={<Landing />} />
+
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route
           path="/client"
