@@ -31,6 +31,7 @@ import WorkoutTracker from "./pages/WorkoutTracker";
 import WorkoutHistory from "./pages/WorkoutHistory";
 import StartWorkout from "./pages/StartWorkout";
 import CompletedWorkout from "./pages/CompletedWorkout";
+import ResetPassword from "./pages/ResetPassword";
 
 type UserRole = "trainer" | "client";
 

@@ -6,6 +6,7 @@ type ClientProfile = {
   id: string;
   full_name: string;
   client_id: string;
+  email: string | null;
   created_at: string;
   setup_complete: boolean | null;
 };
@@ -16,6 +17,8 @@ export default function Clients() {
   const [searchText, setSearchText] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
+  const [resettingClientId, setResettingClientId] = useState<string | null>(null);
+  const [lastResetLink, setLastResetLink] = useState("");
 
   useEffect(() => {
     loadClients();
@@ -27,7 +30,7 @@ export default function Clients() {
 
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, full_name, client_id, created_at, setup_complete")
+      .select("id, full_name, client_id, email, created_at, setup_complete")
       .eq("role", "client")
       .order("created_at", { ascending: false });
 
@@ -40,6 +43,85 @@ export default function Clients() {
 
     setClients(data || []);
     setIsLoading(false);
+  }
+
+  async function generateClientResetLink(client: ClientProfile) {
+    if (!client.email) {
+      setStatusMessage(
+        `${client.full_name} does not have an email saved, so a reset link cannot be generated.`
+      );
+      return;
+    }
+
+    setResettingClientId(client.id);
+    setLastResetLink("");
+    setStatusMessage(`Generating reset link for ${client.full_name}...`);
+
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        setStatusMessage("You must be logged in as a trainer to reset passwords.");
+        setResettingClientId(null);
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke(
+        "admin-generate-client-reset-link",
+        {
+          body: {
+            clientEmail: client.email,
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (error) {
+        console.error(error);
+        setStatusMessage("Could not generate reset link: " + error.message);
+        setResettingClientId(null);
+        return;
+      }
+
+      if (data?.error) {
+        setStatusMessage("Could not generate reset link: " + data.error);
+        setResettingClientId(null);
+        return;
+      }
+
+      if (!data?.resetLink) {
+        setStatusMessage("Reset link was not returned by the server.");
+        setResettingClientId(null);
+        return;
+      }
+
+      await navigator.clipboard.writeText(data.resetLink);
+
+      setLastResetLink(data.resetLink);
+      setStatusMessage(
+        `Password reset link for ${client.full_name} was copied to your clipboard. Send it to the client so they can create a new password.`
+      );
+
+      setResettingClientId(null);
+    } catch (error) {
+      console.error(error);
+      setStatusMessage(
+        "Something went wrong while generating the reset link. Check the browser console and Supabase function logs."
+      );
+      setResettingClientId(null);
+    }
+  }
+
+  async function copyLastResetLink() {
+    if (!lastResetLink) return;
+
+    await navigator.clipboard.writeText(lastResetLink);
+    setStatusMessage("Reset link copied again.");
   }
 
   async function deleteClient(clientId: string, clientName: string) {
@@ -125,6 +207,7 @@ export default function Clients() {
       return (
         client.full_name?.toLowerCase().includes(search) ||
         client.client_id?.toLowerCase().includes(search) ||
+        client.email?.toLowerCase().includes(search) ||
         client.id?.toLowerCase().includes(search)
       );
     });
@@ -155,7 +238,8 @@ export default function Clients() {
 
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
                   View client profiles, open client details, manage starting
-                  info, goals, assigned programs, and submitted workouts.
+                  info, goals, assigned programs, submitted workouts, and reset
+                  client passwords.
                 </p>
               </div>
 
@@ -210,7 +294,7 @@ export default function Clients() {
               </h2>
 
               <p className="mt-1 text-sm leading-6 text-slate-500">
-                Search by name, client ID, or auth UID.
+                Search by name, email, client ID, or auth UID.
               </p>
             </div>
 
@@ -226,9 +310,29 @@ export default function Clients() {
         </div>
 
         {statusMessage && (
-          <p className="mb-6 rounded-2xl border border-sky-100 bg-white p-4 text-sm font-medium leading-6 text-slate-700 shadow-sm">
-            {statusMessage}
-          </p>
+          <div className="mb-6 rounded-2xl border border-sky-100 bg-white p-4 text-sm font-medium leading-6 text-slate-700 shadow-sm">
+            <p>{statusMessage}</p>
+
+            {lastResetLink && (
+              <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Last Generated Reset Link
+                </p>
+
+                <p className="mt-2 break-all text-xs text-slate-600">
+                  {lastResetLink}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={copyLastResetLink}
+                  className="mt-3 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                >
+                  Copy Again
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         {isLoading ? (
@@ -244,18 +348,20 @@ export default function Clients() {
         ) : filteredClients.length === 0 ? (
           <EmptyState
             title="No matching clients"
-            description="Try searching a different name, client ID, or auth UID."
+            description="Try searching a different name, email, client ID, or auth UID."
           />
         ) : (
           <div className="grid gap-5 md:grid-cols-2">
             {filteredClients.map((client) => {
               const isDeleting = deletingClientId === client.id;
+              const isResetting = resettingClientId === client.id;
+              const isBusy = isDeleting || isResetting;
 
               return (
                 <div
                   key={client.id}
                   className={`rounded-3xl border border-sky-100 bg-white p-5 shadow-sm transition sm:p-6 ${
-                    isDeleting
+                    isBusy
                       ? "opacity-60"
                       : "hover:-translate-y-1 hover:border-blue-200 hover:shadow-md"
                   }`}
@@ -272,6 +378,10 @@ export default function Clients() {
 
                       <p className="mt-1 break-words text-sm text-slate-500">
                         Client ID: {client.client_id || "Not set"}
+                      </p>
+
+                      <p className="mt-1 break-words text-sm text-slate-500">
+                        Email: {client.email || "No email saved"}
                       </p>
                     </div>
 
@@ -308,7 +418,7 @@ export default function Clients() {
                     <Link
                       to={`/clients/${client.id}`}
                       className={`rounded-xl bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-blue-700 sm:py-2 ${
-                        isDeleting ? "pointer-events-none opacity-50" : ""
+                        isBusy ? "pointer-events-none opacity-50" : ""
                       }`}
                     >
                       Open Details
@@ -317,7 +427,7 @@ export default function Clients() {
                     <Link
                       to="/create-program"
                       className={`rounded-xl border border-sky-100 bg-sky-50 px-4 py-3 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-50 sm:py-2 ${
-                        isDeleting ? "pointer-events-none opacity-50" : ""
+                        isBusy ? "pointer-events-none opacity-50" : ""
                       }`}
                     >
                       Add Program
@@ -326,7 +436,7 @@ export default function Clients() {
                     <Link
                       to="/messages"
                       className={`rounded-xl border border-sky-100 bg-white px-4 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-sky-50 sm:py-2 ${
-                        isDeleting ? "pointer-events-none opacity-50" : ""
+                        isBusy ? "pointer-events-none opacity-50" : ""
                       }`}
                     >
                       Message
@@ -334,7 +444,16 @@ export default function Clients() {
 
                     <button
                       type="button"
-                      disabled={isDeleting}
+                      disabled={isBusy || !client.email}
+                      onClick={() => generateClientResetLink(client)}
+                      className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50 sm:py-2"
+                    >
+                      {isResetting ? "Generating..." : "Reset Password"}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isBusy}
                       onClick={() => deleteClient(client.id, client.full_name)}
                       className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-center text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 sm:py-2"
                     >
