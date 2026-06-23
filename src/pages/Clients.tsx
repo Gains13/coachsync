@@ -6,7 +6,6 @@ type ClientProfile = {
   id: string;
   full_name: string;
   client_id: string;
-  email: string | null;
   created_at: string;
   setup_complete: boolean | null;
 };
@@ -27,10 +26,11 @@ export default function Clients() {
   async function loadClients() {
     setIsLoading(true);
     setStatusMessage("");
+    setLastResetLink("");
 
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, full_name, client_id, email, created_at, setup_complete")
+      .select("id, full_name, client_id, created_at, setup_complete")
       .eq("role", "client")
       .order("created_at", { ascending: false });
 
@@ -46,13 +46,6 @@ export default function Clients() {
   }
 
   async function generateClientResetLink(client: ClientProfile) {
-    if (!client.email) {
-      setStatusMessage(
-        `${client.full_name} does not have an email saved, so a reset link cannot be generated.`
-      );
-      return;
-    }
-
     setResettingClientId(client.id);
     setLastResetLink("");
     setStatusMessage(`Generating reset link for ${client.full_name}...`);
@@ -73,7 +66,7 @@ export default function Clients() {
         "admin-generate-client-reset-link",
         {
           body: {
-            clientEmail: client.email,
+            clientUserId: client.id,
           },
           headers: {
             Authorization: `Bearer ${session.access_token}`,
@@ -207,7 +200,6 @@ export default function Clients() {
       return (
         client.full_name?.toLowerCase().includes(search) ||
         client.client_id?.toLowerCase().includes(search) ||
-        client.email?.toLowerCase().includes(search) ||
         client.id?.toLowerCase().includes(search)
       );
     });
@@ -294,7 +286,7 @@ export default function Clients() {
               </h2>
 
               <p className="mt-1 text-sm leading-6 text-slate-500">
-                Search by name, email, client ID, or auth UID.
+                Search by name, client ID, or auth UID.
               </p>
             </div>
 
@@ -348,7 +340,7 @@ export default function Clients() {
         ) : filteredClients.length === 0 ? (
           <EmptyState
             title="No matching clients"
-            description="Try searching a different name, email, client ID, or auth UID."
+            description="Try searching a different name, client ID, or auth UID."
           />
         ) : (
           <div className="grid gap-5 md:grid-cols-2">
@@ -378,10 +370,6 @@ export default function Clients() {
 
                       <p className="mt-1 break-words text-sm text-slate-500">
                         Client ID: {client.client_id || "Not set"}
-                      </p>
-
-                      <p className="mt-1 break-words text-sm text-slate-500">
-                        Email: {client.email || "No email saved"}
                       </p>
                     </div>
 
@@ -444,7 +432,7 @@ export default function Clients() {
 
                     <button
                       type="button"
-                      disabled={isBusy || !client.email}
+                      disabled={isBusy}
                       onClick={() => generateClientResetLink(client)}
                       className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50 sm:py-2"
                     >
