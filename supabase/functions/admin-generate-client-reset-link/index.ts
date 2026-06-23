@@ -29,6 +29,9 @@ serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const appUrl = Deno.env.get("APP_URL");
+    const normalizedAppUrl = appUrl?.startsWith("http")
+  ? appUrl.replace(/\/$/, "")
+  : `https://${appUrl?.replace(/\/$/, "")}`;
 
     if (!supabaseUrl || !serviceRoleKey || !appUrl) {
       return new Response(
@@ -154,7 +157,7 @@ serve(async (req: Request) => {
       type: "recovery",
       email: clientAuthUser.email,
       options: {
-        redirectTo: `${appUrl}/reset-password`,
+        redirectTo: `${normalizedAppUrl}/reset-password`,
       },
     });
 
