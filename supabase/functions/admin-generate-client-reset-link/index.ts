@@ -29,9 +29,6 @@ serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const appUrl = Deno.env.get("APP_URL");
-    const normalizedAppUrl = appUrl?.startsWith("http")
-  ? appUrl.replace(/\/$/, "")
-  : `https://${appUrl?.replace(/\/$/, "")}`;
 
     if (!supabaseUrl || !serviceRoleKey || !appUrl) {
       return new Response(
@@ -49,18 +46,27 @@ serve(async (req: Request) => {
       );
     }
 
+    const normalizedAppUrl = appUrl.startsWith("http")
+      ? appUrl.replace(/\/$/, "")
+      : `https://${appUrl.replace(/\/$/, "")}`;
+
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
     const authHeader = req.headers.get("Authorization");
 
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing authorization header" }), {
-        status: 401,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      });
+      return new Response(
+        JSON.stringify({
+          error: "Missing authorization header",
+        }),
+        {
+          status: 401,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     const token = authHeader.replace("Bearer ", "");
@@ -71,13 +77,18 @@ serve(async (req: Request) => {
     } = await supabaseAdmin.auth.getUser(token);
 
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      });
+      return new Response(
+        JSON.stringify({
+          error: "Unauthorized",
+        }),
+        {
+          status: 401,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     const { data: trainerProfile, error: trainerProfileError } =
@@ -106,13 +117,18 @@ serve(async (req: Request) => {
     const clientUserId = body.clientUserId;
 
     if (!clientUserId) {
-      return new Response(JSON.stringify({ error: "Missing client user ID" }), {
-        status: 400,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      });
+      return new Response(
+        JSON.stringify({
+          error: "Missing client user ID",
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     const { data: clientProfile, error: clientProfileError } =
@@ -124,24 +140,9 @@ serve(async (req: Request) => {
         .single();
 
     if (clientProfileError || !clientProfile) {
-      return new Response(JSON.stringify({ error: "Client profile not found" }), {
-        status: 404,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      });
-    }
-
-    const {
-      data: { user: clientAuthUser },
-      error: clientAuthError,
-    } = await supabaseAdmin.auth.admin.getUserById(clientUserId);
-
-    if (clientAuthError || !clientAuthUser?.email) {
       return new Response(
         JSON.stringify({
-          error: "Could not find client auth email",
+          error: "Client profile not found",
         }),
         {
           status: 404,
@@ -153,30 +154,43 @@ serve(async (req: Request) => {
       );
     }
 
-    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
-      type: "recovery",
-      email: clientAuthUser.email,
-      options: {
-        redirectTo: `${normalizedAppUrl}/reset-password`,
-      },
-    });
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
-    if (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 400,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      });
+    const { data: resetRequest, error: resetRequestError } =
+      await supabaseAdmin
+        .from("password_reset_requests")
+        .insert({
+          client_user_id: clientUserId,
+          trainer_user_id: user.id,
+          expires_at: expiresAt,
+        })
+        .select("id, expires_at")
+        .single();
+
+    if (resetRequestError || !resetRequest) {
+      return new Response(
+        JSON.stringify({
+          error:
+            resetRequestError?.message || "Could not create reset request",
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
+
+    const resetLink = `${normalizedAppUrl}/reset-password?resetId=${resetRequest.id}`;
 
     return new Response(
       JSON.stringify({
         success: true,
         clientName: clientProfile.full_name,
-        clientEmail: clientAuthUser.email,
-        resetLink: data.properties?.action_link,
+        resetLink,
+        expiresAt: resetRequest.expires_at,
       }),
       {
         status: 200,

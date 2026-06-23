@@ -1,9 +1,14 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const resetId = useMemo(() => {
+    return searchParams.get("resetId") || "";
+  }, [searchParams]);
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -12,6 +17,11 @@ export default function ResetPassword() {
 
   async function handleUpdatePassword() {
     setMessage("");
+
+    if (!resetId) {
+      setMessage("This reset link is invalid. Please ask your trainer for a new link.");
+      return;
+    }
 
     if (password.length < 8) {
       setMessage("Password must be at least 8 characters.");
@@ -25,9 +35,15 @@ export default function ResetPassword() {
 
     setSaving(true);
 
-    const { error } = await supabase.auth.updateUser({
-      password,
-    });
+    const { data, error } = await supabase.functions.invoke(
+      "complete-client-password-reset",
+      {
+        body: {
+          resetId,
+          newPassword: password,
+        },
+      }
+    );
 
     if (error) {
       setMessage(error.message);
@@ -35,10 +51,19 @@ export default function ResetPassword() {
       return;
     }
 
+    if (data?.error) {
+      setMessage(data.error);
+      setSaving(false);
+      return;
+    }
+
     setMessage("Password updated successfully. Redirecting to login...");
 
+    setPassword("");
+    setConfirmPassword("");
+
     setTimeout(() => {
-      navigate("/login");
+      navigate("/");
     }, 1500);
 
     setSaving(false);
@@ -55,6 +80,13 @@ export default function ResetPassword() {
           Enter a new password for your CoachSync account.
         </p>
 
+        {!resetId && (
+          <div className="mt-4 rounded-xl border border-red-100 bg-red-50 p-3 text-sm font-semibold text-red-700">
+            This reset link is missing its reset ID. Please ask your trainer for
+            a new link.
+          </div>
+        )}
+
         {message && (
           <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
             {message}
@@ -66,10 +98,11 @@ export default function ResetPassword() {
             <label className="mb-1 block text-sm font-medium text-slate-700">
               New Password
             </label>
+
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(event) => setPassword(event.target.value)}
               className="w-full rounded-xl border border-slate-300 px-4 py-2 text-sm outline-none focus:border-blue-500"
               placeholder="Enter new password"
             />
@@ -79,19 +112,21 @@ export default function ResetPassword() {
             <label className="mb-1 block text-sm font-medium text-slate-700">
               Confirm Password
             </label>
+
             <input
               type="password"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(event) => setConfirmPassword(event.target.value)}
               className="w-full rounded-xl border border-slate-300 px-4 py-2 text-sm outline-none focus:border-blue-500"
               placeholder="Confirm new password"
             />
           </div>
 
           <button
+            type="button"
             onClick={handleUpdatePassword}
-            disabled={saving}
-            className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+            disabled={saving || !resetId}
+            className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? "Updating..." : "Update Password"}
           </button>
