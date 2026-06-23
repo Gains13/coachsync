@@ -11,6 +11,38 @@ export default function Login() {
   const [statusMessage, setStatusMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  async function getFunctionErrorMessage(
+    data: any,
+    error: any
+  ): Promise<string> {
+    if (data?.error) {
+      return data.error;
+    }
+
+    if (error && typeof error === "object" && "context" in error) {
+      try {
+        const response = error.context as Response;
+        const errorBody = await response.json();
+
+        if (errorBody?.error) {
+          return errorBody.error;
+        }
+      } catch {
+        // Fallback below
+      }
+    }
+
+    if (error?.message) {
+      if (error.message.includes("non-2xx")) {
+        return "Could not log in. Please check your email and password, or wait if your account is temporarily locked.";
+      }
+
+      return error.message;
+    }
+
+    return "Could not log in. Please check your email and password.";
+  }
+
   async function handleLogin(event: FormEvent) {
     event.preventDefault();
 
@@ -33,10 +65,9 @@ export default function Login() {
       if (error || data?.error) {
         console.error("Secure login error:", error || data?.error);
 
-        setStatusMessage(
-          data?.error || error?.message || "Could not log in."
-        );
+        const friendlyMessage = await getFunctionErrorMessage(data, error);
 
+        setStatusMessage(friendlyMessage);
         setIsLoading(false);
         return;
       }
