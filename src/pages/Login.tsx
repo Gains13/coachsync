@@ -67,142 +67,169 @@ export default function Login() {
         return;
       }
 
-      const { data: profileData, error: profileError } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("role")
+        .select("id, full_name, role, client_id")
         .eq("id", userId)
-        .single();
+        .maybeSingle();
 
-      if (profileError || !profileData) {
-        console.error("Profile error:", profileError);
-        setStatusMessage("Logged in, but could not load your profile.");
+      if (profileError || !profile) {
+        console.error(profileError);
+        setStatusMessage("Login worked, but no profile was found for this user.");
         setIsLoading(false);
         return;
       }
 
-      if (profileData.role === "trainer") {
+      localStorage.setItem("coachsync-user-role", profile.role);
+      localStorage.setItem("coachsync-display-name", profile.full_name || "");
+      localStorage.setItem("coachsync-client-id", profile.client_id || "");
+
+      if (profile.role === "trainer") {
         navigate("/trainer");
-      } else {
-        navigate("/client-dashboard");
+        return;
       }
+
+      if (profile.role === "client") {
+        navigate("/client");
+        return;
+      }
+
+      setStatusMessage("Profile role is not recognized.");
+      setIsLoading(false);
     } catch (err) {
       console.error("Unexpected login error:", err);
       setStatusMessage("Something went wrong while logging in.");
-    } finally {
       setIsLoading(false);
     }
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-900">
-      <section className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-4 py-8">
-        <div className="grid w-full overflow-hidden rounded-3xl bg-white shadow-xl md:grid-cols-2">
-          <div className="hidden bg-gradient-to-br from-blue-700 to-sky-500 p-10 text-white md:flex md:flex-col md:justify-between">
-            <div>
-              <h1 className="text-4xl font-bold tracking-tight">
-                CoachSync
-              </h1>
-
-              <p className="mt-4 max-w-md text-lg leading-8 text-blue-50">
-                A simple training dashboard for coaches and clients to manage
-                workouts, progress, messages, and programs.
-              </p>
-            </div>
-
-            <div className="rounded-2xl bg-white/10 p-5 ring-1 ring-white/20 backdrop-blur">
-              <p className="text-sm font-semibold uppercase tracking-wide text-blue-100">
-                Trainer + Client Portal
-              </p>
-
-              <p className="mt-2 text-sm leading-6 text-blue-50">
-                Log in to continue to your dashboard.
-              </p>
-            </div>
+    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
+      <section className="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-6 py-10 lg:grid-cols-2">
+        <div>
+          <div className="mb-6 inline-flex rounded-full border border-sky-100 bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm">
+            CoachSync Training App
           </div>
 
-          <div className="p-6 sm:p-8 md:p-10">
-            <div className="mb-8">
-              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-600">
-                CoachSync
-              </p>
+          <h1 className="text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">
+            Training plans, client progress, and workout check-ins in one place.
+          </h1>
 
-              <h2 className="mt-3 text-3xl font-bold text-slate-900">
-                Login
-              </h2>
+          <p className="mt-5 max-w-xl text-lg text-slate-500">
+            Log in as a trainer to manage clients and programs, or as a client
+            to view your plan and submit completed workouts.
+          </p>
 
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                Enter your email and password to access your account.
-              </p>
-            </div>
+          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+            <FeatureCard title="Plans" icon="📋" />
+            <FeatureCard title="Progress" icon="📈" />
+            <FeatureCard title="Check-ins" icon="✅" />
+          </div>
+        </div>
 
-            <form onSubmit={handleLogin} className="space-y-5">
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Email
-                </label>
+        <div className="rounded-[2rem] border border-sky-100 bg-white p-6 shadow-sm md:p-8">
+          <div className="mb-6">
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-600">
+              Welcome Back
+            </p>
 
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                />
-              </div>
+            <h2 className="mt-2 text-3xl font-bold text-slate-900">
+              Sign in
+            </h2>
 
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Password
-                </label>
+            <p className="mt-2 text-slate-500">
+              Use the email and password connected to your CoachSync account.
+            </p>
+          </div>
 
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="Enter your password"
-                  autoComplete="current-password"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                />
-              </div>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <Input
+              label="Email"
+              value={email}
+              onChange={setEmail}
+              placeholder="you@example.com"
+              type="email"
+            />
 
-              <div className="flex justify-end">
-                <Link
-                  to="/forgot-password"
-                  className="text-sm font-semibold text-blue-600 hover:text-blue-700"
-                >
-                  Forgot password?
-                </Link>
-              </div>
+            <Input
+              label="Password"
+              value={password}
+              onChange={setPassword}
+              placeholder="Enter password"
+              type="password"
+            />
 
-              {statusMessage && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium leading-6 text-amber-800">
-                  {statusMessage}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            <div className="-mt-2 flex justify-end">
+              <Link
+                to="/forgot-password"
+                className="text-sm font-semibold text-blue-700 transition hover:text-blue-800"
               >
-                {isLoading ? "Logging in..." : "Log In"}
-              </button>
-            </form>
-
-            <div className="mt-8 rounded-2xl border border-slate-100 bg-slate-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Account Security
-              </p>
-
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                After too many incorrect password attempts, your account may be
-                temporarily locked or suspended for protection.
-              </p>
+                Forgot password?
+              </Link>
             </div>
-          </div>
+
+            {statusMessage && (
+              <p className="rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-medium text-slate-700">
+                {statusMessage}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full rounded-2xl bg-blue-600 px-5 py-4 font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isLoading ? "Signing in..." : "Sign In"}
+            </button>
+          </form>
+
+          <p className="mt-5 text-center text-sm text-slate-500">
+            Trainer and client access are controlled by the user profile role.
+          </p>
         </div>
       </section>
     </main>
+  );
+}
+
+function Input({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  type?: string;
+}) {
+  return (
+    <div>
+      <label className="mb-2 block text-sm font-semibold text-slate-700">
+        {label}
+      </label>
+
+      <input
+        value={value}
+        type={type}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+      />
+    </div>
+  );
+}
+
+function FeatureCard({ title, icon }: { title: string; icon: string }) {
+  return (
+    <div className="rounded-3xl border border-sky-100 bg-white p-5 shadow-sm">
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-xl ring-1 ring-sky-100">
+        {icon}
+      </div>
+
+      <p className="font-bold text-slate-900">{title}</p>
+    </div>
   );
 }
