@@ -16,7 +16,12 @@ export default function Clients() {
   const [searchText, setSearchText] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
-  const [resettingClientId, setResettingClientId] = useState<string | null>(null);
+  const [resettingClientId, setResettingClientId] = useState<string | null>(
+    null
+  );
+  const [reactivatingClientId, setReactivatingClientId] = useState<
+    string | null
+  >(null);
   const [lastResetLink, setLastResetLink] = useState("");
 
   useEffect(() => {
@@ -107,6 +112,69 @@ export default function Clients() {
         "Something went wrong while generating the reset link. Check the browser console and Supabase function logs."
       );
       setResettingClientId(null);
+    }
+  }
+
+  async function reactivateClientLogin(client: ClientProfile) {
+    const confirmed = window.confirm(
+      `Reactivate login for ${client.full_name}? This will clear failed login attempts, remove any temporary lock, and remove suspension.`
+    );
+
+    if (!confirmed) return;
+
+    setReactivatingClientId(client.id);
+    setStatusMessage(`Reactivating login for ${client.full_name}...`);
+
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        setStatusMessage(
+          "You must be logged in as a trainer to reactivate client logins."
+        );
+        setReactivatingClientId(null);
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke(
+        "admin-reactivate-client-login",
+        {
+          body: {
+            clientUserId: client.id,
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (error) {
+        console.error(error);
+        setStatusMessage("Could not reactivate login: " + error.message);
+        setReactivatingClientId(null);
+        return;
+      }
+
+      if (data?.error) {
+        setStatusMessage("Could not reactivate login: " + data.error);
+        setReactivatingClientId(null);
+        return;
+      }
+
+      setStatusMessage(
+        data?.message || `Login for ${client.full_name} has been reactivated.`
+      );
+
+      setReactivatingClientId(null);
+    } catch (error) {
+      console.error(error);
+      setStatusMessage(
+        "Something went wrong while reactivating the client login. Check the browser console and Supabase function logs."
+      );
+      setReactivatingClientId(null);
     }
   }
 
@@ -230,8 +298,8 @@ export default function Clients() {
 
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
                   View client profiles, open client details, manage starting
-                  info, goals, assigned programs, submitted workouts, and reset
-                  client passwords.
+                  info, goals, assigned programs, submitted workouts, reset
+                  passwords, and reactivate locked or suspended logins.
                 </p>
               </div>
 
@@ -347,7 +415,8 @@ export default function Clients() {
             {filteredClients.map((client) => {
               const isDeleting = deletingClientId === client.id;
               const isResetting = resettingClientId === client.id;
-              const isBusy = isDeleting || isResetting;
+              const isReactivating = reactivatingClientId === client.id;
+              const isBusy = isDeleting || isResetting || isReactivating;
 
               return (
                 <div
@@ -437,6 +506,15 @@ export default function Clients() {
                       className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50 sm:py-2"
                     >
                       {isResetting ? "Generating..." : "Reset Password"}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => reactivateClientLogin(client)}
+                      className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-center text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50 sm:py-2"
+                    >
+                      {isReactivating ? "Reactivating..." : "Reactivate Login"}
                     </button>
 
                     <button
