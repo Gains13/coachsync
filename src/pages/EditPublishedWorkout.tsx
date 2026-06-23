@@ -71,6 +71,19 @@ type ExerciseRow = {
   exercise_order: number;
 };
 
+type LibraryExercise = {
+  id: string;
+  section: string | null;
+  exercise_name: string;
+  sets: string | null;
+  reps: string | null;
+  weight: string | null;
+  rest: string | null;
+  video_link: string | null;
+  trainer_notes: string | null;
+};
+
+
 type ExerciseForm = {
   formId: string;
   existingId: string | null;
@@ -209,6 +222,8 @@ export default function EditPublishedWorkout() {
   const [workoutOrder, setWorkoutOrder] = useState("1");
   const [exercises, setExercises] = useState<ExerciseForm[]>([]);
   const [originalExerciseIds, setOriginalExerciseIds] = useState<string[]>([]);
+  const [exerciseLibrary, setExerciseLibrary] = useState<LibraryExercise[]>([]);
+  const [isLibraryLoading, setIsLibraryLoading] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -231,6 +246,7 @@ export default function EditPublishedWorkout() {
 
   useEffect(() => {
     loadWorkout();
+    loadExerciseLibrary();
 
     return () => {
       if (saveTimerRef.current) {
@@ -375,6 +391,75 @@ const loadedExercises = (exerciseData || []) as unknown as ExerciseRow[];
 
     setExercises(loadedExercisesToForm(loadedExercises));
     setIsLoading(false);
+  }
+
+  async function loadExerciseLibrary() {
+    setIsLibraryLoading(true);
+
+    const { data, error } = await supabase
+      .from("client_plan_exercises")
+      .select(
+        "id, section, exercise_name, sets, reps, weight, rest, video_link, trainer_notes"
+      )
+      .not("exercise_name", "is", null)
+      .order("exercise_name", { ascending: true })
+      .limit(700);
+
+    if (error) {
+      console.error(error);
+      setIsLibraryLoading(false);
+      return;
+    }
+
+    const seen = new Set<string>();
+    const cleanedLibrary: LibraryExercise[] = [];
+
+    for (const item of (data || []) as LibraryExercise[]) {
+      const name = (item.exercise_name || "").trim();
+
+      if (!name) continue;
+
+      const key = `${normalizeSection(item.section)}-${name.toLowerCase()}`;
+
+      if (seen.has(key)) continue;
+
+      seen.add(key);
+      cleanedLibrary.push({
+        ...item,
+        section: normalizeSection(item.section),
+      });
+    }
+
+    setExerciseLibrary(cleanedLibrary);
+    setIsLibraryLoading(false);
+  }
+
+  function applyLibraryExercise(formId: string, libraryExerciseId: string) {
+    if (!libraryExerciseId) return;
+
+    const selectedExercise = exerciseLibrary.find(
+      (libraryExercise) => libraryExercise.id === libraryExerciseId
+    );
+
+    if (!selectedExercise) return;
+
+    setExercises((currentExercises) =>
+      currentExercises.map((exercise) => {
+        if (exercise.formId !== formId) return exercise;
+
+        return {
+          ...exercise,
+          section: normalizeSection(selectedExercise.section),
+          exerciseName: selectedExercise.exercise_name || "",
+          sets: selectedExercise.sets || "",
+          reps: selectedExercise.reps || "",
+          weight: selectedExercise.weight || "",
+          rest: selectedExercise.rest || "",
+          videoLink: selectedExercise.video_link || "",
+          trainerNotes: selectedExercise.trainer_notes || "",
+        };
+      })
+    );
   }
 
   function loadedExercisesToForm(loadedExercises: ExerciseRow[]): ExerciseForm[] {
@@ -995,6 +1080,9 @@ const loadedExercises = (exerciseData || []) as unknown as ExerciseRow[];
                             moveExercise={moveExercise}
                             duplicateExercise={duplicateExercise}
                             removeExercise={removeExercise}
+                            exerciseLibrary={exerciseLibrary}
+                            isLibraryLoading={isLibraryLoading}
+                            applyLibraryExercise={applyLibraryExercise}
                           />
                         ))}
                       </div>
@@ -1121,6 +1209,9 @@ function SortableExerciseEditor({
   moveExercise,
   duplicateExercise,
   removeExercise,
+  exerciseLibrary,
+  isLibraryLoading,
+  applyLibraryExercise,
 }: {
   exercise: ExerciseForm;
   displayIndex: number;
@@ -1134,6 +1225,9 @@ function SortableExerciseEditor({
   moveExercise: (formId: string, direction: "up" | "down") => void;
   duplicateExercise: (formId: string) => void;
   removeExercise: (formId: string) => void;
+  exerciseLibrary: LibraryExercise[];
+  isLibraryLoading: boolean;
+  applyLibraryExercise: (formId: string, libraryExerciseId: string) => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(
     exercise.exerciseName.trim() === ""
@@ -1245,6 +1339,82 @@ function SortableExerciseEditor({
 
       {isExpanded && (
         <div className="border-t border-sky-100 bg-sky-50/60 p-4">
+          <div className="mb-4 rounded-2xl border border-blue-100 bg-white p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div className="flex-1">
+                <label className="mb-2 block text-sm font-black text-slate-700">
+                  Workout Library
+                </label>
+
+                <select
+                  value=""
+                  onChange={(event) =>
+                    applyLibraryExercise(exercise.formId, event.target.value)
+                  }
+                  disabled={isLibraryLoading || exerciseLibrary.length === 0}
+                  className="w-full rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <option value="">
+                    {isLibraryLoading
+                      ? "Loading exercise library..."
+                      : exerciseLibrary.length === 0
+                      ? "No saved exercises found yet"
+                      : "Choose from workout library..."}
+                  </option>
+
+                  {WORKOUT_SECTIONS.map((section) => {
+                    const sectionLibraryExercises = exerciseLibrary.filter(
+                      (libraryExercise) =>
+                        normalizeSection(libraryExercise.section) === section
+                    );
+
+                    if (sectionLibraryExercises.length === 0) return null;
+
+                    return (
+                      <optgroup key={section} label={section}>
+                        {sectionLibraryExercises.map((libraryExercise) => (
+                          <option
+                            key={libraryExercise.id}
+                            value={libraryExercise.id}
+                          >
+                            {libraryExercise.exercise_name}
+                            {libraryExercise.sets
+                              ? ` • ${libraryExercise.sets} sets`
+                              : ""}
+                            {libraryExercise.reps
+                              ? ` • ${libraryExercise.reps}`
+                              : ""}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
+                </select>
+
+                <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">
+                  Select a saved movement to auto-fill the name, section, sets,
+                  reps/time, weight, rest, video link, and trainer notes.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  updateExercise(exercise.formId, "exerciseName", "");
+                  updateExercise(exercise.formId, "sets", "");
+                  updateExercise(exercise.formId, "reps", "");
+                  updateExercise(exercise.formId, "weight", "");
+                  updateExercise(exercise.formId, "rest", "");
+                  updateExercise(exercise.formId, "videoLink", "");
+                  updateExercise(exercise.formId, "trainerNotes", "");
+                }}
+                className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-xs font-black text-slate-600 transition hover:bg-sky-50"
+              >
+                Clear Fields
+              </button>
+            </div>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-3">
             <div>
               <label className="mb-2 block text-sm font-black text-slate-700">
