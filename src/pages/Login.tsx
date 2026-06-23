@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 
@@ -11,7 +11,7 @@ export default function Login() {
   const [statusMessage, setStatusMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  async function handleLogin(event: React.FormEvent) {
+  async function handleLogin(event: FormEvent) {
     event.preventDefault();
 
     if (!email.trim() || !password) {
@@ -81,7 +81,7 @@ export default function Login() {
       }
 
       if (profileData.role === "trainer") {
-        navigate("/trainer-dashboard");
+        navigate("/trainer");
       } else {
         navigate("/client-dashboard");
       }
@@ -94,83 +94,115 @@ export default function Login() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8">
-          <div className="text-center mb-8">
-            <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-bold text-2xl">
-              C
+    <main className="min-h-screen bg-slate-100 text-slate-900">
+      <section className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-4 py-8">
+        <div className="grid w-full overflow-hidden rounded-3xl bg-white shadow-xl md:grid-cols-2">
+          <div className="hidden bg-gradient-to-br from-blue-700 to-sky-500 p-10 text-white md:flex md:flex-col md:justify-between">
+            <div>
+              <h1 className="text-4xl font-bold tracking-tight">
+                CoachSync
+              </h1>
+
+              <p className="mt-4 max-w-md text-lg leading-8 text-blue-50">
+                A simple training dashboard for coaches and clients to manage
+                workouts, progress, messages, and programs.
+              </p>
             </div>
 
-            <h1 className="text-3xl font-bold text-slate-900">
-              Welcome back
-            </h1>
+            <div className="rounded-2xl bg-white/10 p-5 ring-1 ring-white/20 backdrop-blur">
+              <p className="text-sm font-semibold uppercase tracking-wide text-blue-100">
+                Trainer + Client Portal
+              </p>
 
-            <p className="text-slate-500 mt-2">
-              Log in to your CoachSync account.
-            </p>
+              <p className="mt-2 text-sm leading-6 text-blue-50">
+                Log in to continue to your dashboard.
+              </p>
+            </div>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Email
-              </label>
+          <div className="p-6 sm:p-8 md:p-10">
+            <div className="mb-8">
+              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-600">
+                CoachSync
+              </p>
 
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
-                autoComplete="email"
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-              />
+              <h2 className="mt-3 text-3xl font-bold text-slate-900">
+                Login
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Enter your email and password to access your account.
+              </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Password
-              </label>
+            <form onSubmit={handleLogin} className="space-y-5">
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  Email
+                </label>
 
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Enter your password"
-                autoComplete="current-password"
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-              />
-            </div>
-
-            <div className="flex items-center justify-end">
-              <Link
-                to="/forgot-password"
-                className="text-sm font-semibold text-blue-600 hover:text-blue-700"
-              >
-                Forgot password?
-              </Link>
-            </div>
-
-            {statusMessage && (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                {statusMessage}
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                />
               </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full rounded-2xl bg-blue-600 px-4 py-3 font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isLoading ? "Logging in..." : "Log in"}
-            </button>
-          </form>
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  Password
+                </label>
 
-          <div className="mt-6 text-center text-xs text-slate-400">
-            Protected by CoachSync secure login.
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <Link
+                  to="/forgot-password"
+                  className="text-sm font-semibold text-blue-600 hover:text-blue-700"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+
+              {statusMessage && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium leading-6 text-amber-800">
+                  {statusMessage}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isLoading ? "Logging in..." : "Log In"}
+              </button>
+            </form>
+
+            <div className="mt-8 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Account Security
+              </p>
+
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                After too many incorrect password attempts, your account may be
+                temporarily locked or suspended for protection.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
     </main>
   );
 }
