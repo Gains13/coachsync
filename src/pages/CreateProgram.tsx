@@ -1,6 +1,5 @@
-// FIX VERSION: submitted_at exercise history lookup - generated for Adriel
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   closestCenter,
   DndContext,
@@ -47,6 +46,17 @@ type ClientProfile = {
   client_id: string;
 };
 
+type TrainingPlan = {
+  id: string;
+  client_user_id: string;
+  name: string;
+  plan_type: "fixed" | "ongoing";
+  planned_weeks: number | null;
+  status: "draft" | "active" | "completed" | "archived";
+  start_date: string | null;
+  created_at: string;
+};
+
 type ExerciseLibraryItem = {
   id: string;
   exercise_name: string;
@@ -90,6 +100,7 @@ type ProgramDraftRow = {
   id: string;
   trainer_user_id: string;
   target_client_user_id: string;
+  plan_id: string | null;
   week_number: number;
   week_status: string | null;
   draft_data: ProgramDraftData | null;
@@ -477,6 +488,7 @@ function parseSmartProgramText(rawText: string): WorkoutForm {
 }
 
 export default function CreateProgram() {
+  const [searchParams] = useSearchParams();
   const saveDraftTimerRef = useRef<number | null>(null);
 
   const [currentTrainerUserId, setCurrentTrainerUserId] = useState("");
@@ -487,7 +499,12 @@ export default function CreateProgram() {
   const [isLoadingExerciseLibrary, setIsLoadingExerciseLibrary] =
     useState(false);
 
-  const [selectedClientId, setSelectedClientId] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState(
+    searchParams.get("client") || ""
+  );
+  const [trainingPlans, setTrainingPlans] = useState<TrainingPlan[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState("");
+  const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [copySourceClientId, setCopySourceClientId] = useState("");
 
   const [weekNumber, setWeekNumber] = useState("1");
@@ -557,10 +574,12 @@ export default function CreateProgram() {
 
   useEffect(() => {
     if (selectedClientId) {
-      loadNextWeekNumber(selectedClientId);
+      loadTrainingPlans(selectedClientId);
       loadClientExerciseHistory(selectedClientId);
       setCopySourceClientId(selectedClientId);
     } else {
+      setTrainingPlans([]);
+      setSelectedPlanId("");
       setWeekNumber("1");
       setCopySourceClientId("");
       setExistingWorkouts([]);
@@ -569,6 +588,16 @@ export default function CreateProgram() {
       setSelectedExerciseHistory(null);
     }
   }, [selectedClientId]);
+
+  useEffect(() => {
+    if (selectedClientId && selectedPlanId) {
+      loadNextWeekNumber(selectedClientId, selectedPlanId);
+      setDraftLoaded(false);
+      setDraftSavedAt("");
+    } else if (selectedClientId) {
+      setWeekNumber("1");
+    }
+  }, [selectedClientId, selectedPlanId]);
 
   useEffect(() => {
     if (copySourceClientId) {
@@ -580,19 +609,20 @@ export default function CreateProgram() {
   }, [copySourceClientId]);
 
   useEffect(() => {
-    if (!currentTrainerUserId || !selectedClientId || !weekNumber) {
+    if (!currentTrainerUserId || !selectedClientId || !selectedPlanId || !weekNumber) {
       setDraftLoaded(false);
       setDraftSavedAt("");
       return;
     }
 
     loadProgramDraft();
-  }, [currentTrainerUserId, selectedClientId, weekNumber]);
+  }, [currentTrainerUserId, selectedClientId, selectedPlanId, weekNumber]);
 
   useEffect(() => {
     if (
       !currentTrainerUserId ||
       !selectedClientId ||
+      !selectedPlanId ||
       !weekNumber ||
       !draftLoaded ||
       isSaving ||
@@ -617,6 +647,7 @@ export default function CreateProgram() {
   }, [
     currentTrainerUserId,
     selectedClientId,
+    selectedPlanId,
     weekNumber,
     weekStatus,
     workouts,
@@ -896,7 +927,48 @@ export default function CreateProgram() {
     setIsLoadingHistoricalTemplates(false);
   }
 
-  async function loadNextWeekNumber(clientUserId: string) {
+  async function loadTrainingPlans(clientUserId: string) {
+    setIsLoadingPlans(true);
+
+    const { data, error } = await supabase
+      .from("training_plans")
+      .select("id, client_user_id, name, plan_type, planned_weeks, status, start_date, created_at")
+      .eq("client_user_id", clientUserId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error(error);
+      setTrainingPlans([]);
+      setSelectedPlanId("");
+      setStatusMessage("Could not load this client's training plans: " + error.message);
+      setIsLoadingPlans(false);
+      return;
+    }
+
+    const plans = (data || []) as TrainingPlan[];
+    setTrainingPlans(plans);
+
+    const requestedPlanId = searchParams.get("plan");
+    const requestedPlan = requestedPlanId
+      ? plans.find((plan) => plan.id === requestedPlanId)
+      : null;
+
+    const preferredPlan =
+      requestedPlan ||
+      plans.find((plan) => plan.status === "active") ||
+      plans.find((plan) => plan.status === "draft") ||
+      plans[0];
+
+    setSelectedPlanId((current) =>
+      current && plans.some((plan) => plan.id === current)
+        ? current
+        : preferredPlan?.id || ""
+    );
+
+    setIsLoadingPlans(false);
+  }
+
+  async function loadNextWeekNumber(clientUserId: string, planId: string) {
     setIsLoadingWeek(true);
     setStatusMessage("");
 
@@ -904,6 +976,7 @@ export default function CreateProgram() {
       .from("client_plan_weeks")
       .select("week_number")
       .eq("client_user_id", clientUserId)
+      .eq("plan_id", planId)
       .order("week_number", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -1011,6 +1084,8 @@ export default function CreateProgram() {
 
   function handleClientChange(value: string) {
     setSelectedClientId(value);
+    setSelectedPlanId("");
+    setTrainingPlans([]);
     setDraftLoaded(false);
     setDraftSavedAt("");
 
@@ -1461,7 +1536,7 @@ export default function CreateProgram() {
   }
 
   function hasMeaningfulDraftContent() {
-    if (!selectedClientId || !weekNumber) return false;
+    if (!selectedClientId || !selectedPlanId || !weekNumber) return false;
 
     return workouts.some((workout) => {
       const hasWorkoutText = workout.title.trim() !== "";
@@ -1482,7 +1557,7 @@ export default function CreateProgram() {
   }
 
   async function loadProgramDraft() {
-    if (!currentTrainerUserId || !selectedClientId || !weekNumber) return;
+    if (!currentTrainerUserId || !selectedClientId || !selectedPlanId || !weekNumber) return;
 
     setDraftLoaded(false);
 
@@ -1496,10 +1571,11 @@ export default function CreateProgram() {
     const { data, error } = await supabase
       .from("trainer_program_drafts")
       .select(
-        "id, trainer_user_id, target_client_user_id, week_number, week_status, draft_data, updated_at"
+        "id, trainer_user_id, target_client_user_id, plan_id, week_number, week_status, draft_data, updated_at"
       )
       .eq("trainer_user_id", currentTrainerUserId)
       .eq("target_client_user_id", selectedClientId)
+      .eq("plan_id", selectedPlanId)
       .eq("week_number", targetWeekNumber)
       .maybeSingle();
 
@@ -1553,7 +1629,7 @@ export default function CreateProgram() {
   }
 
   async function saveDraftToSupabase() {
-    if (!currentTrainerUserId || !selectedClientId || !weekNumber) return;
+    if (!currentTrainerUserId || !selectedClientId || !selectedPlanId || !weekNumber) return;
 
     const targetWeekNumber = Number(weekNumber);
 
@@ -1566,6 +1642,7 @@ export default function CreateProgram() {
     const draftPayload = {
       trainer_user_id: currentTrainerUserId,
       target_client_user_id: selectedClientId,
+      plan_id: selectedPlanId,
       week_number: targetWeekNumber,
       week_status: weekStatus,
       draft_data: {
@@ -1579,6 +1656,7 @@ export default function CreateProgram() {
       .select("id")
       .eq("trainer_user_id", currentTrainerUserId)
       .eq("target_client_user_id", selectedClientId)
+      .eq("plan_id", selectedPlanId)
       .eq("week_number", targetWeekNumber)
       .maybeSingle();
 
@@ -1627,7 +1705,7 @@ export default function CreateProgram() {
   }
 
   async function clearProgramDraft(weekToClear = weekNumber) {
-    if (!currentTrainerUserId || !selectedClientId || !weekToClear) return;
+    if (!currentTrainerUserId || !selectedClientId || !selectedPlanId || !weekToClear) return;
 
     const targetWeekNumber = Number(weekToClear);
 
@@ -1638,6 +1716,7 @@ export default function CreateProgram() {
       .delete()
       .eq("trainer_user_id", currentTrainerUserId)
       .eq("target_client_user_id", selectedClientId)
+      .eq("plan_id", selectedPlanId)
       .eq("week_number", targetWeekNumber);
 
     setDraftSavedAt("");
@@ -1662,6 +1741,11 @@ export default function CreateProgram() {
 
     if (!selectedClientId) {
       setStatusMessage("Please select a target client.");
+      return;
+    }
+
+    if (!selectedPlanId) {
+      setStatusMessage("Please select a training plan. Create one in Training Plans if needed.");
       return;
     }
 
@@ -1702,10 +1786,24 @@ export default function CreateProgram() {
 
     const targetWeekNumber = Number(weekNumber);
 
+    const targetPlan = trainingPlans.find((plan) => plan.id === selectedPlanId);
+    if (
+      targetPlan?.plan_type === "fixed" &&
+      targetPlan.planned_weeks &&
+      targetWeekNumber > targetPlan.planned_weeks
+    ) {
+      setStatusMessage(
+        `${targetPlan.name} is a ${targetPlan.planned_weeks}-week plan. Choose Week 1-${targetPlan.planned_weeks} or extend/start a new plan.`
+      );
+      setIsSaving(false);
+      return;
+    }
+
     const { data: existingWeek, error: existingWeekError } = await supabase
       .from("client_plan_weeks")
       .select("id")
       .eq("client_user_id", selectedClientId)
+      .eq("plan_id", selectedPlanId)
       .eq("week_number", targetWeekNumber)
       .maybeSingle();
 
@@ -1730,6 +1828,7 @@ export default function CreateProgram() {
         .from("client_plan_weeks")
         .insert({
           client_user_id: selectedClientId,
+          plan_id: selectedPlanId,
           week_number: targetWeekNumber,
           status: weekStatus,
         })
@@ -1843,6 +1942,7 @@ export default function CreateProgram() {
   }
 
   const selectedClient = clients.find((client) => client.id === selectedClientId);
+  const selectedPlan = trainingPlans.find((plan) => plan.id === selectedPlanId);
   const copySourceClient = clients.find(
     (client) => client.id === copySourceClientId
   );
@@ -1902,7 +2002,10 @@ export default function CreateProgram() {
             <SummaryCard title="Workouts" value={String(totalWorkoutCount)} />
             <SummaryCard title="Exercises" value={String(totalExerciseCount)} />
             <SummaryCard title="Sections Used" value={String(totalSectionCount)} />
-            <SummaryCard title="Builder Mode" value="Guided" />
+            <SummaryCard
+              title="Plan"
+              value={selectedPlan?.name || "Select plan"}
+            />
           </div>
         </div>
 
@@ -1917,11 +2020,11 @@ export default function CreateProgram() {
               </p>
 
               <h2 className="mt-1 text-2xl font-black text-slate-900">
-                Choose client and week
+                Choose client, plan, and week
               </h2>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div>
                 <label className="mb-2 block text-sm font-black text-slate-700">
                   Target Client
@@ -1939,6 +2042,38 @@ export default function CreateProgram() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-black text-slate-700">
+                  Training Plan
+                </label>
+
+                <select
+                  value={selectedPlanId}
+                  onChange={(event) => setSelectedPlanId(event.target.value)}
+                  disabled={!selectedClientId || isLoadingPlans}
+                  className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <option value="">
+                    {isLoadingPlans ? "Loading plans..." : "Select training plan"}
+                  </option>
+                  {trainingPlans.map((plan) => (
+                    <option key={plan.id} value={plan.id}>
+                      {plan.name} — {plan.status}
+                      {plan.planned_weeks ? ` — ${plan.planned_weeks} weeks` : ""}
+                    </option>
+                  ))}
+                </select>
+
+                {selectedClientId && (
+                  <Link
+                    to={`/training-plans?client=${selectedClientId}`}
+                    className="mt-2 inline-block text-xs font-black text-blue-700 hover:text-blue-900"
+                  >
+                    Manage / create plans →
+                  </Link>
+                )}
               </div>
 
               <Input
@@ -1977,8 +2112,9 @@ export default function CreateProgram() {
 
                   <p className="mt-1 text-sm font-semibold leading-6 text-slate-700">
                     This workout/week will be saved to {selectedClient.full_name} —{" "}
-                    {selectedClient.client_id}. If Week {weekNumber} already exists,
-                    the workout will be added into that week.
+                    {selectedClient.client_id}
+                    {selectedPlan ? ` inside ${selectedPlan.name}` : ""}. If Week {weekNumber}
+                    already exists in this plan, the workout will be added into that week.
                   </p>
 
                   <p className="mt-2 text-xs font-bold text-blue-700">

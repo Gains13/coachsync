@@ -412,6 +412,11 @@ export default function TrainerDashboard() {
       icon: "📋",
     },
     {
+      to: "/training-plans",
+      title: "Training Plans",
+      icon: "🗂️",
+    },
+    {
       to: "/import-program",
       title: "Import Program",
       icon: "📥",

@@ -10,6 +10,16 @@ type ClientProfile = {
   created_at: string;
 };
 
+type TrainingPlan = {
+  id: string;
+  name: string;
+  plan_type: "fixed" | "ongoing";
+  planned_weeks: number | null;
+  status: "draft" | "active" | "completed" | "archived";
+  start_date: string | null;
+  created_at: string;
+};
+
 type ClientAssessment = {
   starting_weight: string | null;
   body_fat: string | null;
@@ -53,6 +63,7 @@ type PlanWorkout = {
 
 type PlanWeek = {
   id: string;
+  plan_id: string | null;
   week_number: number;
   status: string;
   client_plan_workouts: PlanWorkout[];
@@ -84,6 +95,7 @@ export default function ClientDetails() {
   const [submittedWorkouts, setSubmittedWorkouts] = useState<
     SubmittedWorkout[]
   >([]);
+  const [trainingPlans, setTrainingPlans] = useState<TrainingPlan[]>([]);
   const [planWeeks, setPlanWeeks] = useState<PlanWeek[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
@@ -162,11 +174,22 @@ export default function ClientDetails() {
       console.error("Workout submissions load error:", workoutsError);
     }
 
+    const { data: trainingPlansData, error: trainingPlansError } = await supabase
+      .from("training_plans")
+      .select("id, name, plan_type, planned_weeks, status, start_date, created_at")
+      .eq("client_user_id", profileData.id)
+      .order("created_at", { ascending: false });
+
+    if (trainingPlansError) {
+      console.error("Training plans load error:", trainingPlansError);
+    }
+
     const { data: planData, error: planError } = await supabase
       .from("client_plan_weeks")
       .select(
         `
         id,
+        plan_id,
         week_number,
         status,
         client_plan_workouts (
@@ -197,6 +220,7 @@ export default function ClientDetails() {
     setAssessment(assessmentData || null);
     setGoals(goalsData || null);
     setSubmittedWorkouts(workoutsData || []);
+    setTrainingPlans((trainingPlansData || []) as TrainingPlan[]);
     setPlanWeeks((planData || []) as PlanWeek[]);
     setEditingWorkout(null);
     setEditingExercise(null);
@@ -377,6 +401,11 @@ export default function ClientDetails() {
     await loadClientDetails();
   }
 
+  function getPlanForWeek(planId: string | null) {
+    if (!planId) return null;
+    return trainingPlans.find((plan) => plan.id === planId) || null;
+  }
+
   if (isLoading) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 p-8 text-slate-900">
@@ -444,10 +473,17 @@ export default function ClientDetails() {
 
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Link
-                  to="/create-program"
+                  to={`/create-program?client=${profile.id}`}
                   className="rounded-xl bg-white px-4 py-2 text-center text-sm font-semibold text-blue-700 hover:bg-blue-50"
                 >
                   Add Program
+                </Link>
+
+                <Link
+                  to={`/training-plans?client=${profile.id}`}
+                  className="rounded-xl bg-white/15 px-4 py-2 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur hover:bg-white/25"
+                >
+                  Manage Plans
                 </Link>
 
                 <Link
@@ -473,7 +509,7 @@ export default function ClientDetails() {
               value={new Date(profile.created_at).toLocaleDateString()}
             />
 
-            <StatCard title="Status" value="Active" />
+            <StatCard title="Training Plans" value={`${trainingPlans.length}`} />
           </div>
         </div>
 
@@ -584,7 +620,7 @@ export default function ClientDetails() {
         </div>
 
         <div className="mt-6">
-          <SectionCard title="Assigned Program">
+          <SectionCard title="Assigned Program & Plan History">
             {planWeeks.length === 0 ? (
               <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5">
                 <h3 className="font-semibold text-slate-900">
@@ -604,6 +640,15 @@ export default function ClientDetails() {
                   >
                     <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                       <div>
+                        {(() => {
+                          const plan = getPlanForWeek(week.plan_id);
+                          return plan ? (
+                            <p className="mb-1 text-xs font-black uppercase tracking-[0.14em] text-blue-600">
+                              {plan.name} • {plan.status}
+                            </p>
+                          ) : null;
+                        })()}
+
                         <h3 className="text-xl font-bold text-slate-900">
                           Week {week.week_number}
                         </h3>

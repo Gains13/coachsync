@@ -9,6 +9,14 @@ type CompletedSubmission = {
   workout_title: string;
 };
 
+type TrainingPlan = {
+  id: string;
+  name: string;
+  plan_type: "fixed" | "ongoing";
+  planned_weeks: number | null;
+  status: string;
+};
+
 type PlanExercise = {
   id: string;
   section?: string | null;
@@ -30,6 +38,7 @@ type PlanWorkout = {
 
 type PlanWeek = {
   id: string;
+  plan_id: string | null;
   week_number: number;
   status: string;
   client_plan_workouts: PlanWorkout[];
@@ -40,6 +49,7 @@ export default function ClientPlan() {
     CompletedSubmission[]
   >([]);
 
+  const [activePlan, setActivePlan] = useState<TrainingPlan | null>(null);
   const [assignedWeeks, setAssignedWeeks] = useState<PlanWeek[]>([]);
   const [isLoadingCompleted, setIsLoadingCompleted] = useState(true);
   const [isLoadingProgram, setIsLoadingProgram] = useState(true);
@@ -97,33 +107,59 @@ export default function ClientPlan() {
     setCompletedSubmissions((completedData || []) as CompletedSubmission[]);
     setIsLoadingCompleted(false);
 
-    const { data: programData, error: programError } = await supabase
-      .from("client_plan_weeks")
-      .select(
-        `
-        id,
-        week_number,
-        status,
-        client_plan_workouts (
-          id,
-          title,
-          workout_order,
-          client_plan_exercises (
-            id,
-            section,
-            exercise_name,
-            sets,
-            reps,
-            weight,
-            rest,
-            video_link,
-            exercise_order
-          )
-        )
-      `
-      )
+    const { data: activePlanData, error: activePlanError } = await supabase
+      .from("training_plans")
+      .select("id, name, plan_type, planned_weeks, status")
       .eq("client_user_id", user.id)
-      .order("week_number", { ascending: true });
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (activePlanError) {
+      console.error(activePlanError);
+    }
+
+    const currentPlan = (activePlanData || null) as TrainingPlan | null;
+    setActivePlan(currentPlan);
+
+    let programData: unknown[] = [];
+    let programError: { message: string } | null = null;
+
+    if (currentPlan?.id) {
+      const programResult = await supabase
+        .from("client_plan_weeks")
+        .select(
+          `
+          id,
+          plan_id,
+          week_number,
+          status,
+          client_plan_workouts (
+            id,
+            title,
+            workout_order,
+            client_plan_exercises (
+              id,
+              section,
+              exercise_name,
+              sets,
+              reps,
+              weight,
+              rest,
+              video_link,
+              exercise_order
+            )
+          )
+        `
+        )
+        .eq("client_user_id", user.id)
+        .eq("plan_id", currentPlan.id)
+        .order("week_number", { ascending: true });
+
+      programData = programResult.data || [];
+      programError = programResult.error;
+    }
 
     if (programError) {
       setStatusMessage("Could not load assigned plan: " + programError.message);
@@ -216,10 +252,24 @@ export default function ClientPlan() {
           </h1>
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
-            View your current workout and upcoming sessions. Completed weeks
+            {activePlan
+              ? `${activePlan.name}: view your current workout and upcoming sessions.`
+              : "View your current workout and upcoming sessions."} Completed weeks
             move out of this tab and stay in Past Workouts.
           </p>
         </div>
+
+        {activePlan && (
+          <div className="mx-3 mt-3 rounded-2xl border border-blue-100 bg-blue-50 p-4 sm:mx-6 sm:mt-6 md:mx-8">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">Current Plan</p>
+            <p className="mt-1 text-lg font-black text-slate-900">
+              {activePlan.name}
+              {activePlan.plan_type === "fixed" && activePlan.planned_weeks
+                ? ` • ${activePlan.planned_weeks} weeks`
+                : ""}
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-4 md:p-8">
           <SummaryCard title="Active Weeks" value={`${activeAssignedWeeks.length}`} />

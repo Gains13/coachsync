@@ -31,6 +31,7 @@ import Clients from "./pages/Clients";
 import ClientDetails from "./pages/ClientDetails";
 import CreateClient from "./pages/CreateClient";
 import CreateProgram from "./pages/CreateProgram";
+import TrainerPlans from "./pages/TrainerPlans";
 import EditPublishedWorkout from "./pages/EditPublishedWorkout";
 import ImportProgram from "./pages/ImportProgram";
 import Program from "./pages/Program";
@@ -261,6 +262,15 @@ export default function App() {
           element={
             <RequireRole allowedRoles={["trainer"]}>
               <CreateProgram />
+            </RequireRole>
+          }
+        />
+
+        <Route
+          path="/training-plans"
+          element={
+            <RequireRole allowedRoles={["trainer"]}>
+              <TrainerPlans />
             </RequireRole>
           }
         />

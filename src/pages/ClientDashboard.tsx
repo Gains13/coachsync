@@ -14,6 +14,14 @@ type GoalData = {
   main_goal: string | null;
 };
 
+type TrainingPlan = {
+  id: string;
+  name: string;
+  plan_type: "fixed" | "ongoing";
+  planned_weeks: number | null;
+  status: string;
+};
+
 type LastWorkoutData = {
   id: string;
   workout_title?: string | null;
@@ -33,6 +41,7 @@ type NextWorkout = {
 
 type PlanWeekRow = {
   id: string;
+  plan_id: string | null;
   week_number: number;
   status: string;
   client_plan_workouts: {
@@ -63,6 +72,7 @@ export default function ClientDashboard() {
 
   const [client, setClient] = useState<ClientData | null>(null);
   const [goal, setGoal] = useState<GoalData | null>(null);
+  const [activePlan, setActivePlan] = useState<TrainingPlan | null>(null);
   const [currentWeek, setCurrentWeek] = useState<number | null>(null);
   const [unreadMessages, setUnreadMessages] = useState(0);
 
@@ -140,25 +150,51 @@ export default function ClientDashboard() {
       setGoal(goalData);
     }
 
-    const { data: weekData, error: weekError } = await supabase
-      .from("client_plan_weeks")
-      .select(
-        `
-        id,
-        week_number,
-        status,
-        client_plan_workouts (
-          id,
-          title,
-          workout_order,
-          client_plan_exercises (
-            id
-          )
-        )
-      `
-      )
+    const { data: activePlanData, error: activePlanError } = await supabase
+      .from("training_plans")
+      .select("id, name, plan_type, planned_weeks, status")
       .eq("client_user_id", userId)
-      .order("week_number", { ascending: true });
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (activePlanError) {
+      console.error(activePlanError);
+    }
+
+    const currentPlan = (activePlanData || null) as TrainingPlan | null;
+    setActivePlan(currentPlan);
+
+    let weekData: unknown[] = [];
+    let weekError: { message: string } | null = null;
+
+    if (currentPlan?.id) {
+      const weekResult = await supabase
+        .from("client_plan_weeks")
+        .select(
+          `
+          id,
+          plan_id,
+          week_number,
+          status,
+          client_plan_workouts (
+            id,
+            title,
+            workout_order,
+            client_plan_exercises (
+              id
+            )
+          )
+        `
+        )
+        .eq("client_user_id", userId)
+        .eq("plan_id", currentPlan.id)
+        .order("week_number", { ascending: true });
+
+      weekData = weekResult.data || [];
+      weekError = weekResult.error;
+    }
 
     if (weekError) {
       console.error(weekError);
@@ -167,10 +203,6 @@ export default function ClientDashboard() {
     const weeks = ((weekData || []) as unknown as PlanWeekRow[]).sort(
       (a, b) => a.week_number - b.week_number
     );
-
-    if (weeks.length > 0) {
-      setCurrentWeek(weeks[weeks.length - 1].week_number);
-    }
 
     const { data: submittedRows, error: submittedRowsError } = await supabase
       .from("workout_submissions")
@@ -212,6 +244,8 @@ export default function ClientDashboard() {
       firstIncompleteWorkout?.weekNumber ||
       unlockedWeeks[unlockedWeeks.length - 1]?.week_number ||
       null;
+
+    setCurrentWeek(progressWeekNumber);
 
     if (progressWeekNumber) {
       const progressWeek = unlockedWeeks.find(
@@ -365,7 +399,7 @@ export default function ClientDashboard() {
               </h1>
 
               <p className="mt-2 text-sm font-semibold leading-6 text-blue-50">
-                Your training plan is ready.
+                {activePlan ? `${activePlan.name} is ready.` : "Your training plan is ready."}
               </p>
             </div>
 
@@ -377,7 +411,21 @@ export default function ClientDashboard() {
             </Link>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-3">
+          {activePlan && (
+            <div className="mt-5 rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-blue-100">
+                Current Plan
+              </p>
+              <p className="mt-1 font-black text-white">
+                {activePlan.name}
+                {activePlan.plan_type === "fixed" && activePlan.planned_weeks
+                  ? ` • ${activePlan.planned_weeks} weeks`
+                  : ""}
+              </p>
+            </div>
+          )}
+
+          <div className="mt-3 grid grid-cols-2 gap-3">
             <div className="rounded-2xl bg-white/15 p-4 ring-1 ring-white/20">
               <p className="text-[10px] font-bold uppercase tracking-wide text-blue-100">
                 Current Week
