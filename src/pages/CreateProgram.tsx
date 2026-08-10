@@ -1375,7 +1375,7 @@ export default function CreateProgram() {
               reps: libraryExercise.default_reps || exercise.reps,
               weight: libraryExercise.default_weight || exercise.weight,
               rest: libraryExercise.default_rest || exercise.rest,
-              videoLink: libraryExercise.video_link || exercise.videoLink,
+              videoLink: libraryExercise.video_link ?? "",
               trainerNotes:
                 libraryExercise.trainer_notes || exercise.trainerNotes,
             };
@@ -3629,7 +3629,8 @@ function WorkoutPreviewModal({
 
 function SummaryCard({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 sm:p-5">
+    <div className="rounded-2xl border
+    border-sky-100 bg-sky-50 p-4 sm:p-5">
       <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
         {title}
       </p>
