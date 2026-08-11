@@ -169,8 +169,8 @@ export default function ClientDashboard() {
     let weekData: unknown[] = [];
     let weekError: { message: string } | null = null;
 
-    if (currentPlan?.id) {
-      const weekResult = await supabase
+    const baseWeekQuery = () =>
+      supabase
         .from("client_plan_weeks")
         .select(
           `
@@ -189,11 +189,26 @@ export default function ClientDashboard() {
         `
         )
         .eq("client_user_id", userId)
-        .eq("plan_id", currentPlan.id)
         .order("week_number", { ascending: true });
 
+    if (currentPlan?.id) {
+      const weekResult = await baseWeekQuery().eq("plan_id", currentPlan.id);
       weekData = weekResult.data || [];
       weekError = weekResult.error;
+
+      // Backward-compatible fallback: if the active plan is visible but has no
+      // attached weeks, keep existing clients from seeing an empty dashboard.
+      if (!weekError && weekData.length === 0) {
+        const fallbackResult = await baseWeekQuery();
+        weekData = fallbackResult.data || [];
+        weekError = fallbackResult.error;
+      }
+    } else {
+      // Some existing clients can read their assigned weeks but do not yet have
+      // access to the new training_plans row. Fall back to their assigned weeks.
+      const fallbackResult = await baseWeekQuery();
+      weekData = fallbackResult.data || [];
+      weekError = fallbackResult.error;
     }
 
     if (weekError) {
