@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import ClientLayout from "../components/ClientLayout";
@@ -67,7 +67,15 @@ function getInitials(name: string) {
     .join("");
 }
 
-export default function ClientDashboard() {
+type ClientDashboardProps = {
+  previewClientUserId?: string;
+  previewMode?: boolean;
+};
+
+export default function ClientDashboard({
+  previewClientUserId,
+  previewMode = false,
+}: ClientDashboardProps) {
   const navigate = useNavigate();
 
   const [client, setClient] = useState<ClientData | null>(null);
@@ -89,7 +97,7 @@ export default function ClientDashboard() {
 
   useEffect(() => {
     loadDashboard();
-  }, []);
+  }, [previewClientUserId]);
 
   const firstName = useMemo(() => {
     const name = client?.full_name || "there";
@@ -109,7 +117,7 @@ export default function ClientDashboard() {
       return;
     }
 
-    const userId = user.id;
+    const userId = previewClientUserId || user.id;
 
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
@@ -129,7 +137,7 @@ export default function ClientDashboard() {
       return;
     }
 
-    if (profileData.setup_complete === false) {
+    if (!previewMode && profileData.setup_complete === false) {
       navigate("/client-setup", { replace: true });
       return;
     }
@@ -388,7 +396,12 @@ export default function ClientDashboard() {
       : 0;
 
   return (
-    <ClientLayout unreadMessages={unreadMessages}>
+    <DashboardFrame
+      previewMode={previewMode}
+      unreadMessages={unreadMessages}
+      clientName={client.full_name}
+      clientUserId={previewClientUserId || ""}
+    >
       <section className="mb-4 overflow-hidden rounded-[1.5rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
         <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-4 py-5 text-white sm:px-6 sm:py-8">
           <div className="flex items-center gap-4">
@@ -699,7 +712,62 @@ export default function ClientDashboard() {
           />
         </div>
       </section>
-    </ClientLayout>
+    </DashboardFrame>
+  );
+}
+
+function DashboardFrame({
+  previewMode,
+  unreadMessages,
+  clientName,
+  clientUserId,
+  children,
+}: {
+  previewMode: boolean;
+  unreadMessages: number;
+  clientName: string;
+  clientUserId: string;
+  children: ReactNode;
+}) {
+  if (!previewMode) {
+    return <ClientLayout unreadMessages={unreadMessages}>{children}</ClientLayout>;
+  }
+
+  return (
+    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
+      <div className="sticky top-0 z-50 border-b border-amber-200 bg-amber-50/95 px-4 py-3 shadow-sm backdrop-blur">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-700">
+              Trainer Preview — Read Only
+            </p>
+            <p className="mt-1 text-sm font-semibold text-slate-700">
+              Viewing exactly the dashboard data loaded for {clientName}. You are still signed in as the trainer.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Link
+              to={`/clients/${clientUserId}`}
+              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white hover:bg-slate-800"
+            >
+              Back to Client Details
+            </Link>
+
+            <Link
+              to="/clients"
+              className="rounded-xl border border-amber-200 bg-white px-4 py-2 text-sm font-black text-amber-800 hover:bg-amber-100"
+            >
+              Client List
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto w-full max-w-7xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+        {children}
+      </div>
+    </main>
   );
 }
 

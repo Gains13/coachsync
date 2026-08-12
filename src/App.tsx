@@ -29,6 +29,7 @@ import ClientHistoricalWorkoutDetails from "./pages/ClientHistoricalWorkoutDetai
 import TrainerDashboard from "./pages/TrainerDashboard";
 import Clients from "./pages/Clients";
 import ClientDetails from "./pages/ClientDetails";
+import TrainerClientPreview from "./pages/TrainerClientPreview";
 import CreateClient from "./pages/CreateClient";
 import CreateProgram from "./pages/CreateProgram";
 import TrainerPlans from "./pages/TrainerPlans";
@@ -244,6 +245,15 @@ export default function App() {
           element={
             <RequireRole allowedRoles={["trainer"]}>
               <ClientDetails />
+            </RequireRole>
+          }
+        />
+
+        <Route
+          path="/trainer/client-preview/:clientUserId"
+          element={
+            <RequireRole allowedRoles={["trainer"]}>
+              <TrainerClientPreview />
             </RequireRole>
           }
         />

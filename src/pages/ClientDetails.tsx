@@ -473,6 +473,13 @@ export default function ClientDetails() {
 
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Link
+                  to={`/trainer/client-preview/${profile.id}`}
+                  className="rounded-xl bg-amber-300 px-4 py-2 text-center text-sm font-black text-amber-950 hover:bg-amber-200"
+                >
+                  👁 View Client Dashboard
+                </Link>
+
+                <Link
                   to={`/create-program?client=${profile.id}`}
                   className="rounded-xl bg-white px-4 py-2 text-center text-sm font-semibold text-blue-700 hover:bg-blue-50"
                 >
