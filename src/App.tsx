@@ -250,7 +250,7 @@ export default function App() {
         />
 
         <Route
-          path="/trainer/client-preview/:clientUserId"
+          path="/trainer/client-preview/:clientUserId/*"
           element={
             <RequireRole allowedRoles={["trainer"]}>
               <TrainerClientPreview />

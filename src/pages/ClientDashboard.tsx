@@ -70,11 +70,13 @@ function getInitials(name: string) {
 type ClientDashboardProps = {
   previewClientUserId?: string;
   previewMode?: boolean;
+  previewBasePath?: string;
 };
 
 export default function ClientDashboard({
   previewClientUserId,
   previewMode = false,
+  previewBasePath = "",
 }: ClientDashboardProps) {
   const navigate = useNavigate();
 
@@ -395,6 +397,37 @@ export default function ClientDashboard({
       ? Math.round((weeklyWorkoutCompleted / weeklyWorkoutTotal) * 100)
       : 0;
 
+  function previewHref(clientHref: string) {
+    if (!previewMode || !previewBasePath) return clientHref;
+
+    const [pathname, search = ""] = clientHref.split("?");
+
+    const routeMap: Record<string, string> = {
+      "/client": "",
+      "/client-plan": "/plan",
+      "/client-past-workouts": "/past-workouts",
+      "/client-messages": "/messages",
+      "/client-progress": "/progress",
+      "/client-settings": "/settings",
+      "/client-log-activity": "/log-activity",
+    };
+
+    if (pathname === "/start-workout") {
+      const params = new URLSearchParams(search);
+      const workoutId = params.get("workoutId");
+      return workoutId
+        ? `${previewBasePath}/workout/${workoutId}`
+        : `${previewBasePath}/plan`;
+    }
+
+    if (pathname.startsWith("/workout-history/")) {
+      const submissionId = pathname.split("/").pop();
+      return `${previewBasePath}/completed/${submissionId}`;
+    }
+
+    return `${previewBasePath}${routeMap[pathname] ?? ""}`;
+  }
+
   return (
     <DashboardFrame
       previewMode={previewMode}
@@ -432,7 +465,7 @@ export default function ClientDashboard({
             </div>
 
             <Link
-              to="/client-settings"
+              to={previewHref("/client-settings")}
               className="hidden shrink-0 rounded-2xl bg-white/15 px-4 py-3 text-sm font-black text-white ring-1 ring-white/20 transition hover:bg-white/25 sm:block"
             >
               Edit Profile
@@ -476,7 +509,7 @@ export default function ClientDashboard({
           </div>
 
           <Link
-            to="/client-settings"
+            to={previewHref("/client-settings")}
             className="mt-3 flex items-center justify-between rounded-2xl bg-white px-4 py-3 text-blue-700 shadow-sm transition hover:bg-blue-50 sm:hidden"
           >
             <div>
@@ -494,7 +527,7 @@ export default function ClientDashboard({
 
       {unreadMessages > 0 && (
         <Link
-          to="/client-messages"
+          to={previewHref("/client-messages")}
           className="mb-4 block rounded-[1.5rem] border border-blue-200 bg-blue-50 p-4 shadow-sm transition hover:border-blue-300 hover:bg-blue-100 sm:mb-6 sm:p-5"
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -546,14 +579,14 @@ export default function ClientDashboard({
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               {nextWorkout ? (
                 <Link
-                  to={`/start-workout?workoutId=${nextWorkout.id}`}
+                  to={previewHref(`/start-workout?workoutId=${nextWorkout.id}`)}
                   className="rounded-2xl bg-blue-600 px-5 py-4 text-center text-sm font-black text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.99]"
                 >
                   Start Workout →
                 </Link>
               ) : (
                 <Link
-                  to="/client-plan"
+                  to={previewHref("/client-plan")}
                   className="rounded-2xl bg-blue-600 px-5 py-4 text-center text-sm font-black text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.99]"
                 >
                   Open My Plan →
@@ -561,7 +594,7 @@ export default function ClientDashboard({
               )}
 
               <Link
-                to="/client-past-workouts"
+                to={previewHref("/client-past-workouts")}
                 className="rounded-2xl border border-sky-100 bg-white px-5 py-4 text-center text-sm font-black text-blue-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 active:scale-[0.99]"
               >
                 Past Workouts →
@@ -620,14 +653,14 @@ export default function ClientDashboard({
 
           {lastWorkout ? (
             <Link
-              to={`/workout-history/${lastWorkout.id}`}
+              to={previewHref(`/workout-history/${lastWorkout.id}`)}
               className="mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-slate-800 active:scale-[0.99] sm:w-auto"
             >
               View Details →
             </Link>
           ) : (
             <Link
-              to="/client-plan"
+              to={previewHref("/client-plan")}
               className="mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.99] sm:w-auto"
             >
               Start Your First Workout →
@@ -653,7 +686,7 @@ export default function ClientDashboard({
             </div>
 
             <Link
-              to="/client-log-activity"
+              to={previewHref("/client-log-activity")}
               className="w-full rounded-2xl bg-emerald-600 px-5 py-3 text-center text-sm font-black text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.99] sm:w-auto"
             >
               Log Activity →
@@ -674,10 +707,10 @@ export default function ClientDashboard({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <QuickAction title="My Plan" href="/client-plan" />
-          <QuickAction title="Past Workouts" href="/client-past-workouts" />
-          <QuickAction title="Messages" href="/client-messages" />
-          <QuickAction title="Progress" href="/client-progress" />
+          <QuickAction title="My Plan" href={previewHref("/client-plan")} />
+          <QuickAction title="Past Workouts" href={previewHref("/client-past-workouts")} />
+          <QuickAction title="Messages" href={previewHref("/client-messages")} />
+          <QuickAction title="Progress" href={previewHref("/client-progress")} />
         </div>
       </section>
 
@@ -739,10 +772,10 @@ function DashboardFrame({
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-700">
-              Trainer Preview — Read Only
+              Trainer Client Preview
             </p>
             <p className="mt-1 text-sm font-semibold text-slate-700">
-              Viewing exactly the dashboard data loaded for {clientName}. You are still signed in as the trainer.
+              Viewing {clientName} as a trainer. Navigation works, but actions that change client data are blocked.
             </p>
           </div>
 
