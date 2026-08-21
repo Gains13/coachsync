@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import ClientDashboard from "./ClientDashboard";
+import StartWorkout from "./StartWorkout";
 
 type Profile = {
   id: string;
@@ -183,7 +184,12 @@ export default function TrainerClientPreview() {
       ) : view === "log-activity" ? (
         <LogActivityPreview />
       ) : view === "workout" && detailId ? (
-        <WorkoutPreview workoutId={detailId} basePath={basePath} />
+        <StartWorkout
+          previewMode
+          previewWorkoutId={detailId}
+          previewClientUserId={clientUserId}
+          previewBasePath={basePath}
+        />
       ) : view === "completed" && detailId ? (
         <CompletedPreview submissionId={detailId} basePath={basePath} />
       ) : (
@@ -399,12 +405,22 @@ function PlanPreview({
                               Completed
                             </span>
                           )}
-                          <Link
-                            to={`${basePath}/workout/${workout.id}`}
-                            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-black text-white hover:bg-blue-700"
-                          >
-                            {completed ? "Preview Workout" : "Start Workout Preview"} →
-                          </Link>
+                          {week.status !== "locked" ? (
+                            <Link
+                              to={`${basePath}/workout/${workout.id}`}
+                              className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-black text-blue-700 hover:bg-blue-100"
+                            >
+                              Preview Workout →
+                            </Link>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled
+                              className="cursor-not-allowed rounded-xl bg-slate-200 px-4 py-2 text-sm font-black text-slate-500"
+                            >
+                              Preview Locked
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -691,128 +707,6 @@ function LogActivityPreview() {
           Log Activity (Disabled in Preview)
         </button>
       </section>
-    </div>
-  );
-}
-
-function WorkoutPreview({
-  workoutId,
-  basePath,
-}: {
-  workoutId: string;
-  basePath: string;
-}) {
-  const [workout, setWorkout] = useState<Workout | null>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    load();
-  }, [workoutId]);
-
-  async function load() {
-    setLoading(true);
-    const { data } = await supabase
-      .from("client_plan_workouts")
-      .select(`
-        id,
-        title,
-        workout_order,
-        client_plan_exercises (
-          id,
-          section,
-          exercise_name,
-          sets,
-          reps,
-          weight,
-          rest,
-          video_link,
-          exercise_order,
-          trainer_notes
-        )
-      `)
-      .eq("id", workoutId)
-      .single();
-
-    const typed = (data || null) as Workout | null;
-    if (typed) {
-      typed.client_plan_exercises = [...(typed.client_plan_exercises || [])].sort(
-        (a, b) => a.exercise_order - b.exercise_order
-      );
-    }
-    setWorkout(typed);
-    setActiveIndex(0);
-    setLoading(false);
-  }
-
-  if (loading) return <LoadingCard text="Loading workout preview..." />;
-  if (!workout) return <EmptyCard title="Workout not found" text="This assigned workout could not be loaded." />;
-
-  const exercises = workout.client_plan_exercises || [];
-  const active = exercises[activeIndex];
-
-  return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link to={`${basePath}/plan`} className="text-sm font-black text-blue-700 hover:text-blue-800">← Back to My Plan</Link>
-        <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-800">No workout data will be saved</span>
-      </div>
-
-      <Hero title={workout.title} subtitle={`${exercises.length} exercise workout preview`} />
-
-      {active ? (
-        <section className="rounded-[2rem] border border-blue-100 bg-white p-5 shadow-sm sm:p-7">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
-            Exercise {activeIndex + 1} of {exercises.length}
-          </p>
-          <h2 className="mt-2 text-3xl font-black">{active.exercise_name}</h2>
-          <p className="mt-2 text-sm font-semibold text-slate-500">{active.section || "Workout"}</p>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-4">
-            <Stat label="Sets" value={active.sets || "—"} />
-            <Stat label="Reps / Time" value={active.reps || "—"} />
-            <Stat label="Weight" value={active.weight || "—"} />
-            <Stat label="Rest" value={active.rest || "—"} />
-          </div>
-
-          {active.trainer_notes && (
-            <div className="mt-5 rounded-2xl bg-sky-50 p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-blue-600">Trainer Notes</p>
-              <p className="mt-2 text-sm leading-6 text-slate-700">{active.trainer_notes}</p>
-            </div>
-          )}
-
-          {active.video_link && (
-            <a href={active.video_link} target="_blank" rel="noreferrer" className="mt-5 inline-block rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white hover:bg-blue-700">
-              Open Exercise Video ↗
-            </a>
-          )}
-
-          <div className="mt-6 flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => setActiveIndex((x) => Math.max(0, x - 1))}
-              disabled={activeIndex === 0}
-              className="rounded-xl border border-sky-100 bg-white px-4 py-3 text-sm font-black text-blue-700 disabled:opacity-40"
-            >
-              ← Previous
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveIndex((x) => Math.min(exercises.length - 1, x + 1))}
-              disabled={activeIndex >= exercises.length - 1}
-              className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white disabled:opacity-40"
-            >
-              Next Exercise →
-            </button>
-            <button disabled className="rounded-xl bg-slate-300 px-4 py-3 text-sm font-black text-slate-600">
-              Complete / Submit (Disabled)
-            </button>
-          </div>
-        </section>
-      ) : (
-        <EmptyCard title="No exercises" text="This workout has no exercises." />
-      )}
     </div>
   );
 }

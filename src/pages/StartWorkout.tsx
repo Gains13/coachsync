@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import ClientLayout from "../components/ClientLayout";
@@ -214,14 +214,25 @@ function formatSeconds(totalSeconds: number) {
 
 export default function StartWorkout({
   previewMode = false,
+  previewWorkoutId,
+  previewClientUserId,
+  previewBasePath,
 }: {
   previewMode?: boolean;
+  previewWorkoutId?: string;
+  previewClientUserId?: string;
+  previewBasePath?: string;
 }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const workoutId = searchParams.get("workoutId");
+  const workoutId = previewWorkoutId || searchParams.get("workoutId");
   const isRepeatMode = searchParams.get("repeat") === "true";
+  const trainerPreviewMode =
+    previewMode && !!previewClientUserId && !!previewBasePath;
+  const previewExitPath = previewBasePath
+    ? `${previewBasePath}/plan`
+    : "/client-plan";
 
   const saveTimerRef = useRef<number | null>(null);
   const restCountdownSpokenRef = useRef<number | null>(null);
@@ -275,7 +286,7 @@ export default function StartWorkout({
         window.clearTimeout(saveTimerRef.current);
       }
     };
-  }, [workoutId, isRepeatMode, previewMode]);
+  }, [workoutId, isRepeatMode, previewMode, previewClientUserId]);
 
   useEffect(() => {
     if (!isResting) return;
@@ -637,13 +648,14 @@ export default function StartWorkout({
       return;
     }
 
-    setCurrentUserId(user.id);
+    const effectiveClientUserId = previewClientUserId || user.id;
+    setCurrentUserId(effectiveClientUserId);
 
     const { count: unreadCount, error: unreadError } = await supabase
       .from("messages")
       .select("id", { count: "exact", head: true })
-      .eq("client_user_id", user.id)
-      .eq("receiver_user_id", user.id)
+      .eq("client_user_id", effectiveClientUserId)
+      .eq("receiver_user_id", effectiveClientUserId)
       .is("read_at", null);
 
     if (unreadError) {
@@ -1302,7 +1314,7 @@ export default function StartWorkout({
 
   if (isLoading) {
     return (
-      <ClientLayout unreadMessages={unreadMessages}>
+      <WorkoutFrame unreadMessages={unreadMessages} embedded={!!previewBasePath}>
         <section className="rounded-[1.75rem] border border-sky-100 bg-white p-6 shadow-sm sm:rounded-[2rem] sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600 sm:text-sm sm:tracking-[0.3em]">
             CoachSync
@@ -1316,13 +1328,13 @@ export default function StartWorkout({
             Getting your guided workout ready.
           </p>
         </section>
-      </ClientLayout>
+      </WorkoutFrame>
     );
   }
 
   if (!workout || !workoutId) {
     return (
-      <ClientLayout unreadMessages={unreadMessages}>
+      <WorkoutFrame unreadMessages={unreadMessages} embedded={!!previewBasePath}>
         <section className="rounded-[1.75rem] border border-sky-100 bg-white p-6 shadow-sm sm:rounded-[2rem] sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600 sm:text-sm sm:tracking-[0.3em]">
             CoachSync
@@ -1343,20 +1355,25 @@ export default function StartWorkout({
           )}
 
           <Link
-            to="/client-plan"
+            to={previewExitPath}
             className="mt-5 inline-block rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white hover:bg-blue-700"
           >
             Back to My Plan
           </Link>
         </section>
-      </ClientLayout>
+      </WorkoutFrame>
     );
   }
 
   if (isResting && activeExercise) {
     return (
-      <ClientLayout unreadMessages={unreadMessages}>
-        {previewMode && <PreviewNotice />}
+      <WorkoutFrame unreadMessages={unreadMessages} embedded={!!previewBasePath}>
+        {previewMode && (
+          <PreviewNotice
+            exitPath={previewExitPath}
+            trainerMode={trainerPreviewMode}
+          />
+        )}
         <section className="overflow-hidden rounded-[1.75rem] border border-sky-100 bg-slate-950 shadow-sm sm:rounded-[2rem]">
           <div className="bg-[radial-gradient(circle_at_top,_rgba(37,99,235,0.55),_transparent_35%),linear-gradient(135deg,_#020617,_#0f172a,_#1d4ed8)] px-5 py-8 text-center text-white sm:px-8 sm:py-12">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-300">
@@ -1430,14 +1447,19 @@ export default function StartWorkout({
             </div>
           </div>
         </section>
-      </ClientLayout>
+      </WorkoutFrame>
     );
   }
 
   if (showFinalReview) {
     return (
-      <ClientLayout unreadMessages={unreadMessages}>
-        {previewMode && <PreviewNotice />}
+      <WorkoutFrame unreadMessages={unreadMessages} embedded={!!previewBasePath}>
+        {previewMode && (
+          <PreviewNotice
+            exitPath={previewExitPath}
+            trainerMode={trainerPreviewMode}
+          />
+        )}
         <section className="mb-4 overflow-hidden rounded-[1.5rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
           <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-4 py-5 text-white sm:px-6 sm:py-8">
             <div className="flex items-start justify-between gap-3">
@@ -1707,18 +1729,28 @@ export default function StartWorkout({
         {previewMode ? (
           <div className="mt-6 grid gap-3 sm:mt-8 sm:grid-cols-2">
             <Link
-              to="/client-plan"
+              to={previewExitPath}
               className="rounded-2xl border border-sky-100 bg-white px-5 py-4 text-center text-sm font-black text-slate-700 hover:bg-sky-50"
             >
               Back to My Plan
             </Link>
 
-            <Link
-              to={`/start-workout?workoutId=${workout.id}`}
-              className="rounded-2xl bg-blue-600 px-5 py-4 text-center text-sm font-black text-white shadow-sm hover:bg-blue-700"
-            >
-              Start This Workout →
-            </Link>
+            {trainerPreviewMode ? (
+              <button
+                type="button"
+                disabled
+                className="cursor-not-allowed rounded-2xl bg-slate-200 px-5 py-4 text-center text-sm font-black text-slate-500"
+              >
+                Start Workout — Client Only
+              </button>
+            ) : (
+              <Link
+                to={`/start-workout?workoutId=${workout.id}`}
+                className="rounded-2xl bg-blue-600 px-5 py-4 text-center text-sm font-black text-white shadow-sm hover:bg-blue-700"
+              >
+                Start This Workout →
+              </Link>
+            )}
           </div>
         ) : (
         <button
@@ -1734,7 +1766,7 @@ export default function StartWorkout({
             : "Submit Workout"}
         </button>
         )}
-      </ClientLayout>
+      </WorkoutFrame>
     );
   }
 
@@ -1746,8 +1778,13 @@ export default function StartWorkout({
     const sectionExercises = currentGroup?.exercises || [];
 
     return (
-      <ClientLayout unreadMessages={unreadMessages}>
-        {previewMode && <PreviewNotice />}
+      <WorkoutFrame unreadMessages={unreadMessages} embedded={!!previewBasePath}>
+        {previewMode && (
+          <PreviewNotice
+            exitPath={previewExitPath}
+            trainerMode={trainerPreviewMode}
+          />
+        )}
         <section className="overflow-hidden rounded-[1.5rem] border border-sky-100 bg-white shadow-sm sm:rounded-[2rem]">
           <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-5 py-7 text-white sm:px-8 sm:py-12">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-200">
@@ -1837,13 +1874,18 @@ export default function StartWorkout({
             </div>
           </div>
         </section>
-      </ClientLayout>
+      </WorkoutFrame>
     );
   }
 
   return (
-    <ClientLayout unreadMessages={unreadMessages}>
-      {previewMode && <PreviewNotice />}
+    <WorkoutFrame unreadMessages={unreadMessages} embedded={!!previewBasePath}>
+      {previewMode && (
+          <PreviewNotice
+            exitPath={previewExitPath}
+            trainerMode={trainerPreviewMode}
+          />
+        )}
       <div className="pb-32 md:pb-0">
         {successMessage && (
           <div className="mb-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-center text-sm font-black text-emerald-700 shadow-sm">
@@ -1926,7 +1968,7 @@ export default function StartWorkout({
                   </div>
 
                   <Link
-                    to="/client-plan"
+                    to={previewExitPath}
                     className="shrink-0 rounded-2xl border border-sky-100 bg-white px-3 py-2 text-xs font-black text-slate-600 shadow-sm hover:bg-sky-50"
                   >
                     {previewMode ? "Exit Preview" : "Exit"}
@@ -2189,28 +2231,54 @@ export default function StartWorkout({
           </>
         )}
       </div>
-    </ClientLayout>
+    </WorkoutFrame>
   );
 }
 
-function PreviewNotice() {
+function PreviewNotice({
+  exitPath,
+  trainerMode = false,
+}: {
+  exitPath: string;
+  trainerMode?: boolean;
+}) {
   return (
     <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">
-          Workout Preview
+          {trainerMode ? "Trainer • Client Workout Preview" : "Workout Preview"}
         </p>
         <p className="mt-1 text-sm font-semibold leading-6 text-amber-900">
-          Explore the full workout. Nothing you do here will be saved or count as completion.
+          {trainerMode
+            ? "You are walking through the same guided preview available to this client. Nothing here is saved or counted as completion."
+            : "Explore the full workout. Nothing you do here will be saved or count as completion."}
         </p>
       </div>
 
       <Link
-        to="/client-plan"
+        to={exitPath}
         className="shrink-0 rounded-xl bg-white px-4 py-2 text-center text-xs font-black text-amber-800 ring-1 ring-amber-200 hover:bg-amber-100"
       >
         Exit Preview
       </Link>
     </div>
+  );
+}
+
+function WorkoutFrame({
+  unreadMessages,
+  embedded,
+  children,
+}: {
+  unreadMessages: number;
+  embedded: boolean;
+  children: ReactNode;
+}) {
+  if (embedded) {
+    return <>{children}</>;
+  }
+
+  return (
+    <ClientLayout unreadMessages={unreadMessages}>{children}</ClientLayout>
   );
 }
