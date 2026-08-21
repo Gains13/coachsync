@@ -79,6 +79,14 @@ type WorkoutDraftRow = {
   updated_at: string;
 };
 
+type LocalWorkoutBackup = {
+  clientUserId: string;
+  workout: PlanWorkout;
+  workoutNotes: string;
+  draftData: WorkoutDraftData;
+  savedAt: string;
+};
+
 type GuidedStep = {
   exercise: LoggedExercise;
   originalIndex: number;
@@ -260,6 +268,11 @@ export default function StartWorkout({
   const [showSectionIntro, setShowSectionIntro] = useState(true);
   const [showFinalReview, setShowFinalReview] = useState(false);
   const [showExerciseDetails, setShowExerciseDetails] = useState(false);
+  const [showExerciseNavigator, setShowExerciseNavigator] = useState(false);
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator === "undefined" ? true : navigator.onLine
+  );
+  const [usingLocalBackup, setUsingLocalBackup] = useState(false);
 
   const [workoutNotes, setWorkoutNotes] = useState("");
 
@@ -287,6 +300,25 @@ export default function StartWorkout({
       }
     };
   }, [workoutId, isRepeatMode, previewMode, previewClientUserId]);
+
+  useEffect(() => {
+    function handleOnline() {
+      setIsOnline(true);
+      setUsingLocalBackup(false);
+    }
+
+    function handleOffline() {
+      setIsOnline(false);
+    }
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isResting) return;
@@ -363,6 +395,10 @@ export default function StartWorkout({
       return;
     }
 
+    if (!isOnline) {
+      return;
+    }
+
     if (saveTimerRef.current) {
       window.clearTimeout(saveTimerRef.current);
     }
@@ -379,6 +415,7 @@ export default function StartWorkout({
   }, [
     previewMode,
     isRepeatMode,
+    isOnline,
     currentUserId,
     workoutId,
     workoutNotes,
@@ -395,6 +432,69 @@ export default function StartWorkout({
     painNotes,
     draftLoaded,
     isSubmitting,
+  ]);
+
+  useEffect(() => {
+    if (
+      previewMode ||
+      isRepeatMode ||
+      !draftLoaded ||
+      !workout ||
+      !workoutId ||
+      !currentUserId ||
+      loggedExercises.length === 0 ||
+      typeof window === "undefined"
+    ) {
+      return;
+    }
+
+    const key = getLocalBackupKey();
+    if (!key) return;
+
+    const backup: LocalWorkoutBackup = {
+      clientUserId: currentUserId,
+      workout,
+      workoutNotes,
+      draftData: {
+        loggedExercises,
+        completedSetCounts,
+        activeStepIndex,
+        activeSetNumber,
+        showSectionIntro,
+        showFinalReview,
+        painReported,
+        painLocation,
+        painLevel,
+        painExercise,
+        painNotes,
+      },
+      savedAt: new Date().toISOString(),
+    };
+
+    try {
+      window.sessionStorage.setItem(key, JSON.stringify(backup));
+    } catch (error) {
+      console.error("Could not save local workout backup:", error);
+    }
+  }, [
+    previewMode,
+    isRepeatMode,
+    draftLoaded,
+    workout,
+    workoutId,
+    currentUserId,
+    workoutNotes,
+    loggedExercises,
+    completedSetCounts,
+    activeStepIndex,
+    activeSetNumber,
+    showSectionIntro,
+    showFinalReview,
+    painReported,
+    painLocation,
+    painLevel,
+    painExercise,
+    painNotes,
   ]);
 
   const groupedExercises = useMemo(() => {
@@ -612,6 +712,58 @@ export default function StartWorkout({
     }
   }
 
+  function getLocalBackupKey() {
+    return workoutId ? `coachsync-workout-backup:${workoutId}` : "";
+  }
+
+  function readLocalBackup() {
+    const key = getLocalBackupKey();
+    if (!key || typeof window === "undefined") return null;
+
+    try {
+      const raw = window.sessionStorage.getItem(key);
+      if (!raw) return null;
+
+      return JSON.parse(raw) as LocalWorkoutBackup;
+    } catch (error) {
+      console.error("Could not read local workout backup:", error);
+      return null;
+    }
+  }
+
+  function clearLocalBackup() {
+    const key = getLocalBackupKey();
+    if (!key || typeof window === "undefined") return;
+
+    try {
+      window.sessionStorage.removeItem(key);
+    } catch (error) {
+      console.error("Could not clear local workout backup:", error);
+    }
+  }
+
+  function restoreLocalBackup(backup: LocalWorkoutBackup) {
+    setCurrentUserId(backup.clientUserId || "");
+    setWorkout(backup.workout);
+    setLoggedExercises(backup.draftData.loggedExercises || []);
+    setCompletedSetCounts(backup.draftData.completedSetCounts || {});
+    setActiveStepIndex(backup.draftData.activeStepIndex || 0);
+    setActiveSetNumber(backup.draftData.activeSetNumber || 1);
+    setShowSectionIntro(backup.draftData.showSectionIntro ?? true);
+    setShowFinalReview(backup.draftData.showFinalReview || false);
+    setWorkoutNotes(backup.workoutNotes || "");
+    setPainReported(backup.draftData.painReported || false);
+    setPainLocation(backup.draftData.painLocation || "");
+    setPainLevel(backup.draftData.painLevel || "");
+    setPainExercise(backup.draftData.painExercise || "");
+    setPainNotes(backup.draftData.painNotes || "");
+    setDraftSavedAt(backup.savedAt || "");
+    setDraftLoaded(true);
+    setUsingLocalBackup(true);
+    setIsOnline(false);
+    setIsLoading(false);
+  }
+
   async function loadWorkout() {
     setIsLoading(true);
     setErrorMessage("");
@@ -636,6 +788,8 @@ export default function StartWorkout({
     setShowSectionIntro(true);
     setShowFinalReview(false);
     setShowExerciseDetails(false);
+    setShowExerciseNavigator(false);
+    setUsingLocalBackup(false);
 
     const {
       data: { user },
@@ -643,7 +797,16 @@ export default function StartWorkout({
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      setErrorMessage("You must be logged in to view this workout.");
+      const localBackup = !previewMode ? readLocalBackup() : null;
+
+      if (localBackup) {
+        restoreLocalBackup(localBackup);
+        return;
+      }
+
+      setErrorMessage(
+        "You must be logged in to view this workout. If you are offline, open the workout once while connected first."
+      );
       setIsLoading(false);
       return;
     }
@@ -694,7 +857,17 @@ export default function StartWorkout({
 
     if (error || !data) {
       console.error(error);
-      setErrorMessage("Could not load this workout.");
+
+      const localBackup = !previewMode ? readLocalBackup() : null;
+
+      if (localBackup) {
+        restoreLocalBackup(localBackup);
+        return;
+      }
+
+      setErrorMessage(
+        "Could not load this workout. If your connection is down, open it once while online so CoachSync can keep a session backup."
+      );
       setIsLoading(false);
       return;
     }
@@ -740,6 +913,14 @@ export default function StartWorkout({
 
     if (draftError) {
       console.error(draftError);
+
+      const localBackup = readLocalBackup();
+
+      if (localBackup) {
+        restoreLocalBackup(localBackup);
+        return;
+      }
+
       setLoggedExercises(freshLoggedExercises);
     } else if (existingDraft) {
       const draft = existingDraft as WorkoutDraftRow;
@@ -777,6 +958,13 @@ export default function StartWorkout({
 
       setDraftSavedAt(draft.updated_at || "");
     } else {
+      const localBackup = readLocalBackup();
+
+      if (localBackup) {
+        restoreLocalBackup(localBackup);
+        return;
+      }
+
       setLoggedExercises(freshLoggedExercises);
     }
 
@@ -792,6 +980,12 @@ export default function StartWorkout({
       !workoutId ||
       loggedExercises.length === 0
     ) {
+      return;
+    }
+
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setIsOnline(false);
+      setIsSavingDraft(false);
       return;
     }
 
@@ -822,7 +1016,10 @@ export default function StartWorkout({
 
     if (findError) {
       console.error(findError);
-      setErrorMessage("Progress could not auto-save. Check connection.");
+      setUsingLocalBackup(true);
+      setErrorMessage(
+        "Cloud auto-save is temporarily unavailable. Your workout progress is still backed up on this device."
+      );
       setIsSavingDraft(false);
       return;
     }
@@ -864,6 +1061,8 @@ export default function StartWorkout({
     }
 
     setDraftSavedAt(now);
+    setIsOnline(true);
+    setUsingLocalBackup(false);
     setIsSavingDraft(false);
   }
 
@@ -915,6 +1114,7 @@ export default function StartWorkout({
 
     if (!previewMode && !isRepeatMode) {
       await clearSavedDraft();
+      clearLocalBackup();
     }
 
     setSuccessMessage("");
@@ -1026,6 +1226,37 @@ export default function StartWorkout({
     finishRest();
   }
 
+  function jumpToExercise(targetStepIndex: number) {
+    const targetStep = guidedSteps[targetStepIndex];
+    if (!targetStep) return;
+
+    restCountdownSpokenRef.current = null;
+    exerciseCountdownSpokenRef.current = null;
+    preStartSpokenRef.current = null;
+
+    setIsPreStartRunning(false);
+    setPreStartSeconds(0);
+    setIsResting(false);
+    setRestSeconds(0);
+    setIsExerciseTimerRunning(false);
+    setExerciseSeconds(0);
+    setShowFinalReview(false);
+    setShowSectionIntro(false);
+    setShowExerciseDetails(false);
+
+    const completedSets =
+      completedSetCounts[targetStep.exercise.exerciseId] || 0;
+    const totalSets = parseSets(targetStep.exercise.plannedSets);
+    const nextSetNumber = Math.min(
+      Math.max(completedSets + 1, 1),
+      Math.max(totalSets, 1)
+    );
+
+    setActiveStepIndex(targetStepIndex);
+    setActiveSetNumber(nextSetNumber);
+    setShowExerciseNavigator(false);
+  }
+
   function completeCurrentSet() {
     if (!activeExercise) return;
 
@@ -1078,19 +1309,39 @@ export default function StartWorkout({
     setIsExerciseTimerRunning(false);
     setExerciseSeconds(0);
 
-    const hasNextExercise = activeStepIndex < guidedSteps.length - 1;
+    const candidateIndexes = [
+      ...guidedSteps.map((_, index) => index).slice(activeStepIndex + 1),
+      ...guidedSteps.map((_, index) => index).slice(0, activeStepIndex),
+    ];
 
-    if (hasNextExercise) {
-      const nextStep = guidedSteps[activeStepIndex + 1];
+    const nextIncompleteIndex = candidateIndexes.find((index) => {
+      const step = guidedSteps[index];
+      if (!step) return false;
+
+      return (
+        step.exercise.exerciseId !== activeExercise?.exerciseId &&
+        !step.exercise.completed
+      );
+    });
+
+    if (nextIncompleteIndex !== undefined) {
+      const nextStep = guidedSteps[nextIncompleteIndex];
       const currentSection = activeExercise?.section;
       const nextSection = nextStep?.exercise.section;
+      const completedSets =
+        completedSetCounts[nextStep.exercise.exerciseId] || 0;
+      const nextTotalSets = parseSets(nextStep.exercise.plannedSets);
 
-      setActiveStepIndex((currentIndex) => currentIndex + 1);
-      setActiveSetNumber(1);
+      setActiveStepIndex(nextIncompleteIndex);
+      setActiveSetNumber(
+        Math.min(Math.max(completedSets + 1, 1), Math.max(nextTotalSets, 1))
+      );
       setShowExerciseDetails(false);
 
       if (currentSection && nextSection && currentSection !== nextSection) {
         setShowSectionIntro(true);
+      } else {
+        setShowSectionIntro(false);
       }
 
       return;
@@ -1230,6 +1481,7 @@ export default function StartWorkout({
 
       if (existingSubmission) {
         await clearSavedDraft();
+        clearLocalBackup();
         navigate(`/workout-history/${existingSubmission.id}`);
         return;
       }
@@ -1299,6 +1551,7 @@ export default function StartWorkout({
 
     if (!isRepeatMode) {
       await clearSavedDraft();
+      clearLocalBackup();
     }
 
     setSuccessMessage(
@@ -1854,7 +2107,18 @@ export default function StartWorkout({
               ))}
             </div>
 
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => {
+                setShowSectionIntro(false);
+                setShowExerciseNavigator(true);
+              }}
+              className="mt-6 w-full rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm font-black text-blue-700 hover:bg-blue-100"
+            >
+              View / Switch Any Exercise
+            </button>
+
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
                 onClick={goBackStep}
@@ -1899,6 +2163,19 @@ export default function StartWorkout({
           </div>
         )}
 
+        {!previewMode && !isRepeatMode && (!isOnline || usingLocalBackup) && (
+          <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900 shadow-sm">
+            <p className="font-black">
+              {!isOnline ? "Offline workout mode" : "Local backup active"}
+            </p>
+            <p className="mt-1 leading-6">
+              You can keep moving through exercises. Progress is backed up in this
+              browser and CoachSync will try cloud auto-save again when your
+              connection returns.
+            </p>
+          </div>
+        )}
+
         {guidedSteps.length === 0 || !activeExercise ? (
           <section className="rounded-[1.5rem] border border-red-100 bg-red-50 p-5 text-center shadow-sm sm:rounded-3xl">
             <h2 className="text-lg font-black text-red-700">
@@ -1929,8 +2206,12 @@ export default function StartWorkout({
                       ? "Preview mode • nothing saved"
                       : isRepeatMode
                       ? "Repeat workout"
+                      : !isOnline
+                      ? "Offline • backed up on this device"
                       : isSavingDraft
                       ? "Saving..."
+                      : usingLocalBackup
+                      ? "Local backup • syncing when possible"
                       : lastSavedLabel
                       ? `Saved ${lastSavedLabel}`
                       : "Guided workout"}
@@ -1949,6 +2230,143 @@ export default function StartWorkout({
                 />
               </div>
             </section>
+
+            <div className="mb-3 grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setShowExerciseNavigator((currentValue) => !currentValue)
+                }
+                className="rounded-2xl border border-blue-200 bg-white px-4 py-3 text-sm font-black text-blue-700 shadow-sm hover:bg-blue-50"
+              >
+                {showExerciseNavigator
+                  ? "Hide Exercise List"
+                  : "View / Switch Exercise"}
+              </button>
+
+              <button
+                type="button"
+                onClick={skipCurrentExercise}
+                disabled={isSubmitting}
+                className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-black text-orange-700 shadow-sm hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Machine Busy? Skip for Now
+              </button>
+            </div>
+
+            {showExerciseNavigator && (
+              <section className="mb-3 rounded-[1.5rem] border border-sky-100 bg-white p-4 shadow-sm sm:p-5">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-blue-600">
+                      Full Workout
+                    </p>
+                    <h2 className="mt-1 text-xl font-black text-slate-900">
+                      Choose any exercise
+                    </h2>
+                    <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">
+                      Tap a movement to jump to it. Completed sets and notes stay
+                      saved when you switch.
+                    </p>
+                  </div>
+
+                  <div className="w-fit rounded-full bg-sky-50 px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-sky-100">
+                    {completedCount}/{loggedExercises.length} complete
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-5">
+                  {groupedExercises.map((group) => (
+                    <div key={group.section}>
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <h3 className="text-sm font-black text-slate-900">
+                          {group.section}
+                        </h3>
+                        <span className="text-xs font-bold text-slate-500">
+                          {
+                            group.exercises.filter(
+                              ({ exercise }) => exercise.completed
+                            ).length
+                          }
+                          /{group.exercises.length}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        {group.exercises.map(({ exercise }) => {
+                          const targetStepIndex = guidedSteps.findIndex(
+                            (step) =>
+                              step.exercise.exerciseId === exercise.exerciseId
+                          );
+                          const targetCompletedSets =
+                            completedSetCounts[exercise.exerciseId] || 0;
+                          const targetTotalSets = parseSets(exercise.plannedSets);
+                          const isCurrent =
+                            exercise.exerciseId === activeExercise.exerciseId;
+                          const statusLabel = exercise.completed
+                            ? "Completed"
+                            : targetCompletedSets > 0
+                            ? `Set ${targetCompletedSets}/${targetTotalSets}`
+                            : "Not started";
+
+                          return (
+                            <button
+                              key={exercise.exerciseId}
+                              type="button"
+                              onClick={() => jumpToExercise(targetStepIndex)}
+                              className={`w-full rounded-2xl border p-3 text-left transition ${
+                                isCurrent
+                                  ? "border-blue-300 bg-blue-50 ring-2 ring-blue-100"
+                                  : "border-sky-100 bg-sky-50 hover:border-blue-200 hover:bg-blue-50"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <p className="break-words text-sm font-black text-slate-900">
+                                      {exercise.exerciseName || "Unnamed Exercise"}
+                                    </p>
+
+                                    {isCurrent && (
+                                      <span className="rounded-full bg-blue-600 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-white">
+                                        Current
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                                    {exercise.plannedSets || "N/A"} sets ×{" "}
+                                    {exercise.plannedReps || "N/A"}
+                                    {exercise.plannedWeight
+                                      ? ` • ${exercise.plannedWeight}`
+                                      : ""}
+                                    {exercise.plannedRest
+                                      ? ` • Rest ${exercise.plannedRest}`
+                                      : ""}
+                                  </p>
+                                </div>
+
+                                <span
+                                  className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-black ${
+                                    exercise.completed
+                                      ? "bg-emerald-100 text-emerald-700"
+                                      : targetCompletedSets > 0
+                                      ? "bg-amber-100 text-amber-800"
+                                      : "bg-white text-slate-600 ring-1 ring-sky-100"
+                                  }`}
+                                >
+                                  {statusLabel}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             <section className="overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm">
               <div className="bg-gradient-to-br from-white via-sky-50 to-blue-50 p-5">
@@ -2211,11 +2629,11 @@ export default function StartWorkout({
 
                 <button
                   type="button"
-                  onClick={skipCurrentExercise}
+                  onClick={() => setShowExerciseNavigator(true)}
                   disabled={isSubmitting}
-                  className="rounded-2xl border border-orange-100 bg-orange-50 px-3 py-4 text-sm font-black text-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-2xl border border-blue-100 bg-blue-50 px-3 py-4 text-sm font-black text-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Skip
+                  Exercises
                 </button>
 
                 <button
