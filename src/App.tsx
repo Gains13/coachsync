@@ -205,6 +205,15 @@ export default function App() {
         />
 
         <Route
+          path="/preview-workout"
+          element={
+            <RequireRole allowedRoles={["client"]}>
+              <StartWorkout previewMode />
+            </RequireRole>
+          }
+        />
+
+        <Route
           path="/start-workout"
           element={
             <RequireRole allowedRoles={["client"]}>

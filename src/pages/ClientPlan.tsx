@@ -484,23 +484,34 @@ export default function ClientPlan() {
 
                             <WorkoutExerciseList workout={workout} />
 
-                            {isCurrentWorkout ? (
-                              <Link
-                                to={`/start-workout?workoutId=${workout.id}`}
-                                className="mt-4 block w-full rounded-2xl bg-blue-600 px-4 py-3 text-center text-sm font-black text-white shadow-sm hover:bg-blue-700 active:scale-[0.99] sm:inline-block sm:w-auto"
-                              >
-                                Start Workout →
-                              </Link>
-                            ) : (
-                              <button
-                                disabled
-                                className="mt-4 w-full cursor-not-allowed rounded-2xl bg-slate-100 px-4 py-3 text-sm font-black text-slate-500 sm:w-auto"
-                              >
-                                {week.status === "locked"
-                                  ? "Locked until trainer unlocks"
-                                  : "Complete current workout first"}
-                              </button>
-                            )}
+                            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                              {week.status !== "locked" && (
+                                <Link
+                                  to={`/preview-workout?workoutId=${workout.id}`}
+                                  className="block w-full rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-center text-sm font-black text-blue-700 hover:bg-blue-100 active:scale-[0.99] sm:w-auto"
+                                >
+                                  Preview Workout
+                                </Link>
+                              )}
+
+                              {isCurrentWorkout ? (
+                                <Link
+                                  to={`/start-workout?workoutId=${workout.id}`}
+                                  className="block w-full rounded-2xl bg-blue-600 px-4 py-3 text-center text-sm font-black text-white shadow-sm hover:bg-blue-700 active:scale-[0.99] sm:w-auto"
+                                >
+                                  Start Workout →
+                                </Link>
+                              ) : (
+                                <button
+                                  disabled
+                                  className="w-full cursor-not-allowed rounded-2xl bg-slate-100 px-4 py-3 text-sm font-black text-slate-500 sm:w-auto"
+                                >
+                                  {week.status === "locked"
+                                    ? "Locked until trainer unlocks"
+                                    : "Complete current workout first"}
+                                </button>
+                              )}
+                            </div>
                           </div>
                         );
                       })

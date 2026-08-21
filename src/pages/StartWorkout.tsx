@@ -212,7 +212,11 @@ function formatSeconds(totalSeconds: number) {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-export default function StartWorkout() {
+export default function StartWorkout({
+  previewMode = false,
+}: {
+  previewMode?: boolean;
+}) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -271,7 +275,7 @@ export default function StartWorkout() {
         window.clearTimeout(saveTimerRef.current);
       }
     };
-  }, [workoutId, isRepeatMode]);
+  }, [workoutId, isRepeatMode, previewMode]);
 
   useEffect(() => {
     if (!isResting) return;
@@ -337,6 +341,7 @@ export default function StartWorkout() {
 
   useEffect(() => {
     if (
+      previewMode ||
       isRepeatMode ||
       !currentUserId ||
       !workoutId ||
@@ -361,6 +366,7 @@ export default function StartWorkout() {
       }
     };
   }, [
+    previewMode,
     isRepeatMode,
     currentUserId,
     workoutId,
@@ -703,7 +709,7 @@ export default function StartWorkout() {
 
     setWorkout(data as PlanWorkout);
 
-    if (isRepeatMode) {
+    if (previewMode || isRepeatMode) {
       setLoggedExercises(freshLoggedExercises);
       setCompletedSetCounts({});
       setDraftLoaded(true);
@@ -768,6 +774,7 @@ export default function StartWorkout() {
 
   async function saveDraftToSupabase() {
     if (
+      previewMode ||
       isRepeatMode ||
       !currentUserId ||
       !workoutId ||
@@ -849,7 +856,7 @@ export default function StartWorkout() {
   }
 
   async function clearSavedDraft() {
-    if (isRepeatMode || !currentUserId || !workoutId) return;
+    if (previewMode || isRepeatMode || !currentUserId || !workoutId) return;
 
     await supabase
       .from("workout_drafts")
@@ -894,12 +901,14 @@ export default function StartWorkout() {
     setPainExercise("");
     setPainNotes("");
 
-    if (!isRepeatMode) {
+    if (!previewMode && !isRepeatMode) {
       await clearSavedDraft();
     }
 
     setSuccessMessage("");
-    setErrorMessage("Progress was cleared.");
+    setErrorMessage(
+      previewMode ? "Preview progress was cleared." : "Progress was cleared."
+    );
   }
 
   function updateDifficulty(exerciseIndex: number, value: string) {
@@ -1141,6 +1150,11 @@ export default function StartWorkout() {
   }
 
   async function submitWorkout() {
+    if (previewMode) {
+      setErrorMessage("Preview mode does not submit or save workout data.");
+      return;
+    }
+
     if (!workout) {
       setErrorMessage("No workout found.");
       return;
@@ -1342,6 +1356,7 @@ export default function StartWorkout() {
   if (isResting && activeExercise) {
     return (
       <ClientLayout unreadMessages={unreadMessages}>
+        {previewMode && <PreviewNotice />}
         <section className="overflow-hidden rounded-[1.75rem] border border-sky-100 bg-slate-950 shadow-sm sm:rounded-[2rem]">
           <div className="bg-[radial-gradient(circle_at_top,_rgba(37,99,235,0.55),_transparent_35%),linear-gradient(135deg,_#020617,_#0f172a,_#1d4ed8)] px-5 py-8 text-center text-white sm:px-8 sm:py-12">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-300">
@@ -1422,12 +1437,13 @@ export default function StartWorkout() {
   if (showFinalReview) {
     return (
       <ClientLayout unreadMessages={unreadMessages}>
+        {previewMode && <PreviewNotice />}
         <section className="mb-4 overflow-hidden rounded-[1.5rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
           <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-4 py-5 text-white sm:px-6 sm:py-8">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100">
-                  Final Review
+                  {previewMode ? "Preview Complete" : "Final Review"}
                 </p>
 
                 <h1 className="mt-2 line-clamp-2 break-words text-2xl font-black leading-tight sm:text-4xl">
@@ -1435,7 +1451,9 @@ export default function StartWorkout() {
                 </h1>
 
                 <p className="mt-2 max-w-xl text-sm leading-6 text-blue-50">
-                  Add notes, complete the pain check, then submit.
+                  {previewMode
+                    ? "You reached the end of this workout preview. Nothing has been recorded."
+                    : "Add notes, complete the pain check, then submit."}
                 </p>
               </div>
 
@@ -1489,20 +1507,22 @@ export default function StartWorkout() {
           </div>
         )}
 
-        <section className="mb-4 rounded-[1.5rem] border border-sky-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
-          <label className="mb-2 block text-sm font-black text-slate-700">
-            Overall Workout Notes
-          </label>
+        {!previewMode && (
+          <section className="mb-4 rounded-[1.5rem] border border-sky-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
+            <label className="mb-2 block text-sm font-black text-slate-700">
+              Overall Workout Notes
+            </label>
 
-          <textarea
-            value={workoutNotes}
-            onChange={(event) => setWorkoutNotes(event.target.value)}
-            disabled={isSubmitting}
-            placeholder="Optional notes about the whole workout"
-            rows={4}
-            className="w-full rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
-          />
-        </section>
+            <textarea
+              value={workoutNotes}
+              onChange={(event) => setWorkoutNotes(event.target.value)}
+              disabled={isSubmitting}
+              placeholder="Optional notes about the whole workout"
+              rows={4}
+              className="w-full rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+            />
+          </section>
+        )}
 
         <section className="mb-4 rounded-[1.5rem] border border-sky-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
           <h2 className="text-xl font-black text-slate-900">
@@ -1563,8 +1583,9 @@ export default function StartWorkout() {
           </div>
         </section>
 
-        <section className="rounded-[1.5rem] border border-red-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
-          <div className="mb-5">
+        {!previewMode && (
+          <section className="rounded-[1.5rem] border border-red-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+            <div className="mb-5">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-red-600">
               Pain & Discomfort Check
             </p>
@@ -1680,8 +1701,26 @@ export default function StartWorkout() {
               </div>
             </div>
           )}
-        </section>
+          </section>
+        )}
 
+        {previewMode ? (
+          <div className="mt-6 grid gap-3 sm:mt-8 sm:grid-cols-2">
+            <Link
+              to="/client-plan"
+              className="rounded-2xl border border-sky-100 bg-white px-5 py-4 text-center text-sm font-black text-slate-700 hover:bg-sky-50"
+            >
+              Back to My Plan
+            </Link>
+
+            <Link
+              to={`/start-workout?workoutId=${workout.id}`}
+              className="rounded-2xl bg-blue-600 px-5 py-4 text-center text-sm font-black text-white shadow-sm hover:bg-blue-700"
+            >
+              Start This Workout →
+            </Link>
+          </div>
+        ) : (
         <button
           type="button"
           onClick={submitWorkout}
@@ -1694,6 +1733,7 @@ export default function StartWorkout() {
             ? "Submit Repeated Workout"
             : "Submit Workout"}
         </button>
+        )}
       </ClientLayout>
     );
   }
@@ -1707,6 +1747,7 @@ export default function StartWorkout() {
 
     return (
       <ClientLayout unreadMessages={unreadMessages}>
+        {previewMode && <PreviewNotice />}
         <section className="overflow-hidden rounded-[1.5rem] border border-sky-100 bg-white shadow-sm sm:rounded-[2rem]">
           <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-5 py-7 text-white sm:px-8 sm:py-12">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-200">
@@ -1802,6 +1843,7 @@ export default function StartWorkout() {
 
   return (
     <ClientLayout unreadMessages={unreadMessages}>
+      {previewMode && <PreviewNotice />}
       <div className="pb-32 md:pb-0">
         {successMessage && (
           <div className="mb-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-center text-sm font-black text-emerald-700 shadow-sm">
@@ -1841,7 +1883,9 @@ export default function StartWorkout() {
                   </h2>
 
                   <p className="mt-1 text-xs font-bold text-blue-100">
-                    {isRepeatMode
+                    {previewMode
+                      ? "Preview mode • nothing saved"
+                      : isRepeatMode
                       ? "Repeat workout"
                       : isSavingDraft
                       ? "Saving..."
@@ -1885,7 +1929,7 @@ export default function StartWorkout() {
                     to="/client-plan"
                     className="shrink-0 rounded-2xl border border-sky-100 bg-white px-3 py-2 text-xs font-black text-slate-600 shadow-sm hover:bg-sky-50"
                   >
-                    Exit
+                    {previewMode ? "Exit Preview" : "Exit"}
                   </Link>
                 </div>
               </div>
@@ -2146,5 +2190,27 @@ export default function StartWorkout() {
         )}
       </div>
     </ClientLayout>
+  );
+}
+
+function PreviewNotice() {
+  return (
+    <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">
+          Workout Preview
+        </p>
+        <p className="mt-1 text-sm font-semibold leading-6 text-amber-900">
+          Explore the full workout. Nothing you do here will be saved or count as completion.
+        </p>
+      </div>
+
+      <Link
+        to="/client-plan"
+        className="shrink-0 rounded-xl bg-white px-4 py-2 text-center text-xs font-black text-amber-800 ring-1 ring-amber-200 hover:bg-amber-100"
+      >
+        Exit Preview
+      </Link>
+    </div>
   );
 }
