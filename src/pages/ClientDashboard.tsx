@@ -412,7 +412,7 @@ export default function ClientDashboard({
       "/client-log-activity": "/log-activity",
     };
 
-    if (pathname === "/start-workout") {
+    if (pathname === "/start-workout" || pathname === "/preview-workout") {
       const params = new URLSearchParams(search);
       const workoutId = params.get("workoutId");
       return workoutId
@@ -578,27 +578,48 @@ export default function ClientDashboard({
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               {nextWorkout ? (
-                <Link
-                  to={previewHref(`/start-workout?workoutId=${nextWorkout.id}`)}
-                  className="rounded-2xl bg-blue-600 px-5 py-4 text-center text-sm font-black text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.99]"
-                >
-                  Start Workout →
-                </Link>
-              ) : (
-                <Link
-                  to={previewHref("/client-plan")}
-                  className="rounded-2xl bg-blue-600 px-5 py-4 text-center text-sm font-black text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.99]"
-                >
-                  Open My Plan →
-                </Link>
-              )}
+                <>
+                  <Link
+                    to={previewHref(`/preview-workout?workoutId=${nextWorkout.id}`)}
+                    className="rounded-2xl border border-blue-200 bg-white px-5 py-4 text-center text-sm font-black text-blue-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 active:scale-[0.99]"
+                  >
+                    👁 Preview Workout
+                  </Link>
 
-              <Link
-                to={previewHref("/client-past-workouts")}
-                className="rounded-2xl border border-sky-100 bg-white px-5 py-4 text-center text-sm font-black text-blue-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 active:scale-[0.99]"
-              >
-                Past Workouts →
-              </Link>
+                  {previewMode ? (
+                    <button
+                      type="button"
+                      disabled
+                      className="cursor-not-allowed rounded-2xl bg-slate-200 px-5 py-4 text-center text-sm font-black text-slate-500 shadow-sm"
+                    >
+                      Start Workout — Client Only
+                    </button>
+                  ) : (
+                    <Link
+                      to={`/start-workout?workoutId=${nextWorkout.id}`}
+                      className="rounded-2xl bg-blue-600 px-5 py-4 text-center text-sm font-black text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.99]"
+                    >
+                      ▶ Start Workout
+                    </Link>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Link
+                    to={previewHref("/client-plan")}
+                    className="rounded-2xl bg-blue-600 px-5 py-4 text-center text-sm font-black text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.99]"
+                  >
+                    Open My Plan →
+                  </Link>
+
+                  <Link
+                    to={previewHref("/client-past-workouts")}
+                    className="rounded-2xl border border-sky-100 bg-white px-5 py-4 text-center text-sm font-black text-blue-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 active:scale-[0.99]"
+                  >
+                    Past Workouts →
+                  </Link>
+                </>
+              )}
             </div>
           </div>
 
