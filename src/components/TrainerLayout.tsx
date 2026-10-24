@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   BookOpen,
   CalendarDays,
+  ClipboardPen,
   Clock,
   Dumbbell,
   House,
@@ -42,17 +43,18 @@ const primaryItems: TrainerMenuItem[] = [
     matches: ["/clients/", "/trainer/client-preview/"],
   },
   {
+    to: "/sessions",
+    title: "Sessions",
+    shortTitle: "Sessions",
+    icon: ClipboardPen,
+    matches: ["/sessions/"],
+  },
+  {
     to: "/create-program",
     title: "Create program",
     shortTitle: "Program",
     icon: Layers,
     matches: ["/edit-workout/"],
-  },
-  {
-    to: "/training-plans",
-    title: "Training plans",
-    shortTitle: "Plans",
-    icon: CalendarDays,
   },
   {
     to: "/messages",
@@ -63,6 +65,7 @@ const primaryItems: TrainerMenuItem[] = [
 ];
 
 const toolItems: TrainerMenuItem[] = [
+  { to: "/training-plans", title: "Training plans", shortTitle: "Plans", icon: CalendarDays },
   { to: "/create-client", title: "Add client", shortTitle: "Add", icon: Plus },
   { to: "/import-program", title: "Import notes", shortTitle: "Import", icon: Upload },
   { to: "/workout-tracker", title: "Workout tracker", shortTitle: "Tracker", icon: Dumbbell },

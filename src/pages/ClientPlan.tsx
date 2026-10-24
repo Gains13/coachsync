@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { Repeat2 } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import ClientLayout from "../components/ClientLayout";
 
@@ -429,10 +430,9 @@ export default function ClientPlan() {
 
                         if (isCompleted && completedSubmissionId) {
                           return (
-                            <Link
+                            <div
                               key={workout.id}
-                              to={`/workout-history/${completedSubmissionId}`}
-                              className="block rounded-2xl border border-line bg-white p-4 opacity-70 transition hover:border-accent/30 hover:opacity-100  active:scale-[0.99] sm:p-5"
+                              className="rounded-2xl border border-line bg-white p-4 sm:p-5"
                             >
                               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <h4 className="text-base font-bold text-ink sm:text-lg">
@@ -446,10 +446,23 @@ export default function ClientPlan() {
 
                               <WorkoutExerciseList workout={workout} />
 
-                              <div className="mt-4 inline-block rounded-xl bg-slate-100 px-4 py-3 text-sm font-bold text-ink/80">
-                                View Completed Workout →
+                              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                                <Link
+                                  to={`/start-workout?workoutId=${workout.id}&repeat=true&sourceSubmissionId=${completedSubmissionId}`}
+                                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-bold text-white hover:bg-accent-dark active:scale-[0.99] sm:w-auto"
+                                >
+                                  <Repeat2 className="h-4 w-4" />
+                                  Repeat this workout
+                                </Link>
+
+                                <Link
+                                  to={`/workout-history/${completedSubmissionId}`}
+                                  className="block w-full rounded-2xl border border-line bg-white px-4 py-3 text-center text-sm font-bold text-ink hover:bg-canvas active:scale-[0.99] sm:w-auto"
+                                >
+                                  View completed workout
+                                </Link>
                               </div>
-                            </Link>
+                            </div>
                           );
                         }
 

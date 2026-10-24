@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
-import { Eye } from "lucide-react";
+import { Eye, Play } from "lucide-react";
 import TrainerLayout from "../components/TrainerLayout";
 import PageHeader from "../components/ui/PageHeader";
 import { btnGhost, btnPrimary } from "../components/ui/styles";
@@ -479,9 +479,16 @@ export default function ClientDetails() {
               </Link>
               <Link
                 to={`/create-program?client=${profile.id}`}
-                className={btnPrimary}
+                className={btnGhost}
               >
                 Add program
+              </Link>
+              <Link
+                to={`/sessions?client=${profile.id}`}
+                className={btnPrimary}
+              >
+                <Play className="h-4 w-4 fill-current" />
+                Start session
               </Link>
             </>
           }

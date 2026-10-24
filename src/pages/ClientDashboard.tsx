@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
-import { Check, Eye, MessageCircle, Play, Plus, PersonStanding } from "lucide-react";
+import { Check, Eye, MessageCircle, Play, Plus, PersonStanding, Repeat2 } from "lucide-react";
+import { loadLatestSessionForClient, startOfWeek, type Session } from "../lib/sessions";
 import ClientLayout from "../components/ClientLayout";
 
 type ClientData = {
@@ -96,6 +97,9 @@ export default function ClientDashboard({
 
   const [weeklyWorkoutTotal, setWeeklyWorkoutTotal] = useState(0);
   const [weeklyWorkoutCompleted, setWeeklyWorkoutCompleted] = useState(0);
+
+  const [latestSession, setLatestSession] = useState<Session | null>(null);
+  const [sessionRepeatsThisWeek, setSessionRepeatsThisWeek] = useState(0);
 
   const [loading, setLoading] = useState(true);
 
@@ -357,6 +361,22 @@ export default function ClientDashboard({
       setLastWorkout(lastWorkoutData);
     }
 
+    const session = await loadLatestSessionForClient(userId);
+    setLatestSession(session);
+
+    if (session) {
+      const { count: repeatCount } = await supabase
+        .from("workout_submissions")
+        .select("id", { count: "exact", head: true })
+        .eq("client_user_id", userId)
+        .eq("historical_workout_id", session.id)
+        .gte("submitted_at", startOfWeek().toISOString());
+
+      setSessionRepeatsThisWeek(repeatCount || 0);
+    } else {
+      setSessionRepeatsThisWeek(0);
+    }
+
     setLoading(false);
   }
 
@@ -542,6 +562,14 @@ export default function ClientDashboard({
 
       {/* Next up + this week */}
       <div className="grid gap-4 lg:grid-cols-[1.65fr_1fr]">
+        {!nextWorkout && latestSession ? (
+          <SessionCard
+            session={latestSession}
+            repeatsThisWeek={sessionRepeatsThisWeek}
+            previewMode={previewMode}
+            dark
+          />
+        ) : (
         <section className="rounded-[22px] bg-ink p-5 text-white sm:p-7">
           <div className="flex items-center gap-2.5">
             <span className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide">
@@ -613,6 +641,7 @@ export default function ClientDashboard({
             )}
           </div>
         </section>
+        )}
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-1 lg:gap-4">
           {/* This week: compact bar on mobile, ring on desktop */}
@@ -663,6 +692,17 @@ export default function ClientDashboard({
           </Link>
         </div>
       </div>
+
+      {/* Clients on a program who also train in person */}
+      {nextWorkout && latestSession && (
+        <div className="mt-4">
+          <SessionCard
+            session={latestSession}
+            repeatsThisWeek={sessionRepeatsThisWeek}
+            previewMode={previewMode}
+          />
+        </div>
+      )}
 
       {/* Last completed + log activity (desktop) */}
       <div className="mt-4 hidden gap-4 lg:grid lg:grid-cols-2">
@@ -749,6 +789,110 @@ export default function ClientDashboard({
       </section>
     </DashboardFrame>
   );
+}
+
+function SessionCard({
+  session,
+  repeatsThisWeek,
+  previewMode,
+  dark = false,
+}: {
+  session: Session;
+  repeatsThisWeek: number;
+  previewMode: boolean;
+  dark?: boolean;
+}) {
+  const exerciseNames = session.exercises
+    .map((exercise) => exercise.exerciseName)
+    .filter(Boolean);
+
+  const repeatLabel =
+    repeatsThisWeek === 0
+      ? "Not repeated yet this week"
+      : `Repeated ${repeatsThisWeek}× this week`;
+
+  return (
+    <section
+      className={
+        dark
+          ? "rounded-[22px] bg-ink p-5 text-white sm:p-7"
+          : "flex flex-wrap items-center gap-4 rounded-[18px] border border-line bg-white p-5"
+      }
+    >
+      <div className={dark ? "" : "min-w-[220px] flex-1"}>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span
+            className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${
+              dark ? "bg-accent text-white" : "bg-accent-soft text-accent"
+            }`}
+          >
+            Your last session
+          </span>
+          <span
+            className={`flex items-center gap-1.5 text-xs font-semibold ${
+              dark ? "text-emerald-300" : "text-emerald-700"
+            }`}
+          >
+            <Repeat2 className="h-3.5 w-3.5" />
+            {repeatLabel}
+          </span>
+        </div>
+
+        <h2
+          className={`break-words font-display font-extrabold tracking-tight ${
+            dark ? "mt-4 text-[26px] leading-tight sm:text-4xl" : "mt-2 text-xl"
+          }`}
+        >
+          {session.title || "Training session"}
+        </h2>
+
+        <p className={`mt-1.5 text-sm ${dark ? "text-white/65" : "text-muted"}`}>
+          {formatSessionDate(session.workoutDate)} · {session.exercises.length} exercise
+          {session.exercises.length === 1 ? "" : "s"}
+          {exerciseNames.length > 0 && ` · ${exerciseNames.slice(0, 3).join(", ")}`}
+          {exerciseNames.length > 3 && "..."}
+        </p>
+      </div>
+
+      <div className={`flex gap-2.5 ${dark ? "mt-5 sm:mt-6" : ""}`}>
+        {previewMode ? (
+          <span
+            className={`flex h-12 flex-1 items-center justify-center rounded-xl px-5 text-sm font-semibold ${
+              dark ? "bg-white/10 text-white/60" : "bg-canvas text-muted"
+            }`}
+          >
+            Repeat — client only
+          </span>
+        ) : (
+          <Link
+            to={`/repeat-historical-workout/${session.id}`}
+            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-accent px-6 text-sm font-semibold text-white transition hover:bg-accent-dark sm:flex-none"
+          >
+            <Repeat2 className="h-4 w-4" />
+            Repeat this workout
+          </Link>
+        )}
+        {!previewMode && (
+          <Link
+            to={`/client-historical-workout/${session.id}`}
+            className={`flex h-12 items-center justify-center rounded-xl border px-5 text-sm font-semibold transition ${
+              dark
+                ? "border-white/15 text-white hover:bg-white/5"
+                : "border-line text-ink hover:bg-canvas"
+            }`}
+          >
+            View
+          </Link>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function formatSessionDate(value: string) {
+  const date = new Date(`${value.slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 }
 
 function DashboardFrame({

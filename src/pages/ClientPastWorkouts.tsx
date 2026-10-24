@@ -193,6 +193,8 @@ export default function ClientPastWorkouts() {
       `
       )
       .eq("client_user_id", user.id)
+      // Sessions the trainer is still logging stay hidden until finished.
+      .neq("status", "draft")
       .order("workout_date", { ascending: false });
 
     if (historicalError) {
@@ -272,7 +274,11 @@ export default function ClientPastWorkouts() {
       id: workout.id,
       title: workout.title || "Imported Past Workout",
       date: workout.workout_date || workout.created_at,
-      notes: workout.notes || "Imported from trainer notes.",
+      notes:
+        workout.notes ||
+        (workout.source === "session"
+          ? "Logged by your trainer during your session."
+          : "Imported from trainer notes."),
       source: workout.source || "notes_import",
       exerciseCount: workout.client_historical_workout_exercises.length,
       previewExercises: workout.client_historical_workout_exercises.slice(0, 5),
@@ -628,12 +634,16 @@ export default function ClientPastWorkouts() {
                     <div>
                       <div className="mb-2 flex flex-wrap items-center gap-2">
                         <span className="w-fit rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700 ring-1 ring-amber-200">
-                          Imported Past Workout
+                          {item.source === "session"
+                            ? "Session with coach"
+                            : "Imported Past Workout"}
                         </span>
 
-                        <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-bold text-muted ring-1 ring-amber-100">
-                          Trainer Notes
-                        </span>
+                        {item.source !== "session" && (
+                          <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-bold text-muted ring-1 ring-amber-100">
+                            Trainer Notes
+                          </span>
+                        )}
                       </div>
 
                       <h2 className="text-lg font-bold text-ink">

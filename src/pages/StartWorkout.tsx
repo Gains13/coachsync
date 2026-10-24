@@ -1497,6 +1497,7 @@ export default function StartWorkout({
       .insert({
         client_user_id: user.id,
         workout_id: workout.id,
+        source_type: isRepeatMode ? "program_repeat" : "program",
         workout_title: isRepeatMode
           ? `Repeated - ${workout.title}`
           : workout.title,

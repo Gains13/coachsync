@@ -41,6 +41,8 @@ import WorkoutTracker from "./pages/WorkoutTracker";
 import WorkoutHistory from "./pages/WorkoutHistory";
 import StartWorkout from "./pages/StartWorkout";
 import CompletedWorkout from "./pages/CompletedWorkout";
+import TrainerSessions from "./pages/TrainerSessions";
+import TrainerSessionLog from "./pages/TrainerSessionLog";
 
 type UserRole = "trainer" | "client";
 
@@ -236,6 +238,24 @@ export default function App() {
           element={
             <RequireRole allowedRoles={["trainer"]}>
               <TrainerDashboard />
+            </RequireRole>
+          }
+        />
+
+        <Route
+          path="/sessions"
+          element={
+            <RequireRole allowedRoles={["trainer"]}>
+              <TrainerSessions />
+            </RequireRole>
+          }
+        />
+
+        <Route
+          path="/sessions/:sessionId"
+          element={
+            <RequireRole allowedRoles={["trainer"]}>
+              <TrainerSessionLog />
             </RequireRole>
           }
         />

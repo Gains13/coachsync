@@ -6,6 +6,7 @@ import {
   BookOpen,
   CalendarDays,
   ChevronRight,
+  ClipboardPen,
   Layers,
   Plus,
   RefreshCw,
@@ -531,6 +532,7 @@ export default function TrainerDashboard() {
         <aside className={`${card} flex-[1_1_280px] p-5`}>
           <h2 className="text-lg font-bold">Quick actions</h2>
           <div className="mt-3 grid gap-2">
+            <QuickLink to="/sessions" icon={ClipboardPen} label="Start a session" />
             <QuickLink to="/clients" icon={Users} label="View clients" />
             <QuickLink to="/create-program" icon={Layers} label="Create program" />
             <QuickLink to="/training-plans" icon={CalendarDays} label="Training plans" />

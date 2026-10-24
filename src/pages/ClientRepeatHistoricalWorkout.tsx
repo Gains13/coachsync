@@ -31,6 +31,7 @@ type HistoricalWorkout = {
   title: string;
   workout_date: string | null;
   notes: string | null;
+  source: string | null;
   client_historical_workout_exercises: HistoricalExercise[];
 };
 
@@ -172,6 +173,7 @@ export default function ClientRepeatHistoricalWorkout() {
         title,
         workout_date,
         notes,
+        source,
         client_historical_workout_exercises (
           id,
           section,
@@ -439,12 +441,15 @@ export default function ClientRepeatHistoricalWorkout() {
       .insert({
         client_user_id: user.id,
         workout_id: null,
+        historical_workout_id: workout.id,
+        source_type:
+          workout.source === "session" ? "session_repeat" : "imported_repeat",
         workout_title: `${workout.title} — Repeated`,
         notes:
           repeatNotes.trim() ||
-          `Repeated from imported past workout. Original workout date: ${
-            workout.workout_date || "not recorded"
-          }.`,
+          `Repeated from ${
+            workout.source === "session" ? "a session with your trainer" : "an imported past workout"
+          }. Original workout date: ${workout.workout_date || "not recorded"}.`,
       })
       .select("id")
       .single();
