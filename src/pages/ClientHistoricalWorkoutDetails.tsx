@@ -143,12 +143,12 @@ export default function ClientHistoricalWorkoutDetails() {
   if (isLoading) {
     return (
       <ClientLayout unreadMessages={unreadMessages}>
-        <section className="rounded-[1.75rem] border border-sky-100 bg-white p-6 shadow-sm sm:rounded-[2rem] sm:p-8">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
+        <section className="rounded-[18px] border border-line bg-white p-6 sm:rounded-[18px] sm:p-8">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
             Imported Workout
           </p>
 
-          <h1 className="mt-3 text-2xl font-black text-slate-900">
+          <h1 className="mt-3 text-2xl font-bold text-ink">
             Loading workout details...
           </h1>
         </section>
@@ -159,22 +159,22 @@ export default function ClientHistoricalWorkoutDetails() {
   if (statusMessage || !workout) {
     return (
       <ClientLayout unreadMessages={unreadMessages}>
-        <section className="rounded-[1.75rem] border border-sky-100 bg-white p-6 shadow-sm sm:rounded-[2rem] sm:p-8">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
+        <section className="rounded-[18px] border border-line bg-white p-6 sm:rounded-[18px] sm:p-8">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
             Imported Workout
           </p>
 
-          <h1 className="mt-3 text-2xl font-black text-slate-900">
+          <h1 className="mt-3 text-2xl font-bold text-ink">
             Workout not available
           </h1>
 
-          <p className="mt-3 text-sm font-semibold leading-6 text-slate-600">
+          <p className="mt-3 text-sm font-semibold leading-6 text-muted">
             {statusMessage || "Could not load this workout."}
           </p>
 
           <Link
             to="/client-past-workouts"
-            className="mt-5 inline-block rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-700"
+            className="mt-5 inline-block rounded-2xl bg-accent px-5 py-3 text-sm font-bold text-white transition hover:bg-accent-dark"
           >
             Back to Past Workouts
           </Link>
@@ -185,23 +185,23 @@ export default function ClientHistoricalWorkoutDetails() {
 
   return (
     <ClientLayout unreadMessages={unreadMessages}>
-      <section className="mb-4 overflow-hidden rounded-[1.75rem] border border-amber-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
-        <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-5 text-white sm:px-6 sm:py-8 md:px-8">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-100 sm:text-sm sm:tracking-[0.3em]">
+      <section className="mb-4 sm:mb-6">
+        <div className="mb-4">
+          <p className="text-sm text-muted">
             Imported Past Workout
           </p>
 
-          <h1 className="mt-2 break-words text-2xl font-black leading-tight sm:mt-3 sm:text-4xl">
+          <h1 className="break-words text-2xl font-bold leading-tight tracking-tight sm:text-[30px]">
             {workout.title}
           </h1>
 
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-amber-50 sm:mt-3 sm:text-base">
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
             Imported from your trainer’s notes. You can review the full workout
             or repeat it.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-4 md:p-8">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
           <SummaryCard title="Date" value={formatDate(workout.workout_date)} />
           <SummaryCard
             title="Exercises"
@@ -212,53 +212,53 @@ export default function ClientHistoricalWorkoutDetails() {
         </div>
       </section>
 
-      <section className="mb-4 rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
+      <section className="mb-4 rounded-[18px] border border-line bg-white p-4 sm:mb-6 sm:rounded-[18px] sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <Link
             to="/client-past-workouts"
-            className="rounded-2xl border border-sky-100 bg-sky-50 px-5 py-3 text-center text-sm font-black text-blue-700 transition hover:bg-blue-50"
+            className="rounded-2xl border border-line bg-canvas px-5 py-3 text-center text-sm font-bold text-accent transition hover:bg-accent-soft"
           >
             ← Back to Past Workouts
           </Link>
 
           <Link
             to={`/repeat-historical-workout/${workout.id}`}
-            className="rounded-2xl bg-amber-500 px-5 py-3 text-center text-sm font-black text-white shadow-sm transition hover:bg-amber-600"
+            className="rounded-2xl bg-amber-500 px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-amber-600"
           >
             Repeat This Workout
           </Link>
         </div>
 
         {workout.notes && (
-          <div className="mt-5 rounded-2xl border border-sky-100 bg-sky-50 p-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+          <div className="mt-5 rounded-2xl border border-line bg-canvas p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted">
               Notes
             </p>
 
-            <p className="mt-1 text-sm font-semibold leading-6 text-slate-800">
+            <p className="mt-1 text-sm font-semibold leading-6 text-ink">
               {workout.notes}
             </p>
           </div>
         )}
       </section>
 
-      <section className="rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+      <section className="rounded-[18px] border border-line bg-white p-4 sm:rounded-[18px] sm:p-6">
         <div className="mb-5">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700">
             Full Workout
           </p>
 
-          <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+          <h2 className="mt-1 text-xl font-bold text-ink sm:text-2xl">
             Exercise Details
           </h2>
 
-          <p className="mt-1 text-sm leading-6 text-slate-500">
+          <p className="mt-1 text-sm leading-6 text-muted">
             Exercises are grouped by the sections your trainer recorded.
           </p>
         </div>
 
         {groupedExercises.length === 0 ? (
-          <p className="rounded-2xl bg-amber-50 p-5 text-sm font-semibold text-slate-600">
+          <p className="rounded-2xl bg-amber-50 p-5 text-sm font-semibold text-muted">
             No exercises found for this imported workout.
           </p>
         ) : (
@@ -266,9 +266,9 @@ export default function ClientHistoricalWorkoutDetails() {
             {groupedExercises.map((group) => (
               <div
                 key={group.section}
-                className="rounded-3xl border border-amber-100 bg-amber-50 p-4 sm:p-5"
+                className="rounded-[18px] border border-amber-100 bg-amber-50 p-4 sm:p-5"
               >
-                <h3 className="text-lg font-black text-slate-900">
+                <h3 className="text-lg font-bold text-ink">
                   {group.section}
                 </h3>
 
@@ -284,7 +284,7 @@ export default function ClientHistoricalWorkoutDetails() {
                             Exercise {index + 1}
                           </p>
 
-                          <h4 className="mt-1 text-base font-black text-slate-900 sm:text-lg">
+                          <h4 className="mt-1 text-base font-bold text-ink sm:text-lg">
                             {exercise.exercise_name ||
                               exercise.raw_text ||
                               "Exercise"}
@@ -292,7 +292,7 @@ export default function ClientHistoricalWorkoutDetails() {
                         </div>
 
                         {exercise.raw_text && (
-                          <span className="w-fit rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700 ring-1 ring-amber-100">
+                          <span className="w-fit rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 ring-1 ring-amber-100">
                             Imported
                           </span>
                         )}
@@ -318,12 +318,12 @@ export default function ClientHistoricalWorkoutDetails() {
                       </div>
 
                       {exercise.raw_text && (
-                        <div className="mt-4 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                        <div className="mt-4 rounded-2xl bg-canvas p-4 ring-1 ring-slate-100">
+                          <p className="text-xs font-bold uppercase tracking-wide text-muted">
                             Original Note
                           </p>
 
-                          <p className="mt-1 text-sm font-semibold leading-6 text-slate-800">
+                          <p className="mt-1 text-sm font-semibold leading-6 text-ink">
                             {exercise.raw_text}
                           </p>
                         </div>
@@ -356,12 +356,12 @@ function formatDate(value: string | null) {
 
 function SummaryCard({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 shadow-sm">
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+    <div className="rounded-[18px] border border-amber-100 bg-amber-50 p-4 ">
+      <p className="text-xs font-medium text-muted">
         {title}
       </p>
 
-      <h2 className="mt-2 line-clamp-2 break-words text-lg font-black leading-tight text-slate-900 sm:text-xl">
+      <h2 className="mt-2 line-clamp-2 break-words text-lg font-bold leading-tight text-ink sm:text-xl">
         {value}
       </h2>
     </div>
@@ -371,11 +371,11 @@ function SummaryCard({ title, value }: { title: string; value: string }) {
 function MiniInfo({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-100">
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+      <p className="text-xs font-bold uppercase tracking-wide text-muted">
         {label}
       </p>
 
-      <p className="mt-1 break-words text-sm font-black text-slate-900">
+      <p className="mt-1 break-words text-sm font-bold text-ink">
         {value}
       </p>
     </div>

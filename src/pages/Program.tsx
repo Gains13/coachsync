@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import TrainerLayout from "../components/TrainerLayout";
+import PageHeader from "../components/ui/PageHeader";
+import { btnGhost } from "../components/ui/styles";
 
 type ClientProfile = {
   id: string;
@@ -536,53 +538,27 @@ export default function Program() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
-      <section className="mx-auto max-w-6xl px-6 py-10">
-        <div className="mb-8 overflow-hidden rounded-[2rem] border border-sky-100 bg-white shadow-sm">
-          <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-6 py-8 text-white md:px-8">
-            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-100">
-                  Program Templates
-                </p>
+    <TrainerLayout>
+        <PageHeader
+          eyebrow="Program templates"
+          title="Template library"
+          description="Create reusable templates and assign them directly to a client’s active plan."
+          actions={
+            <button type="button" onClick={loadPageData} className={btnGhost}>
+              Refresh
+            </button>
+          }
+        />
 
-                <h1 className="mt-3 text-3xl font-bold md:text-4xl">
-                  Template Library
-                </h1>
-
-                <p className="mt-3 max-w-2xl text-blue-50">
-                  Create reusable templates and assign them directly to a
-                  client’s active plan.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button
-                  onClick={loadPageData}
-                  className="rounded-xl bg-white/15 px-4 py-2 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur hover:bg-white/25"
-                >
-                  Refresh
-                </button>
-
-                <Link
-                  to="/trainer"
-                  className="rounded-xl bg-white px-4 py-2 text-center text-sm font-semibold text-blue-700 hover:bg-blue-50"
-                >
-                  Back to Trainer
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-4 p-6 md:grid-cols-3 md:p-8">
-            <SummaryCard title="Templates" value={`${templates.length}`} />
-            <SummaryCard title="Clients" value={`${clients.length}`} />
-            <SummaryCard title="Storage" value="Supabase" />
-          </div>
+        <div className="mb-4 grid grid-cols-3 gap-3">
+          <SummaryCard title="Templates" value={`${templates.length}`} />
+          <SummaryCard title="Clients" value={`${clients.length}`} />
+          <SummaryCard title="Storage" value="Supabase" />
         </div>
 
+
         {statusMessage && (
-          <p className="mb-6 rounded-2xl border border-sky-100 bg-white p-4 text-sm font-medium text-slate-700 shadow-sm">
+          <p className="mb-6 rounded-2xl border border-line bg-white p-4 text-sm font-medium text-ink/80 ">
             {statusMessage}
           </p>
         )}
@@ -590,14 +566,14 @@ export default function Program() {
         <div className="grid gap-6 lg:grid-cols-2">
           <form
             onSubmit={saveTemplate}
-            className="rounded-3xl border border-sky-100 bg-white p-6 shadow-sm"
+            className="rounded-[18px] border border-line bg-white p-6 "
           >
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-slate-900">
+              <h2 className="text-xl font-bold text-ink">
                 Create New Template
               </h2>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-muted">
                 Build a reusable structure like Push/Pull/Legs, Golf Mobility,
                 or Seated Strength.
               </p>
@@ -631,11 +607,11 @@ export default function Program() {
             <div className="mt-8">
               <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">
+                  <h3 className="text-lg font-bold text-ink">
                     Template Workouts
                   </h3>
 
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-muted">
                     Add each workout/session inside this reusable template.
                   </p>
                 </div>
@@ -643,7 +619,7 @@ export default function Program() {
                 <button
                   type="button"
                   onClick={addWorkout}
-                  className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                  className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-dark"
                 >
                   Add Workout
                 </button>
@@ -653,10 +629,10 @@ export default function Program() {
                 {workouts.map((workout, workoutIndex) => (
                   <div
                     key={workoutIndex}
-                    className="rounded-3xl border border-sky-100 bg-sky-50 p-5"
+                    className="rounded-[18px] border border-line bg-canvas p-5"
                   >
                     <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                      <h4 className="font-bold text-slate-900">
+                      <h4 className="font-bold text-ink">
                         Workout {workoutIndex + 1}
                       </h4>
 
@@ -680,12 +656,12 @@ export default function Program() {
 
                     <div className="mt-5">
                       <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <h5 className="font-bold text-slate-900">Exercises</h5>
+                        <h5 className="font-bold text-ink">Exercises</h5>
 
                         <button
                           type="button"
                           onClick={() => addExercise(workoutIndex)}
-                          className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-blue-700 ring-1 ring-sky-100 hover:bg-blue-50"
+                          className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-accent ring-1 ring-line hover:bg-accent-soft"
                         >
                           Add Exercise
                         </button>
@@ -695,10 +671,10 @@ export default function Program() {
                         {workout.exercises.map((exercise, exerciseIndex) => (
                           <div
                             key={exerciseIndex}
-                            className="rounded-2xl border border-sky-100 bg-white p-4"
+                            className="rounded-2xl border border-line bg-white p-4"
                           >
                             <div className="mb-3 flex items-center justify-between">
-                              <h6 className="font-semibold text-slate-900">
+                              <h6 className="font-semibold text-ink">
                                 Exercise {exerciseIndex + 1}
                               </h6>
 
@@ -809,29 +785,29 @@ export default function Program() {
 
             <button
               type="submit"
-              className="mt-6 w-full rounded-2xl bg-blue-600 px-5 py-4 font-semibold text-white shadow-sm hover:bg-blue-700"
+              className="mt-6 w-full rounded-2xl bg-accent px-5 py-4 font-semibold text-white hover:bg-accent-dark"
             >
               Save Template
             </button>
           </form>
 
-          <div className="rounded-3xl border border-sky-100 bg-white p-6 shadow-sm">
+          <div className="rounded-[18px] border border-line bg-white p-6 ">
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-slate-900">
+              <h2 className="text-xl font-bold text-ink">
                 Saved Templates
               </h2>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-muted">
                 Assign a saved template to a client’s visible plan.
               </p>
             </div>
 
             {isLoading ? (
-              <p className="rounded-2xl bg-sky-50 p-5 text-slate-500">
+              <p className="rounded-2xl bg-canvas p-5 text-muted">
                 Loading templates...
               </p>
             ) : templates.length === 0 ? (
-              <p className="rounded-2xl bg-sky-50 p-5 text-slate-500">
+              <p className="rounded-2xl bg-canvas p-5 text-muted">
                 No templates saved yet.
               </p>
             ) : (
@@ -839,20 +815,20 @@ export default function Program() {
                 {templates.map((template) => (
                   <div
                     key={template.id}
-                    className="rounded-3xl border border-sky-100 bg-sky-50 p-5"
+                    className="rounded-[18px] border border-line bg-canvas p-5"
                   >
                     <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div>
-                        <h3 className="text-lg font-bold text-slate-900">
+                        <h3 className="text-lg font-bold text-ink">
                           {template.title}
                         </h3>
 
-                        <p className="mt-1 text-sm text-slate-500">
+                        <p className="mt-1 text-sm text-muted">
                           {template.category || "No category"}
                         </p>
 
                         {template.description && (
-                          <p className="mt-2 text-sm text-slate-600">
+                          <p className="mt-2 text-sm text-muted">
                             {template.description}
                           </p>
                         )}
@@ -869,14 +845,14 @@ export default function Program() {
                       </button>
                     </div>
 
-                    <div className="mb-5 rounded-2xl border border-blue-100 bg-white p-4">
-                      <h4 className="mb-3 font-semibold text-slate-900">
+                    <div className="mb-5 rounded-2xl border border-line bg-white p-4">
+                      <h4 className="mb-3 font-semibold text-ink">
                         Assign Template to Client
                       </h4>
 
                       <div className="grid gap-3 md:grid-cols-[1fr_120px]">
                         <div>
-                          <label className="mb-2 block text-sm font-semibold text-slate-700">
+                          <label className="mb-2 block text-sm font-semibold text-ink/80">
                             Client
                           </label>
 
@@ -888,7 +864,7 @@ export default function Program() {
                                 event.target.value
                               )
                             }
-                            className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                            className="w-full rounded-xl border border-line bg-white px-4 py-3 text-ink outline-none focus:border-accent/40 focus:ring-2 focus:ring-line"
                           >
                             <option value="">Choose client</option>
                             {clients.map((client) => (
@@ -913,7 +889,7 @@ export default function Program() {
                         type="button"
                         onClick={() => assignTemplateToClient(template)}
                         disabled={isAssigningTemplateId === template.id}
-                        className="mt-4 w-full rounded-2xl bg-blue-600 px-5 py-3 font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="mt-4 w-full rounded-2xl bg-accent px-5 py-3 font-semibold text-white hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {isAssigningTemplateId === template.id
                           ? "Assigning..."
@@ -927,9 +903,9 @@ export default function Program() {
                         .map((workout) => (
                           <div
                             key={workout.id}
-                            className="rounded-2xl border border-sky-100 bg-white p-4"
+                            className="rounded-2xl border border-line bg-white p-4"
                           >
-                            <h4 className="font-semibold text-slate-900">
+                            <h4 className="font-semibold text-ink">
                               {workout.title}
                             </h4>
 
@@ -942,13 +918,13 @@ export default function Program() {
                                 .map((exercise) => (
                                   <div
                                     key={exercise.id}
-                                    className="rounded-xl bg-sky-50 p-3"
+                                    className="rounded-xl bg-canvas p-3"
                                   >
-                                    <p className="font-semibold text-slate-900">
+                                    <p className="font-semibold text-ink">
                                       {exercise.exercise_name}
                                     </p>
 
-                                    <p className="mt-1 text-sm text-slate-500">
+                                    <p className="mt-1 text-sm text-muted">
                                       {exercise.sets || "—"} sets x{" "}
                                       {exercise.reps || "—"} reps • Weight:{" "}
                                       {exercise.weight || "N/A"} • Rest:{" "}
@@ -960,7 +936,7 @@ export default function Program() {
                                         href={exercise.video_link}
                                         target="_blank"
                                         rel="noreferrer"
-                                        className="mt-2 inline-block text-sm font-semibold text-blue-600 hover:text-blue-700"
+                                        className="mt-2 inline-block text-sm font-semibold text-accent hover:text-accent"
                                       >
                                         Video Link
                                       </a>
@@ -977,21 +953,10 @@ export default function Program() {
             )}
           </div>
         </div>
-      </section>
-    </main>
+    </TrainerLayout>
   );
 }
 
-function SummaryCard({ title, value }: { title: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5">
-      <p className="text-sm font-medium text-slate-500">{title}</p>
-      <h2 className="mt-2 break-words text-xl font-bold text-slate-900">
-        {value}
-      </h2>
-    </div>
-  );
-}
 
 function Input({
   label,
@@ -1006,7 +971,7 @@ function Input({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-semibold text-slate-700">
+      <label className="mb-2 block text-sm font-semibold text-ink/80">
         {label}
       </label>
 
@@ -1014,7 +979,7 @@ function Input({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+        className="w-full rounded-xl border border-line bg-white px-4 py-3 text-ink outline-none ring-0 placeholder:text-muted focus:border-accent/40 focus:ring-2 focus:ring-line"
       />
     </div>
   );
@@ -1033,7 +998,7 @@ function TextArea({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-semibold text-slate-700">
+      <label className="mb-2 block text-sm font-semibold text-ink/80">
         {label}
       </label>
 
@@ -1042,8 +1007,17 @@ function TextArea({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         rows={4}
-        className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+        className="w-full rounded-xl border border-line bg-white px-4 py-3 text-ink outline-none ring-0 placeholder:text-muted focus:border-accent/40 focus:ring-2 focus:ring-line"
       />
+    </div>
+  );
+}
+function SummaryCard({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="rounded-[18px] border border-line bg-white p-4 sm:p-5">
+      <p className="text-sm text-muted">{title}</p>
+
+      <h2 className="mt-1 break-words text-xl font-bold text-ink">{value}</h2>
     </div>
   );
 }

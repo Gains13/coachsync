@@ -139,13 +139,13 @@ export default function ResetPassword() {
   const canUsePage = resetId || hasRecoverySession || isCheckingSession;
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-10">
-      <div className="mx-auto max-w-md rounded-2xl bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-bold text-slate-900">
+    <div className="min-h-screen bg-canvas px-4 py-10">
+      <div className="mx-auto max-w-md rounded-2xl bg-white p-6 ">
+        <h1 className="text-2xl font-bold text-ink">
           Create New Password
         </h1>
 
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-muted">
           Enter a new password for your CoachSync account.
         </p>
 
@@ -157,14 +157,14 @@ export default function ResetPassword() {
         )}
 
         {message && (
-          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+          <div className="mt-4 rounded-xl border border-line bg-canvas p-3 text-sm text-ink/80">
             {message}
           </div>
         )}
 
         <div className="mt-5 space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
+            <label className="mb-1 block text-sm font-medium text-ink/80">
               New Password
             </label>
 
@@ -178,7 +178,7 @@ export default function ResetPassword() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
+            <label className="mb-1 block text-sm font-medium text-ink/80">
               Confirm Password
             </label>
 
@@ -195,7 +195,7 @@ export default function ResetPassword() {
             type="button"
             onClick={handleUpdatePassword}
             disabled={saving || !canUsePage}
-            className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? "Updating..." : "Update Password"}
           </button>
@@ -204,7 +204,7 @@ export default function ResetPassword() {
         <button
           type="button"
           onClick={() => navigate("/")}
-          className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          className="mt-4 w-full rounded-xl border border-line bg-white px-4 py-3 text-sm font-semibold text-ink/80 hover:bg-canvas"
         >
           Back to Login
         </button>

@@ -558,16 +558,16 @@ export default function ClientRepeatHistoricalWorkout() {
   if (isLoading) {
     return (
       <ClientLayout unreadMessages={unreadMessages}>
-        <section className="rounded-[1.75rem] border border-sky-100 bg-white p-6 shadow-sm sm:rounded-[2rem] sm:p-8">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600 sm:text-sm sm:tracking-[0.3em]">
+        <section className="rounded-[18px] border border-line bg-white p-6 sm:rounded-[18px] sm:p-8">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent sm:text-sm sm:tracking-[0.3em]">
             CoachSync
           </p>
 
-          <h1 className="mt-3 text-2xl font-black text-slate-900">
+          <h1 className="mt-3 text-2xl font-bold text-ink">
             Loading imported workout...
           </h1>
 
-          <p className="mt-2 text-sm leading-6 text-slate-500">
+          <p className="mt-2 text-sm leading-6 text-muted">
             Getting this past workout ready for you to repeat.
           </p>
         </section>
@@ -578,16 +578,16 @@ export default function ClientRepeatHistoricalWorkout() {
   if (!workout || !historicalWorkoutId) {
     return (
       <ClientLayout unreadMessages={unreadMessages}>
-        <section className="rounded-[1.75rem] border border-sky-100 bg-white p-6 shadow-sm sm:rounded-[2rem] sm:p-8">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600 sm:text-sm sm:tracking-[0.3em]">
+        <section className="rounded-[18px] border border-line bg-white p-6 sm:rounded-[18px] sm:p-8">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent sm:text-sm sm:tracking-[0.3em]">
             CoachSync
           </p>
 
-          <h1 className="mt-3 text-2xl font-black text-slate-900">
+          <h1 className="mt-3 text-2xl font-bold text-ink">
             Imported workout not found
           </h1>
 
-          <p className="mt-2 text-sm leading-6 text-slate-500">
+          <p className="mt-2 text-sm leading-6 text-muted">
             Go back to your past workouts and choose another imported workout.
           </p>
 
@@ -599,7 +599,7 @@ export default function ClientRepeatHistoricalWorkout() {
 
           <Link
             to="/client-past-workouts"
-            className="mt-5 inline-block rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white hover:bg-blue-700"
+            className="mt-5 inline-block rounded-2xl bg-accent px-4 py-3 text-sm font-bold text-white hover:bg-accent-dark"
           >
             Back to Past Workouts
           </Link>
@@ -610,19 +610,19 @@ export default function ClientRepeatHistoricalWorkout() {
 
   return (
     <ClientLayout unreadMessages={unreadMessages}>
-      <section className="mb-4 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
-        <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-5 text-white sm:px-6 sm:py-8 md:px-8">
+      <section className="mb-4 sm:mb-6">
+        <div className="mb-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-100 sm:text-sm sm:tracking-[0.3em]">
+              <p className="text-sm text-muted">
                 Repeat Imported Workout
               </p>
 
-              <h1 className="mt-2 break-words text-2xl font-black leading-tight sm:mt-3 sm:text-4xl">
+              <h1 className="break-words text-2xl font-bold leading-tight tracking-tight sm:text-[30px]">
                 {workout.title}
               </h1>
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-amber-50 sm:mt-3 sm:text-base">
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
                 Your progress saves automatically across devices while you
                 repeat this workout.
               </p>
@@ -630,7 +630,7 @@ export default function ClientRepeatHistoricalWorkout() {
 
             <Link
               to="/client-past-workouts"
-              className="w-full rounded-2xl bg-white/15 px-4 py-3 text-center text-sm font-black text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto"
+              className="w-full rounded-2xl bg-white border border-line px-4 py-3 text-center text-sm font-bold text-ink ring-1 ring-line backdrop-blur transition hover:bg-canvas sm:w-auto"
             >
               Back to Past Workouts
             </Link>
@@ -638,20 +638,20 @@ export default function ClientRepeatHistoricalWorkout() {
         </div>
 
         <div className="p-4 sm:p-6 md:p-8">
-          <div className="rounded-[1.5rem] border border-amber-100 bg-amber-50 p-4 sm:rounded-3xl sm:p-6">
+          <div className="rounded-[18px] border border-amber-100 bg-amber-50 p-4 sm:rounded-[18px] sm:p-6">
             <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                <p className="text-xs font-bold uppercase tracking-wide text-muted">
                   Workout Progress
                 </p>
 
-                <h2 className="mt-2 text-xl font-black text-slate-900 sm:text-2xl">
+                <h2 className="mt-2 text-xl font-bold text-ink sm:text-2xl">
                   {completedCount} / {loggedExercises.length} exercises
                   completed
                 </h2>
               </div>
 
-              <div className="w-fit rounded-full bg-white px-4 py-2 text-sm font-black text-amber-700 ring-1 ring-amber-100">
+              <div className="w-fit rounded-full bg-white px-4 py-2 text-sm font-bold text-amber-700 ring-1 ring-amber-100">
                 {completionPercent}% complete
               </div>
             </div>
@@ -664,7 +664,7 @@ export default function ClientRepeatHistoricalWorkout() {
             </div>
 
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-bold text-slate-600">
+              <p className="text-sm font-bold text-muted">
                 {isSavingDraft
                   ? "Saving progress..."
                   : lastSavedLabel
@@ -676,7 +676,7 @@ export default function ClientRepeatHistoricalWorkout() {
                 type="button"
                 onClick={resetWorkoutProgress}
                 disabled={isSubmitting}
-                className="rounded-xl border border-red-100 bg-white px-4 py-2 text-sm font-black text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-xl border border-red-100 bg-white px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Clear Saved Progress
               </button>
@@ -686,19 +686,19 @@ export default function ClientRepeatHistoricalWorkout() {
       </section>
 
       {successMessage && (
-        <div className="mb-4 rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-5 text-center text-sm font-black text-emerald-700 shadow-sm sm:mb-6 sm:rounded-3xl">
+        <div className="mb-4 rounded-[18px] border border-emerald-100 bg-emerald-50 p-5 text-center text-sm font-bold text-emerald-700 sm:mb-6 sm:rounded-[18px]">
           {successMessage} Opening your completed workout...
         </div>
       )}
 
       {errorMessage && (
-        <div className="mb-4 rounded-[1.5rem] border border-red-100 bg-red-50 p-5 text-center text-sm font-black text-red-700 shadow-sm sm:mb-6 sm:rounded-3xl">
+        <div className="mb-4 rounded-[18px] border border-red-100 bg-red-50 p-5 text-center text-sm font-bold text-red-700 sm:mb-6 sm:rounded-[18px]">
           {errorMessage}
         </div>
       )}
 
-      <section className="mb-4 rounded-[1.5rem] border border-amber-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
-        <label className="mb-2 block text-sm font-black text-slate-700">
+      <section className="mb-4 rounded-[18px] border border-amber-100 bg-white p-4 sm:mb-6 sm:rounded-[18px] sm:p-6">
+        <label className="mb-2 block text-sm font-bold text-ink/80">
           Overall Notes for This Repeated Workout
         </label>
 
@@ -708,7 +708,7 @@ export default function ClientRepeatHistoricalWorkout() {
           disabled={isSubmitting}
           placeholder="Optional notes about this repeated workout"
           rows={3}
-          className="w-full rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-amber-300 focus:ring-4 focus:ring-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-ink outline-none ring-0 placeholder:text-muted focus:border-amber-300 focus:ring-4 focus:ring-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
         />
       </section>
 
@@ -716,14 +716,14 @@ export default function ClientRepeatHistoricalWorkout() {
         {groupedExercises.map((group) => (
           <div
             key={group.section}
-            className="rounded-[1.5rem] border border-amber-100 bg-amber-50 p-4 shadow-sm sm:rounded-3xl sm:p-5"
+            className="rounded-[18px] border border-amber-100 bg-amber-50 p-4 sm:rounded-[18px] sm:p-5"
           >
             <div className="mb-4">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-600">
                 Section
               </p>
 
-              <h2 className="mt-1 text-xl font-black text-slate-900">
+              <h2 className="mt-1 text-xl font-bold text-ink">
                 {group.section}
               </h2>
             </div>
@@ -732,7 +732,7 @@ export default function ClientRepeatHistoricalWorkout() {
               {group.exercises.map(({ exercise, originalIndex }) => (
                 <div
                   key={`${exercise.exerciseId}-${originalIndex}`}
-                  className={`rounded-[1.5rem] border p-4 shadow-sm transition sm:rounded-3xl sm:p-6 ${
+                  className={`rounded-[18px] border p-4  transition sm:rounded-[18px] sm:p-6 ${
                     exercise.completed
                       ? "border-emerald-200 bg-emerald-50"
                       : "border-amber-100 bg-white"
@@ -741,22 +741,22 @@ export default function ClientRepeatHistoricalWorkout() {
                   <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
                       <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700 ring-1 ring-amber-100">
+                        <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 ring-1 ring-amber-100">
                           {exercise.section}
                         </span>
 
                         {exercise.completed && (
-                          <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700">
+                          <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
                             Completed
                           </span>
                         )}
                       </div>
 
-                      <h3 className="text-lg font-black text-slate-900 sm:text-xl">
+                      <h3 className="text-lg font-bold text-ink sm:text-xl">
                         {exercise.exerciseName}
                       </h3>
 
-                      <p className="mt-2 text-sm leading-6 text-slate-500">
+                      <p className="mt-2 text-sm leading-6 text-muted">
                         {exercise.plannedSets || "N/A"} sets x{" "}
                         {exercise.plannedReps || "N/A"} • Weight:{" "}
                         {exercise.plannedWeight || "N/A"} • Rest:{" "}
@@ -764,7 +764,7 @@ export default function ClientRepeatHistoricalWorkout() {
                       </p>
 
                       {exercise.rawText && (
-                        <p className="mt-2 text-xs font-semibold leading-5 text-slate-400">
+                        <p className="mt-2 text-xs font-semibold leading-5 text-muted">
                           Original: {exercise.rawText}
                         </p>
                       )}
@@ -786,14 +786,14 @@ export default function ClientRepeatHistoricalWorkout() {
                       disabled={isSubmitting}
                     />
 
-                    <span className="text-sm font-black leading-6 text-slate-800 sm:text-base">
+                    <span className="text-sm font-bold leading-6 text-ink sm:text-base">
                       I completed this exercise
                     </span>
                   </label>
 
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div>
-                      <label className="mb-2 block text-sm font-black text-slate-700">
+                      <label className="mb-2 block text-sm font-bold text-ink/80">
                         Difficulty
                       </label>
 
@@ -803,7 +803,7 @@ export default function ClientRepeatHistoricalWorkout() {
                           updateDifficulty(originalIndex, event.target.value)
                         }
                         disabled={isSubmitting}
-                        className="w-full rounded-2xl border border-amber-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-amber-300 focus:ring-4 focus:ring-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="w-full rounded-2xl border border-amber-100 bg-white px-4 py-3 text-sm text-ink outline-none ring-0 focus:border-amber-300 focus:ring-4 focus:ring-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <option value="">Select difficulty</option>
                         <option value="Easy">Easy</option>
@@ -816,7 +816,7 @@ export default function ClientRepeatHistoricalWorkout() {
                     </div>
 
                     <div>
-                      <label className="mb-2 block text-sm font-black text-slate-700">
+                      <label className="mb-2 block text-sm font-bold text-ink/80">
                         Notes
                       </label>
 
@@ -827,7 +827,7 @@ export default function ClientRepeatHistoricalWorkout() {
                         }
                         disabled={isSubmitting}
                         placeholder="Optional note for your trainer"
-                        className="w-full rounded-2xl border border-amber-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-amber-300 focus:ring-4 focus:ring-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="w-full rounded-2xl border border-amber-100 bg-white px-4 py-3 text-sm text-ink outline-none ring-0 placeholder:text-muted focus:border-amber-300 focus:ring-4 focus:ring-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
                       />
                     </div>
                   </div>
@@ -842,7 +842,7 @@ export default function ClientRepeatHistoricalWorkout() {
         type="button"
         onClick={submitRepeatedWorkout}
         disabled={isSubmitting || loggedExercises.length === 0}
-        className="mt-6 w-full rounded-2xl bg-amber-500 px-5 py-4 text-sm font-black text-white shadow-sm hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60 sm:mt-8"
+        className="mt-6 w-full rounded-2xl bg-amber-500 px-5 py-4 text-sm font-bold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60 sm:mt-8"
       >
         {isSubmitting ? "Submitting workout..." : "Submit Repeated Workout"}
       </button>

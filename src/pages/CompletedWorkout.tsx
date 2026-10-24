@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import ClientLayout from "../components/ClientLayout";
+import TrainerLayout from "../components/TrainerLayout";
 
 type SubmissionExercise = {
   id: string;
@@ -226,16 +227,16 @@ ${trainerResponse.trim()}`;
 
   if (isLoading) {
     const loadingContent = (
-      <section className="rounded-[1.75rem] border border-sky-100 bg-white p-6 shadow-sm sm:rounded-[2rem] sm:p-8">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600 sm:text-sm sm:tracking-[0.3em]">
+      <section className="rounded-[18px] border border-line bg-white p-6 sm:rounded-[18px] sm:p-8">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent sm:text-sm sm:tracking-[0.3em]">
           CoachSync
         </p>
 
-        <h1 className="mt-3 text-2xl font-black text-slate-900">
+        <h1 className="mt-3 text-2xl font-bold text-ink">
           Loading completed workout...
         </h1>
 
-        <p className="mt-2 text-sm leading-6 text-slate-500">
+        <p className="mt-2 text-sm leading-6 text-muted">
           Pulling up the submitted workout details.
         </p>
       </section>
@@ -243,9 +244,7 @@ ${trainerResponse.trim()}`;
 
     if (userRole === "trainer") {
       return (
-        <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 p-4 text-slate-900 sm:p-8">
-          <div className="mx-auto max-w-6xl">{loadingContent}</div>
-        </main>
+        <TrainerLayout>{loadingContent}</TrainerLayout>
       );
     }
 
@@ -258,16 +257,16 @@ ${trainerResponse.trim()}`;
 
   if (!workout) {
     const notFoundContent = (
-      <section className="rounded-[1.75rem] border border-sky-100 bg-white p-6 shadow-sm sm:rounded-[2rem] sm:p-8">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600 sm:text-sm sm:tracking-[0.3em]">
+      <section className="rounded-[18px] border border-line bg-white p-6 sm:rounded-[18px] sm:p-8">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent sm:text-sm sm:tracking-[0.3em]">
           CoachSync
         </p>
 
-        <h1 className="mt-3 text-2xl font-black text-slate-900">
+        <h1 className="mt-3 text-2xl font-bold text-ink">
           Workout not found
         </h1>
 
-        <p className="mt-2 text-sm leading-6 text-slate-500">
+        <p className="mt-2 text-sm leading-6 text-muted">
           This completed workout could not be loaded.
         </p>
 
@@ -280,14 +279,14 @@ ${trainerResponse.trim()}`;
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           <Link
             to={backToPlanLink}
-            className="rounded-2xl bg-blue-600 px-4 py-3 text-center text-sm font-black text-white hover:bg-blue-700"
+            className="rounded-2xl bg-accent px-4 py-3 text-center text-sm font-bold text-white hover:bg-accent-dark"
           >
             {backToPlanLabel}
           </Link>
 
           <Link
             to={dashboardLink}
-            className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-center text-sm font-black text-blue-600 hover:bg-sky-50"
+            className="rounded-2xl border border-line bg-white px-4 py-3 text-center text-sm font-bold text-accent hover:bg-canvas"
           >
             {dashboardLabel}
           </Link>
@@ -297,9 +296,7 @@ ${trainerResponse.trim()}`;
 
     if (userRole === "trainer") {
       return (
-        <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 p-4 text-slate-900 sm:p-8">
-          <div className="mx-auto max-w-6xl">{notFoundContent}</div>
-        </main>
+        <TrainerLayout>{notFoundContent}</TrainerLayout>
       );
     }
 
@@ -337,24 +334,24 @@ ${trainerResponse.trim()}`;
 
   const pageContent = (
     <>
-      <section className="mb-4 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
-        <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-5 text-white sm:px-6 sm:py-8 md:px-8">
+      <section className="mb-4 sm:mb-6">
+        <div className="mb-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
+              <p className="text-sm text-muted">
                 Completed Workout
               </p>
 
-              <h1 className="mt-2 break-words text-2xl font-black leading-tight sm:mt-3 sm:text-4xl">
+              <h1 className="break-words text-2xl font-bold leading-tight tracking-tight sm:text-[30px]">
                 {workout.workout_title}
               </h1>
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
                 Submitted: {submittedDate}
               </p>
 
               {userRole === "trainer" && (
-                <p className="mt-1 text-sm font-bold text-blue-50">
+                <p className="mt-1 text-sm font-bold text-muted">
                   Client: {clientDisplayName}
                 </p>
               )}
@@ -363,7 +360,7 @@ ${trainerResponse.trim()}`;
             <div className="flex flex-col gap-3 sm:flex-row">
               <Link
                 to={backToPlanLink}
-                className="w-full rounded-2xl bg-white/15 px-4 py-3 text-center text-sm font-black text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto"
+                className="w-full rounded-2xl bg-white border border-line px-4 py-3 text-center text-sm font-bold text-ink ring-1 ring-line backdrop-blur transition hover:bg-canvas sm:w-auto"
               >
                 {backToPlanLabel}
               </Link>
@@ -371,7 +368,7 @@ ${trainerResponse.trim()}`;
               {userRole === "trainer" && (
                 <Link
                   to={dashboardLink}
-                  className="w-full rounded-2xl bg-white px-4 py-3 text-center text-sm font-black text-blue-700 transition hover:bg-blue-50 sm:w-auto"
+                  className="w-full rounded-2xl bg-white px-4 py-3 text-center text-sm font-bold text-accent transition hover:bg-accent-soft sm:w-auto"
                 >
                   {dashboardLabel}
                 </Link>
@@ -380,7 +377,7 @@ ${trainerResponse.trim()}`;
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-5 md:p-8">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-5">
           <SummaryCard
             title="Completed"
             value={`${completedCount} / ${totalExercises}`}
@@ -401,39 +398,39 @@ ${trainerResponse.trim()}`;
       </section>
 
       {statusMessage && (
-        <p className="mb-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-semibold leading-6 text-red-700 shadow-sm sm:mb-6">
+        <p className="mb-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-semibold leading-6 text-red-700 sm:mb-6">
           {statusMessage}
         </p>
       )}
 
       {successMessage && (
-        <p className="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-black leading-6 text-emerald-700 shadow-sm sm:mb-6">
+        <p className="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-bold leading-6 text-emerald-700 sm:mb-6">
           {successMessage}
         </p>
       )}
 
       {painReported && (
-        <section className="mb-4 rounded-[1.75rem] border border-red-100 bg-red-50 p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
+        <section className="mb-4 rounded-[18px] border border-red-100 bg-red-50 p-4 sm:mb-6 sm:rounded-[18px] sm:p-6">
           <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-red-600">
                 Pain & Discomfort Report
               </p>
 
-              <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+              <h2 className="mt-1 text-xl font-bold text-ink sm:text-2xl">
                 {typeof workout.pain_level === "number"
                   ? `${workout.pain_level}/10 pain level`
                   : "Pain level not recorded"}
               </h2>
 
-              <p className="mt-1 text-sm leading-6 text-slate-600">
+              <p className="mt-1 text-sm leading-6 text-muted">
                 Review the client’s pain report and respond with next steps.
               </p>
             </div>
 
             {typeof workout.pain_level === "number" &&
               workout.pain_level >= 7 && (
-                <span className="w-fit rounded-full bg-red-600 px-4 py-2 text-sm font-black text-white shadow-sm">
+                <span className="w-fit rounded-full bg-red-600 px-4 py-2 text-sm font-bold text-white ">
                   High Priority
                 </span>
               )}
@@ -465,18 +462,18 @@ ${trainerResponse.trim()}`;
               Client Pain Notes
             </p>
 
-            <p className="mt-2 whitespace-pre-wrap break-words text-sm font-black leading-6 text-slate-900">
+            <p className="mt-2 whitespace-pre-wrap break-words text-sm font-bold leading-6 text-ink">
               {workout.pain_notes || "No pain notes added."}
             </p>
           </div>
 
           {userRole === "trainer" && (
             <div className="mt-5 rounded-2xl border border-red-100 bg-white p-4">
-              <label className="block text-sm font-black text-slate-800">
+              <label className="block text-sm font-bold text-ink">
                 Respond to Pain Report
               </label>
 
-              <p className="mt-1 text-sm leading-6 text-slate-500">
+              <p className="mt-1 text-sm leading-6 text-muted">
                 This sends a message directly to the client.
               </p>
 
@@ -486,14 +483,14 @@ ${trainerResponse.trim()}`;
                 disabled={isSendingResponse}
                 rows={5}
                 placeholder="Example: Thanks for letting me know. For now, avoid that movement, keep the intensity low, and I’ll adjust your next workout."
-                className="mt-3 w-full rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-3 w-full rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
               />
 
               <button
                 type="button"
                 onClick={sendPainResponseToClient}
                 disabled={isSendingResponse}
-                className="mt-3 w-full rounded-2xl bg-red-600 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                className="mt-3 w-full rounded-2xl bg-red-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 {isSendingResponse
                   ? "Sending Response..."
@@ -504,35 +501,35 @@ ${trainerResponse.trim()}`;
         </section>
       )}
 
-      <section className="mb-4 rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
+      <section className="mb-4 rounded-[18px] border border-line bg-white p-4 sm:mb-6 sm:rounded-[18px] sm:p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted">
               Workout Completion
             </p>
 
-            <h2 className="mt-2 text-xl font-black text-slate-900 sm:text-2xl">
+            <h2 className="mt-2 text-xl font-bold text-ink sm:text-2xl">
               {completedCount} / {totalExercises} exercises completed
             </h2>
           </div>
 
-          <span className="w-fit rounded-full bg-blue-50 px-4 py-2 text-sm font-black text-blue-700 ring-1 ring-blue-100">
+          <span className="w-fit rounded-full bg-accent-soft px-4 py-2 text-sm font-bold text-accent ring-1 ring-line">
             {completionPercent}% complete
           </span>
         </div>
 
-        <div className="mt-5 h-3 rounded-full bg-sky-50">
+        <div className="mt-5 h-3 rounded-full bg-canvas">
           <div
-            className="h-3 rounded-full bg-blue-600 transition-all"
+            className="h-3 rounded-full bg-accent transition-all"
             style={{ width: `${completionPercent}%` }}
           />
         </div>
 
         {workout.notes && (
-          <div className="mt-5 rounded-2xl border border-sky-100 bg-sky-50 p-4">
-            <p className="text-sm font-bold text-slate-500">Workout Notes</p>
+          <div className="mt-5 rounded-2xl border border-line bg-canvas p-4">
+            <p className="text-sm font-bold text-muted">Workout Notes</p>
 
-            <p className="mt-1 whitespace-pre-wrap text-sm font-black leading-6 text-slate-800">
+            <p className="mt-1 whitespace-pre-wrap text-sm font-bold leading-6 text-ink">
               {workout.notes}
             </p>
           </div>
@@ -540,12 +537,12 @@ ${trainerResponse.trim()}`;
       </section>
 
       {exercises.length === 0 ? (
-        <section className="rounded-[1.75rem] border border-sky-100 bg-white p-6 shadow-sm sm:rounded-3xl sm:p-8">
-          <h2 className="text-xl font-black text-slate-900">
+        <section className="rounded-[18px] border border-line bg-white p-6 sm:rounded-[18px] sm:p-8">
+          <h2 className="text-xl font-bold text-ink">
             No exercise details found
           </h2>
 
-          <p className="mt-2 text-sm leading-6 text-slate-500">
+          <p className="mt-2 text-sm leading-6 text-muted">
             This workout was submitted, but no exercise rows were saved.
           </p>
         </section>
@@ -554,7 +551,7 @@ ${trainerResponse.trim()}`;
           {exercises.map((exercise, index) => (
             <div
               key={exercise.id}
-              className={`rounded-[1.5rem] border p-4 shadow-sm sm:rounded-3xl sm:p-6 ${
+              className={`rounded-[18px] border p-4  sm:rounded-[18px] sm:p-6 ${
                 exercise.completed
                   ? "border-emerald-100 bg-emerald-50"
                   : "border-red-100 bg-red-50"
@@ -562,15 +559,15 @@ ${trainerResponse.trim()}`;
             >
               <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted">
                     Exercise {index + 1}
                   </p>
 
-                  <h2 className="mt-2 text-lg font-black text-slate-900 sm:text-xl">
+                  <h2 className="mt-2 text-lg font-bold text-ink sm:text-xl">
                     {exercise.exercise_name}
                   </h2>
 
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                  <p className="mt-2 text-sm leading-6 text-muted">
                     {exercise.planned_sets || "N/A"} sets x{" "}
                     {exercise.planned_reps || "N/A"} reps • Weight:{" "}
                     {exercise.planned_weight || "N/A"} • Rest:{" "}
@@ -579,7 +576,7 @@ ${trainerResponse.trim()}`;
                 </div>
 
                 <span
-                  className={`w-fit rounded-full px-3 py-1 text-sm font-black ring-1 ${
+                  className={`w-fit rounded-full px-3 py-1 text-sm font-bold ring-1 ${
                     exercise.completed
                       ? "bg-emerald-100 text-emerald-700 ring-emerald-200"
                       : "bg-red-100 text-red-700 ring-red-200"
@@ -606,11 +603,7 @@ ${trainerResponse.trim()}`;
 
   if (userRole === "trainer") {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
-        <section className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:py-10">
-          {pageContent}
-        </section>
-      </main>
+      <TrainerLayout>{pageContent}</TrainerLayout>
     );
   }
 
@@ -630,17 +623,17 @@ function SummaryCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border p-4 shadow-sm sm:p-5 ${
-        danger ? "border-red-100 bg-red-50" : "border-sky-100 bg-sky-50"
+      className={`rounded-[18px] border p-4  sm:p-5 ${
+        danger ? "border-red-100 bg-red-50" : "border-line bg-white"
       }`}
     >
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+      <p className="text-xs font-medium text-muted">
         {title}
       </p>
 
       <h2
-        className={`mt-2 line-clamp-2 break-words text-xl font-black leading-tight sm:text-2xl ${
-          danger ? "text-red-700" : "text-slate-900"
+        className={`mt-2 line-clamp-2 break-words text-xl font-bold leading-tight sm:text-2xl ${
+          danger ? "text-red-700" : "text-ink"
         }`}
       >
         {value}
@@ -652,9 +645,9 @@ function SummaryCard({
 function InfoBox({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-white/70 bg-white p-4">
-      <p className="text-sm font-bold text-slate-500">{label}</p>
+      <p className="text-sm font-bold text-muted">{label}</p>
 
-      <p className="mt-1 whitespace-pre-wrap break-words text-sm font-black leading-6 text-slate-900 sm:text-base">
+      <p className="mt-1 whitespace-pre-wrap break-words text-sm font-bold leading-6 text-ink sm:text-base">
         {value}
       </p>
     </div>
@@ -668,7 +661,7 @@ function PainBox({ label, value }: { label: string; value: string }) {
         {label}
       </p>
 
-      <p className="mt-1 whitespace-pre-wrap break-words text-sm font-black leading-6 text-slate-900 sm:text-base">
+      <p className="mt-1 whitespace-pre-wrap break-words text-sm font-bold leading-6 text-ink sm:text-base">
         {value}
       </p>
     </div>

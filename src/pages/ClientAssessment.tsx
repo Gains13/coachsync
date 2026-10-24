@@ -119,16 +119,16 @@ export default function ClientAssessment() {
   if (isLoading) {
     return (
       <ClientLayout unreadMessages={unreadMessages}>
-        <section className="rounded-[1.75rem] border border-sky-100 bg-white p-6 shadow-sm sm:rounded-[2rem] sm:p-8">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600 sm:text-sm sm:tracking-[0.3em]">
+        <section className="rounded-[18px] border border-line bg-white p-6 sm:rounded-[18px] sm:p-8">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent sm:text-sm sm:tracking-[0.3em]">
             CoachSync
           </p>
 
-          <h1 className="mt-3 text-2xl font-black text-slate-900">
+          <h1 className="mt-3 text-2xl font-bold text-ink">
             Loading assessment...
           </h1>
 
-          <p className="mt-2 text-sm leading-6 text-slate-500">
+          <p className="mt-2 text-sm leading-6 text-muted">
             Please wait while we load your starting information.
           </p>
         </section>
@@ -138,23 +138,23 @@ export default function ClientAssessment() {
 
   return (
     <ClientLayout unreadMessages={unreadMessages}>
-      <section className="mb-4 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
-        <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-5 text-white sm:px-6 sm:py-8 md:px-8">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
+      <section className="mb-4 sm:mb-6">
+        <div className="mb-4">
+          <p className="text-sm text-muted">
             Client Assessment
           </p>
 
-          <h1 className="mt-2 break-words text-2xl font-black leading-tight sm:mt-3 sm:text-4xl">
+          <h1 className="break-words text-2xl font-bold leading-tight tracking-tight sm:text-[30px]">
             Initial Assessment
           </h1>
 
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
             View your starting measurements. Edit them only if something needs
             to be updated.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-4 md:p-8">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
           <SummaryCard
             title="Weight"
             value={startingWeight || "Not set"}
@@ -175,18 +175,18 @@ export default function ClientAssessment() {
         </div>
       </section>
 
-      <section className="rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+      <section className="rounded-[18px] border border-line bg-white p-4 sm:rounded-[18px] sm:p-6">
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">
               Starting Point
             </p>
 
-            <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+            <h2 className="mt-1 text-xl font-bold text-ink sm:text-2xl">
               Your Assessment
             </h2>
 
-            <p className="mt-1 text-sm leading-6 text-slate-500">
+            <p className="mt-1 text-sm leading-6 text-muted">
               These measurements help your trainer track your starting point and
               progress.
             </p>
@@ -199,7 +199,7 @@ export default function ClientAssessment() {
                 setStatusMessage("");
                 setIsEditing(true);
               }}
-              className="w-full rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.99] sm:w-auto"
+              className="w-full rounded-2xl bg-accent px-5 py-3 text-sm font-bold text-white transition hover:bg-accent-dark active:scale-[0.99] sm:w-auto"
             >
               Edit Assessment
             </button>
@@ -260,7 +260,7 @@ export default function ClientAssessment() {
             />
 
             {statusMessage && (
-              <p className="rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-semibold text-slate-700">
+              <p className="rounded-2xl border border-line bg-canvas p-4 text-sm font-semibold text-ink/80">
                 {statusMessage}
               </p>
             )}
@@ -269,7 +269,7 @@ export default function ClientAssessment() {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                className="w-full rounded-2xl bg-accent px-5 py-4 text-sm font-bold text-white transition hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 {isSaving ? "Saving Assessment..." : "Save Assessment"}
               </button>
@@ -281,7 +281,7 @@ export default function ClientAssessment() {
                   setIsEditing(false);
                   loadAssessment();
                 }}
-                className="w-full rounded-2xl border border-sky-100 bg-white px-5 py-4 text-sm font-black text-slate-700 shadow-sm transition hover:bg-sky-50 sm:w-auto"
+                className="w-full rounded-2xl border border-line bg-white px-5 py-4 text-sm font-bold text-ink/80 transition hover:bg-canvas sm:w-auto"
               >
                 Cancel
               </button>
@@ -312,12 +312,12 @@ export default function ClientAssessment() {
               <InfoCard label="Chest" value={chest || "Not added yet"} />
             </div>
 
-            <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 sm:p-5">
-              <p className="text-sm font-bold text-slate-500">
+            <div className="rounded-2xl border border-line bg-canvas p-4 sm:p-5">
+              <p className="text-sm font-bold text-muted">
                 Assessment Notes
               </p>
 
-              <p className="mt-2 text-sm leading-6 text-slate-700 sm:text-base">
+              <p className="mt-2 text-sm leading-6 text-ink/80 sm:text-base">
                 {notes || "No assessment notes added yet."}
               </p>
             </div>
@@ -336,10 +336,10 @@ export default function ClientAssessment() {
 
 function InfoCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 sm:p-5">
-      <p className="text-sm font-bold text-slate-500">{label}</p>
+    <div className="rounded-2xl border border-line bg-canvas p-4 sm:p-5">
+      <p className="text-sm font-bold text-muted">{label}</p>
 
-      <p className="mt-2 break-words text-xl font-black text-slate-900">
+      <p className="mt-2 break-words text-xl font-bold text-ink">
         {value}
       </p>
     </div>
@@ -358,8 +358,8 @@ function Input({
   placeholder: string;
 }) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 sm:p-5">
-      <label className="mb-2 block text-sm font-black text-slate-700">
+    <div className="rounded-2xl border border-line bg-canvas p-4 sm:p-5">
+      <label className="mb-2 block text-sm font-bold text-ink/80">
         {label}
       </label>
 
@@ -367,7 +367,7 @@ function Input({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+        className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line"
       />
     </div>
   );
@@ -385,8 +385,8 @@ function TextArea({
   placeholder: string;
 }) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 sm:p-5">
-      <label className="mb-2 block text-sm font-black text-slate-700">
+    <div className="rounded-2xl border border-line bg-canvas p-4 sm:p-5">
+      <label className="mb-2 block text-sm font-bold text-ink/80">
         {label}
       </label>
 
@@ -395,7 +395,7 @@ function TextArea({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         rows={4}
-        className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+        className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line"
       />
     </div>
   );
@@ -412,17 +412,17 @@ function SummaryCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border p-4 shadow-sm ${
-        alert ? "border-blue-200 bg-blue-50" : "border-sky-100 bg-sky-50"
+      className={`rounded-2xl border p-4  ${
+        alert ? "border-accent/30 bg-accent-soft" : "border-line bg-canvas"
       }`}
     >
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+      <p className="text-xs font-bold uppercase tracking-wide text-muted">
         {title}
       </p>
 
       <h2
-        className={`mt-2 line-clamp-2 break-words text-xl font-black leading-tight sm:text-2xl ${
-          alert ? "text-blue-700" : "text-slate-900"
+        className={`mt-2 line-clamp-2 break-words text-xl font-bold leading-tight sm:text-2xl ${
+          alert ? "text-accent" : "text-ink"
         }`}
       >
         {value}

@@ -193,9 +193,9 @@ export default function TrainerClientPreview() {
       ) : view === "completed" && detailId ? (
         <CompletedPreview submissionId={detailId} basePath={basePath} />
       ) : (
-        <div className="rounded-3xl border border-sky-100 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-black">Preview page not found</h2>
-          <p className="mt-2 text-sm text-slate-600">
+        <div className="rounded-[18px] border border-line bg-white p-6 ">
+          <h2 className="text-xl font-bold">Preview page not found</h2>
+          <p className="mt-2 text-sm text-muted">
             This preview route does not exist.
           </p>
         </div>
@@ -216,15 +216,15 @@ function PreviewShell({
   children: React.ReactNode;
 }) {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
-      <div className="sticky top-0 z-50 border-b border-amber-200 bg-amber-50/95 shadow-sm backdrop-blur">
+    <main className="min-h-screen bg-canvas text-ink">
+      <div className="sticky top-0 z-50 border-b border-amber-200 bg-amber-50/95 backdrop-blur">
         <div className="mx-auto max-w-7xl px-4 py-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-700">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">
                 Trainer Client Preview
               </p>
-              <p className="mt-1 text-sm font-semibold text-slate-700">
+              <p className="mt-1 text-sm font-semibold text-ink/80">
                 Viewing {profile.full_name} • Read-only safety mode
               </p>
             </div>
@@ -232,13 +232,13 @@ function PreviewShell({
             <div className="flex flex-wrap gap-2">
               <Link
                 to={`/clients/${profile.id}`}
-                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white hover:bg-slate-800"
+                className="rounded-xl bg-ink px-4 py-2 text-sm font-bold text-white hover:bg-ink/85"
               >
                 Client Details
               </Link>
               <Link
                 to="/clients"
-                className="rounded-xl border border-amber-200 bg-white px-4 py-2 text-sm font-black text-amber-800 hover:bg-amber-100"
+                className="rounded-xl border border-amber-200 bg-white px-4 py-2 text-sm font-bold text-amber-800 hover:bg-amber-100"
               >
                 Client List
               </Link>
@@ -253,7 +253,7 @@ function PreviewShell({
                 <Link
                   key={slug || "dashboard"}
                   to={href}
-                  className={`whitespace-nowrap rounded-xl px-3 py-2 text-xs font-black ${
+                  className={`whitespace-nowrap rounded-xl px-3 py-2 text-xs font-bold ${
                     active
                       ? "bg-amber-600 text-white"
                       : "border border-amber-200 bg-white text-amber-800 hover:bg-amber-100"
@@ -374,13 +374,13 @@ function PlanPreview({
         <EmptyCard title="No assigned weeks" text="This is what the client would see when no weeks are attached to the active plan." />
       ) : (
         weeks.map((week) => (
-          <section key={week.id} className="rounded-3xl border border-sky-100 bg-white p-5 shadow-sm">
+          <section key={week.id} className="rounded-[18px] border border-line bg-white p-5 ">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-black uppercase tracking-wide text-blue-600">Training Week</p>
-                <h2 className="mt-1 text-2xl font-black">Week {week.week_number}</h2>
+                <p className="text-xs font-bold uppercase tracking-wide text-accent">Training Week</p>
+                <h2 className="mt-1 text-2xl font-bold">Week {week.week_number}</h2>
               </div>
-              <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-sky-100">
+              <span className="rounded-full bg-canvas px-3 py-1 text-xs font-bold text-accent ring-1 ring-line">
                 {week.status}
               </span>
             </div>
@@ -391,24 +391,24 @@ function PlanPreview({
                 .map((workout) => {
                   const completed = completedIds.has(workout.id);
                   return (
-                    <div key={workout.id} className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                    <div key={workout.id} className="rounded-2xl border border-line bg-canvas p-4">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                          <h3 className="text-lg font-black">{workout.title}</h3>
-                          <p className="mt-1 text-sm text-slate-500">
+                          <h3 className="text-lg font-bold">{workout.title}</h3>
+                          <p className="mt-1 text-sm text-muted">
                             {workout.client_plan_exercises?.length || 0} exercises
                           </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {completed && (
-                            <span className="rounded-xl bg-emerald-100 px-3 py-2 text-xs font-black text-emerald-700">
+                            <span className="rounded-xl bg-emerald-100 px-3 py-2 text-xs font-bold text-emerald-700">
                               Completed
                             </span>
                           )}
                           {week.status !== "locked" ? (
                             <Link
                               to={`${basePath}/workout/${workout.id}`}
-                              className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-black text-blue-700 hover:bg-blue-100"
+                              className="rounded-xl border border-accent/30 bg-accent-soft px-4 py-2 text-sm font-bold text-accent hover:bg-accent-soft"
                             >
                               Preview Workout →
                             </Link>
@@ -416,7 +416,7 @@ function PlanPreview({
                             <button
                               type="button"
                               disabled
-                              className="cursor-not-allowed rounded-xl bg-slate-200 px-4 py-2 text-sm font-black text-slate-500"
+                              className="cursor-not-allowed rounded-xl bg-slate-200 px-4 py-2 text-sm font-bold text-muted"
                             >
                               Preview Locked
                             </button>
@@ -428,9 +428,9 @@ function PlanPreview({
                         {[...(workout.client_plan_exercises || [])]
                           .sort((a, b) => a.exercise_order - b.exercise_order)
                           .map((exercise) => (
-                            <div key={exercise.id} className="rounded-xl bg-white p-3 ring-1 ring-sky-100">
-                              <p className="font-black">{exercise.exercise_name}</p>
-                              <p className="mt-1 text-xs text-slate-500">
+                            <div key={exercise.id} className="rounded-xl bg-white p-3 ring-1 ring-line">
+                              <p className="font-bold">{exercise.exercise_name}</p>
+                              <p className="mt-1 text-xs text-muted">
                                 {exercise.sets || "—"} sets • {exercise.reps || "—"} • {exercise.weight || "No weight"}
                               </p>
                             </div>
@@ -494,11 +494,11 @@ function PastWorkoutsPreview({
         <div className="grid gap-3">
           {items.map((item) =>
             item.link ? (
-              <Link key={`${item.type}-${item.id}`} to={item.link} className="rounded-2xl border border-sky-100 bg-white p-4 shadow-sm hover:border-blue-200">
+              <Link key={`${item.type}-${item.id}`} to={item.link} className="rounded-2xl border border-line bg-white p-4 hover:border-accent/30">
                 <HistoryRow item={item} />
               </Link>
             ) : (
-              <div key={`${item.type}-${item.id}`} className="rounded-2xl border border-sky-100 bg-white p-4 shadow-sm">
+              <div key={`${item.type}-${item.id}`} className="rounded-2xl border border-line bg-white p-4 ">
                 <HistoryRow item={item} />
               </div>
             )
@@ -513,10 +513,10 @@ function HistoryRow({ item }: { item: { type: string; title: string; date: strin
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <p className="text-xs font-black uppercase tracking-wide text-blue-600">{item.type}</p>
-        <h3 className="mt-1 font-black text-slate-900">{item.title}</h3>
+        <p className="text-xs font-bold uppercase tracking-wide text-accent">{item.type}</p>
+        <h3 className="mt-1 font-bold text-ink">{item.title}</h3>
       </div>
-      <p className="text-sm font-semibold text-slate-500">{formatDate(item.date)}</p>
+      <p className="text-sm font-semibold text-muted">{formatDate(item.date)}</p>
     </div>
   );
 }
@@ -546,18 +546,18 @@ function MessagesPreview({ clientUserId }: { clientUserId: string }) {
   return (
     <div className="space-y-5">
       <Hero title="Messages" subtitle="Client conversation preview" />
-      <section className="rounded-3xl border border-sky-100 bg-white p-5 shadow-sm">
+      <section className="rounded-[18px] border border-line bg-white p-5 ">
         {messages.length === 0 ? (
-          <p className="text-sm text-slate-500">No messages yet.</p>
+          <p className="text-sm text-muted">No messages yet.</p>
         ) : (
           <div className="space-y-3">
             {messages.map((message) => {
               const fromClient = message.sender_user_id === clientUserId;
               return (
                 <div key={message.id} className={`flex ${fromClient ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${fromClient ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-900"}`}>
+                  <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${fromClient ? "bg-accent text-white" : "bg-slate-100 text-ink"}`}>
                     <p className="text-sm font-semibold">{message.message_body}</p>
-                    <p className={`mt-1 text-[11px] ${fromClient ? "text-blue-100" : "text-slate-500"}`}>
+                    <p className={`mt-1 text-[11px] ${fromClient ? "text-white/75" : "text-muted"}`}>
                       {fromClient ? "Client" : "Trainer"} • {formatDateTime(message.created_at)}
                     </p>
                   </div>
@@ -568,8 +568,8 @@ function MessagesPreview({ clientUserId }: { clientUserId: string }) {
         )}
 
         <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <label className="text-xs font-black uppercase tracking-wide text-amber-800">Message box disabled in preview</label>
-          <textarea disabled placeholder="Sending is disabled while previewing a client." className="mt-2 min-h-24 w-full rounded-xl border border-amber-200 bg-white p-3 text-sm text-slate-500" />
+          <label className="text-xs font-bold uppercase tracking-wide text-amber-800">Message box disabled in preview</label>
+          <textarea disabled placeholder="Sending is disabled while previewing a client." className="mt-2 min-h-24 w-full rounded-xl border border-amber-200 bg-white p-3 text-sm text-muted" />
         </div>
       </section>
     </div>
@@ -629,22 +629,22 @@ function ProgressPreview({ clientUserId }: { clientUserId: string }) {
         <Stat label="Total Entries" value={`${exerciseRows.reduce((sum, x) => sum + x.entries, 0)}`} />
       </div>
 
-      <section className="rounded-3xl border border-sky-100 bg-white p-5 shadow-sm">
-        <h2 className="text-xl font-black">Exercise Progress</h2>
+      <section className="rounded-[18px] border border-line bg-white p-5 ">
+        <h2 className="text-xl font-bold">Exercise Progress</h2>
         <div className="mt-4 space-y-3">
           {exerciseRows.length === 0 ? (
-            <p className="text-sm text-slate-500">No progress data yet.</p>
+            <p className="text-sm text-muted">No progress data yet.</p>
           ) : (
             exerciseRows.map((row) => (
-              <div key={row.name} className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+              <div key={row.name} className="rounded-2xl border border-line bg-canvas p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="font-black">{row.name}</p>
-                    <p className="mt-1 text-xs text-slate-500">{row.entries} logged entries</p>
+                    <p className="font-bold">{row.name}</p>
+                    <p className="mt-1 text-xs text-muted">{row.entries} logged entries</p>
                   </div>
                   <div className="text-right text-sm">
-                    <p className="font-black text-blue-700">Best weight: {row.bestWeight || "—"}</p>
-                    <p className="text-slate-500">Volume: {Math.round(row.totalVolume)}</p>
+                    <p className="font-bold text-accent">Best weight: {row.bestWeight || "—"}</p>
+                    <p className="text-muted">Volume: {Math.round(row.totalVolume)}</p>
                   </div>
                 </div>
               </div>
@@ -660,7 +660,7 @@ function SettingsPreview({ profile }: { profile: Profile }) {
   return (
     <div className="space-y-5">
       <Hero title="Account Settings" subtitle="Preview of the client account/settings area" />
-      <section className="rounded-3xl border border-sky-100 bg-white p-5 shadow-sm">
+      <section className="rounded-[18px] border border-line bg-white p-5 ">
         <div className="grid gap-4 sm:grid-cols-2">
           <ReadOnlyField label="Name" value={profile.full_name} />
           <ReadOnlyField label="Client ID" value={profile.client_id || "Not set"} />
@@ -669,7 +669,7 @@ function SettingsPreview({ profile }: { profile: Profile }) {
         </div>
 
         <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <h3 className="font-black text-amber-900">Password change disabled</h3>
+          <h3 className="font-bold text-amber-900">Password change disabled</h3>
           <p className="mt-1 text-sm text-amber-800">
             This preview will never call Supabase Auth updateUser or sign the trainer out.
           </p>
@@ -677,7 +677,7 @@ function SettingsPreview({ profile }: { profile: Profile }) {
             <input disabled type="password" placeholder="New password" className="rounded-xl border border-amber-200 bg-white p-3" />
             <input disabled type="password" placeholder="Confirm password" className="rounded-xl border border-amber-200 bg-white p-3" />
           </div>
-          <button disabled className="mt-3 rounded-xl bg-slate-300 px-4 py-2 text-sm font-black text-slate-600">
+          <button disabled className="mt-3 rounded-xl bg-slate-300 px-4 py-2 text-sm font-bold text-muted">
             Save Changes (Disabled)
           </button>
         </div>
@@ -690,20 +690,20 @@ function LogActivityPreview() {
   return (
     <div className="space-y-5">
       <Hero title="Log Activity" subtitle="Interactive form preview with saving disabled" />
-      <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm">
+      <section className="rounded-[18px] border border-emerald-100 bg-white p-5 ">
         <div className="grid gap-4 sm:grid-cols-2">
           {["Activity Type", "Title", "Duration (minutes)", "Location", "Intensity"].map((label) => (
             <label key={label} className="block">
-              <span className="text-sm font-black text-slate-700">{label}</span>
-              <input disabled placeholder={label} className="mt-2 w-full rounded-xl border border-sky-100 bg-slate-50 p-3 text-sm" />
+              <span className="text-sm font-bold text-ink/80">{label}</span>
+              <input disabled placeholder={label} className="mt-2 w-full rounded-xl border border-line bg-canvas p-3 text-sm" />
             </label>
           ))}
           <label className="block sm:col-span-2">
-            <span className="text-sm font-black text-slate-700">Notes</span>
-            <textarea disabled className="mt-2 min-h-28 w-full rounded-xl border border-sky-100 bg-slate-50 p-3" />
+            <span className="text-sm font-bold text-ink/80">Notes</span>
+            <textarea disabled className="mt-2 min-h-28 w-full rounded-xl border border-line bg-canvas p-3" />
           </label>
         </div>
-        <button disabled className="mt-4 rounded-xl bg-slate-300 px-5 py-3 text-sm font-black text-slate-600">
+        <button disabled className="mt-4 rounded-xl bg-slate-300 px-5 py-3 text-sm font-bold text-muted">
           Log Activity (Disabled in Preview)
         </button>
       </section>
@@ -752,30 +752,30 @@ function CompletedPreview({
 
   return (
     <div className="space-y-5">
-      <Link to={`${basePath}/past-workouts`} className="text-sm font-black text-blue-700 hover:text-blue-800">← Back to Past Workouts</Link>
+      <Link to={`${basePath}/past-workouts`} className="text-sm font-bold text-accent hover:text-accent-dark">← Back to Past Workouts</Link>
       <Hero
         title={submission.workout_title || submission.title || "Completed Workout"}
         subtitle={`Completed ${formatDate(submission.submitted_at || submission.completed_at || submission.date)}`}
       />
 
-      <section className="rounded-3xl border border-sky-100 bg-white p-5 shadow-sm">
+      <section className="rounded-[18px] border border-line bg-white p-5 ">
         {submission.notes && (
-          <div className="mb-4 rounded-2xl bg-sky-50 p-4">
-            <p className="text-xs font-black uppercase tracking-wide text-blue-600">Workout Notes</p>
-            <p className="mt-2 text-sm text-slate-700">{submission.notes}</p>
+          <div className="mb-4 rounded-2xl bg-canvas p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-accent">Workout Notes</p>
+            <p className="mt-2 text-sm text-ink/80">{submission.notes}</p>
           </div>
         )}
 
         <div className="space-y-3">
           {(submission.workout_submission_exercises || []).map((exercise, index) => (
-            <div key={exercise.id || `${index}`} className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
-              <p className="font-black">{exercise.exercise_name || exercise.name || `Exercise ${index + 1}`}</p>
-              <p className="mt-1 text-sm text-slate-500">
+            <div key={exercise.id || `${index}`} className="rounded-2xl border border-line bg-canvas p-4">
+              <p className="font-bold">{exercise.exercise_name || exercise.name || `Exercise ${index + 1}`}</p>
+              <p className="mt-1 text-sm text-muted">
                 Sets: {String(exercise.sets ?? exercise.planned_sets ?? "—")} •
                 Reps: {String(exercise.reps ?? exercise.planned_reps ?? "—")} •
                 Weight: {String(exercise.weight ?? exercise.planned_weight ?? "—")}
               </p>
-              {exercise.notes && <p className="mt-2 text-sm text-slate-700">Notes: {exercise.notes}</p>}
+              {exercise.notes && <p className="mt-2 text-sm text-ink/80">Notes: {exercise.notes}</p>}
             </div>
           ))}
         </div>
@@ -786,11 +786,11 @@ function CompletedPreview({
 
 function Hero({ title, subtitle }: { title: string; subtitle: string }) {
   return (
-    <section className="overflow-hidden rounded-[2rem] border border-sky-100 bg-white shadow-sm">
-      <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-5 py-6 text-white sm:px-7 sm:py-8">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-100">CoachSync Client View</p>
-        <h1 className="mt-2 text-3xl font-black">{title}</h1>
-        <p className="mt-2 text-sm font-semibold text-blue-50">{subtitle}</p>
+    <section className="overflow-hidden rounded-[18px] border border-line bg-white ">
+      <div className="bg-ink px-5 py-6 text-white sm:px-7 sm:py-8">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/75">CoachSync Client View</p>
+        <h1 className="mt-2 text-3xl font-bold">{title}</h1>
+        <p className="mt-2 text-sm font-semibold text-white/75">{subtitle}</p>
       </div>
     </section>
   );
@@ -798,9 +798,9 @@ function Hero({ title, subtitle }: { title: string; subtitle: string }) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
-      <p className="text-xs font-black uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-2 text-xl font-black text-slate-900">{value}</p>
+    <div className="rounded-2xl border border-line bg-canvas p-4">
+      <p className="text-xs font-bold uppercase tracking-wide text-muted">{label}</p>
+      <p className="mt-2 text-xl font-bold text-ink">{value}</p>
     </div>
   );
 }
@@ -808,15 +808,15 @@ function Stat({ label, value }: { label: string; value: string }) {
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs font-black uppercase tracking-wide text-slate-500">{label}</p>
-      <div className="mt-2 rounded-xl border border-sky-100 bg-sky-50 p-3 text-sm font-semibold text-slate-800">{value}</div>
+      <p className="text-xs font-bold uppercase tracking-wide text-muted">{label}</p>
+      <div className="mt-2 rounded-xl border border-line bg-canvas p-3 text-sm font-semibold text-ink">{value}</div>
     </div>
   );
 }
 
 function LoadingCard({ text }: { text: string }) {
   return (
-    <div className="rounded-3xl border border-sky-100 bg-white p-6 text-sm font-semibold text-slate-600 shadow-sm">
+    <div className="rounded-[18px] border border-line bg-white p-6 text-sm font-semibold text-muted ">
       {text}
     </div>
   );
@@ -828,18 +828,18 @@ function ErrorCard({ text }: { text: string }) {
 
 function EmptyCard({ title, text }: { title: string; text: string }) {
   return (
-    <div className="rounded-3xl border border-sky-100 bg-white p-6 shadow-sm">
-      <h2 className="text-xl font-black">{title}</h2>
-      <p className="mt-2 text-sm text-slate-600">{text}</p>
+    <div className="rounded-[18px] border border-line bg-white p-6 ">
+      <h2 className="text-xl font-bold">{title}</h2>
+      <p className="mt-2 text-sm text-muted">{text}</p>
     </div>
   );
 }
 
 function PreviewLoading() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 p-6">
-      <div className="mx-auto max-w-3xl rounded-3xl border border-sky-100 bg-white p-8 shadow-sm">
-        <p className="font-black">Loading client preview...</p>
+    <main className="min-h-screen bg-canvas p-6">
+      <div className="mx-auto max-w-3xl rounded-[18px] border border-line bg-white p-8 ">
+        <p className="font-bold">Loading client preview...</p>
       </div>
     </main>
   );
@@ -847,11 +847,11 @@ function PreviewLoading() {
 
 function PreviewError({ message }: { message: string }) {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 p-6">
-      <div className="mx-auto max-w-3xl rounded-3xl border border-red-100 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-black">Client preview unavailable</h1>
-        <p className="mt-3 text-sm text-slate-600">{message}</p>
-        <Link to="/clients" className="mt-5 inline-block rounded-xl bg-blue-600 px-4 py-2 text-sm font-black text-white">
+    <main className="min-h-screen bg-canvas p-6">
+      <div className="mx-auto max-w-3xl rounded-[18px] border border-red-100 bg-white p-8 ">
+        <h1 className="text-2xl font-bold">Client preview unavailable</h1>
+        <p className="mt-3 text-sm text-muted">{message}</p>
+        <Link to="/clients" className="mt-5 inline-block rounded-xl bg-accent px-4 py-2 text-sm font-bold text-white">
           Back to Clients
         </Link>
       </div>

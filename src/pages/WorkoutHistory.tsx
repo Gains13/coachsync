@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import TrainerLayout from "../components/TrainerLayout";
+import PageHeader from "../components/ui/PageHeader";
+import { btnGhost } from "../components/ui/styles";
 
 type SubmissionExercise = {
   id: string;
@@ -269,62 +272,35 @@ export default function WorkoutHistory() {
     historyItems.length > 0 ? historyItems[0].title : "None yet";
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
-      <section className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:py-10">
-        <div className="mb-8 overflow-hidden rounded-3xl border border-sky-100 bg-white shadow-sm sm:rounded-[2rem]">
-          <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-6 text-white sm:px-6 sm:py-8 md:px-8">
-            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
-                  Trainer Tools
-                </p>
+    <TrainerLayout>
+        <PageHeader
+          eyebrow="Trainer tools"
+          title="Workout history"
+          description="Submitted program workouts and personal activities from your clients."
+          actions={
+            <button type="button" onClick={loadWorkoutHistory} className={btnGhost}>
+              Refresh
+            </button>
+          }
+        />
 
-                <h1 className="mt-3 break-words text-3xl font-bold md:text-4xl">
-                  Workout History
-                </h1>
-
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
-                  Review submitted program workouts and personal activities from
-                  your clients.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={loadWorkoutHistory}
-                  className="w-full rounded-xl bg-white/15 px-4 py-3 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto sm:py-2"
-                >
-                  Refresh
-                </button>
-
-                <Link
-                  to="/trainer"
-                  className="w-full rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-50 sm:w-auto sm:py-2"
-                >
-                  Back to Trainer
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-4 p-4 sm:p-6 md:grid-cols-5 md:p-8">
-            <SummaryCard title="Total Logs" value={`${historyItems.length}`} />
-            <SummaryCard title="Program" value={`${submissions.length}`} />
-            <SummaryCard title="Personal" value={`${personalLogs.length}`} />
-            <SummaryCard title="Clients" value={`${uniqueClientCount}`} />
-            <SummaryCard title="Latest" value={latestActivity} />
-          </div>
+        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <SummaryCard title="Total logs" value={`${historyItems.length}`} />
+          <SummaryCard title="Program" value={`${submissions.length}`} />
+          <SummaryCard title="Personal" value={`${personalLogs.length}`} />
+          <SummaryCard title="Clients" value={`${uniqueClientCount}`} />
+          <SummaryCard title="Latest" value={latestActivity} />
         </div>
 
-        <div className="mb-6 rounded-3xl border border-sky-100 bg-white p-4 shadow-sm sm:p-6">
+
+        <div className="mb-6 rounded-[18px] border border-line bg-white p-4 sm:p-6">
           <div className="grid gap-4 md:grid-cols-[1fr_220px] md:items-end">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">
+              <h2 className="text-xl font-bold text-ink">
                 Search History
               </h2>
 
-              <p className="mt-1 text-sm leading-6 text-slate-500">
+              <p className="mt-1 text-sm leading-6 text-muted">
                 Search by client name, client ID, workout title, or activity
                 title.
               </p>
@@ -333,19 +309,19 @@ export default function WorkoutHistory() {
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
                 placeholder="Search workout history..."
-                className="mt-4 w-full rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                className="mt-4 w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-sm text-ink outline-none ring-0 placeholder:text-muted focus:border-accent/40 focus:bg-white focus:ring-2 focus:ring-line"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
+              <label className="mb-2 block text-sm font-semibold text-ink/80">
                 Filter
               </label>
 
               <select
                 value={filterMode}
                 onChange={(event) => setFilterMode(event.target.value)}
-                className="w-full rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-sm text-ink outline-none ring-0 focus:border-accent/40 focus:bg-white focus:ring-2 focus:ring-line"
               >
                 <option value="all">All history</option>
                 <option value="program">Program workouts only</option>
@@ -356,7 +332,7 @@ export default function WorkoutHistory() {
         </div>
 
         {statusMessage && (
-          <p className="mb-6 rounded-2xl border border-sky-100 bg-white p-4 text-sm font-medium leading-6 text-slate-700 shadow-sm">
+          <p className="mb-6 rounded-2xl border border-line bg-white p-4 text-sm font-medium leading-6 text-ink/80 ">
             {statusMessage}
           </p>
         )}
@@ -386,23 +362,23 @@ export default function WorkoutHistory() {
                 return (
                   <div
                     key={`program-${item.id}`}
-                    className="rounded-3xl border border-sky-100 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-blue-200 hover:shadow-md sm:p-6"
+                    className="rounded-[18px] border border-line bg-white p-5 transition hover:-translate-y-1 hover:border-accent/30  sm:p-6"
                   >
                     <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
-                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-xl ring-1 ring-sky-100">
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-canvas text-xl ring-1 ring-line">
                           🏋️
                         </div>
 
-                        <span className="mb-3 inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-100">
+                        <span className="mb-3 inline-block rounded-full bg-accent-soft px-3 py-1 text-xs font-bold text-accent ring-1 ring-line">
                           Program Workout
                         </span>
 
-                        <h2 className="break-words text-xl font-bold text-slate-900">
+                        <h2 className="break-words text-xl font-bold text-ink">
                           {item.title}
                         </h2>
 
-                        <p className="mt-1 text-sm text-slate-500">
+                        <p className="mt-1 text-sm text-muted">
                           {clientName} • Client ID: {clientId}
                         </p>
                       </div>
@@ -412,7 +388,7 @@ export default function WorkoutHistory() {
                           item.percent === 100
                             ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
                             : item.percent > 0
-                            ? "bg-blue-50 text-blue-700 ring-blue-100"
+                            ? "bg-accent-soft text-accent ring-line"
                             : "bg-red-50 text-red-700 ring-red-100"
                         }`}
                       >
@@ -432,20 +408,20 @@ export default function WorkoutHistory() {
                       />
                     </div>
 
-                    <div className="mt-4 h-3 rounded-full bg-sky-50">
+                    <div className="mt-4 h-3 rounded-full bg-canvas">
                       <div
-                        className="h-3 rounded-full bg-blue-600 transition-all"
+                        className="h-3 rounded-full bg-accent transition-all"
                         style={{ width: `${item.percent}%` }}
                       />
                     </div>
 
                     {item.notes && (
-                      <div className="mt-4 rounded-2xl border border-sky-100 bg-sky-50 p-4">
-                        <p className="text-sm font-medium text-slate-500">
+                      <div className="mt-4 rounded-2xl border border-line bg-canvas p-4">
+                        <p className="text-sm font-medium text-muted">
                           Notes
                         </p>
 
-                        <p className="mt-1 whitespace-pre-wrap text-sm font-semibold text-slate-800">
+                        <p className="mt-1 whitespace-pre-wrap text-sm font-semibold text-ink">
                           {item.notes}
                         </p>
                       </div>
@@ -454,14 +430,14 @@ export default function WorkoutHistory() {
                     <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                       <Link
                         to={`/workout-history/${item.id}`}
-                        className="rounded-xl bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-blue-700 sm:py-2"
+                        className="rounded-xl bg-accent px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-accent-dark sm:py-2"
                       >
                         Open Workout
                       </Link>
 
                       <Link
                         to={`/clients/${item.clientUserId}`}
-                        className="rounded-xl border border-sky-100 bg-sky-50 px-4 py-3 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-50 sm:py-2"
+                        className="rounded-xl border border-line bg-canvas px-4 py-3 text-center text-sm font-semibold text-accent transition hover:bg-accent-soft sm:py-2"
                       >
                         View Client
                       </Link>
@@ -473,7 +449,7 @@ export default function WorkoutHistory() {
               return (
                 <div
                   key={`personal-${item.id}`}
-                  className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm transition hover:-translate-y-1 hover:border-emerald-200 hover:shadow-md sm:p-6"
+                  className="rounded-[18px] border border-emerald-100 bg-emerald-50 p-5 transition hover:-translate-y-1 hover:border-emerald-200  sm:p-6"
                 >
                   <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
@@ -486,16 +462,16 @@ export default function WorkoutHistory() {
                           Personal Activity
                         </span>
 
-                        <span className="inline-block rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-emerald-100">
+                        <span className="inline-block rounded-full bg-white px-3 py-1 text-xs font-bold text-muted ring-1 ring-emerald-100">
                           {item.activityType}
                         </span>
                       </div>
 
-                      <h2 className="break-words text-xl font-bold text-slate-900">
+                      <h2 className="break-words text-xl font-bold text-ink">
                         {item.title}
                       </h2>
 
-                      <p className="mt-1 text-sm text-slate-500">
+                      <p className="mt-1 text-sm text-muted">
                         {clientName} • Client ID: {clientId}
                       </p>
                     </div>
@@ -523,11 +499,11 @@ export default function WorkoutHistory() {
 
                   {item.notes && (
                     <div className="mt-4 rounded-2xl border border-emerald-100 bg-white p-4">
-                      <p className="text-sm font-medium text-slate-500">
+                      <p className="text-sm font-medium text-muted">
                         Notes
                       </p>
 
-                      <p className="mt-1 whitespace-pre-wrap text-sm font-semibold text-slate-800">
+                      <p className="mt-1 whitespace-pre-wrap text-sm font-semibold text-ink">
                         {item.notes}
                       </p>
                     </div>
@@ -546,8 +522,7 @@ export default function WorkoutHistory() {
             })}
           </div>
         )}
-      </section>
-    </main>
+    </TrainerLayout>
   );
 }
 
@@ -579,10 +554,10 @@ function formatDate(value: string | null) {
 
 function SummaryCard({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 sm:p-5">
-      <p className="text-xs font-medium text-slate-500 sm:text-sm">{title}</p>
+    <div className="rounded-[18px] border border-line bg-white p-4 sm:p-5">
+      <p className="text-xs font-medium text-muted sm:text-sm">{title}</p>
 
-      <h2 className="mt-2 break-words text-lg font-bold text-slate-900 sm:text-xl">
+      <h2 className="mt-2 break-words text-lg font-bold text-ink sm:text-xl">
         {value}
       </h2>
     </div>
@@ -591,10 +566,10 @@ function SummaryCard({ title, value }: { title: string; value: string }) {
 
 function InfoBox({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-white p-4">
-      <p className="text-sm font-medium text-slate-500">{label}</p>
+    <div className="rounded-2xl border border-line bg-white p-4">
+      <p className="text-sm font-medium text-muted">{label}</p>
 
-      <p className="mt-1 break-words font-semibold text-slate-900">{value}</p>
+      <p className="mt-1 break-words font-semibold text-ink">{value}</p>
     </div>
   );
 }
@@ -607,14 +582,14 @@ function EmptyState({
   description: string;
 }) {
   return (
-    <div className="rounded-3xl border border-sky-100 bg-white p-8 shadow-sm">
-      <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-xl ring-1 ring-sky-100">
+    <div className="rounded-[18px] border border-line bg-white p-8 ">
+      <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-canvas text-xl ring-1 ring-line">
         🕓
       </div>
 
-      <h2 className="text-xl font-bold text-slate-900">{title}</h2>
+      <h2 className="text-xl font-bold text-ink">{title}</h2>
 
-      <p className="mt-2 text-slate-500">{description}</p>
+      <p className="mt-2 text-muted">{description}</p>
     </div>
   );
 }

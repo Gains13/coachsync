@@ -169,22 +169,22 @@ export default function ClientSetup() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 px-4 py-8 text-slate-900">
-        <div className="mx-auto max-w-4xl rounded-3xl border border-sky-100 bg-white p-6 shadow-sm">
-          <p className="text-slate-600">Loading your setup...</p>
+      <main className="min-h-screen bg-canvas px-4 py-8 text-ink">
+        <div className="mx-auto max-w-4xl rounded-[18px] border border-line bg-white p-6 ">
+          <p className="text-muted">Loading your setup...</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
+    <main className="min-h-screen bg-canvas text-ink">
       <section className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:py-10">
-        <div className="mb-5 overflow-hidden rounded-3xl border border-sky-100 bg-white shadow-sm sm:mb-8 sm:rounded-[2rem]">
-          <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-6 text-white sm:px-6 sm:py-8 md:px-8">
+        <div className="mb-5 overflow-hidden rounded-[18px] border border-line bg-white sm:mb-8 sm:rounded-[18px]">
+          <div className="bg-ink px-4 py-6 text-white sm:px-6 sm:py-8 md:px-8">
             <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/75 sm:text-sm sm:tracking-[0.3em]">
                   Client Setup
                 </p>
 
@@ -192,7 +192,7 @@ export default function ClientSetup() {
                   Welcome{fullName ? `, ${fullName}` : ""}
                 </h1>
 
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75 sm:text-base">
                   Set your goals and send your trainer a quick message before
                   using your dashboard.
                 </p>
@@ -217,7 +217,7 @@ export default function ClientSetup() {
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-3xl border border-sky-100 bg-white p-4 shadow-sm sm:p-6"
+          className="rounded-[18px] border border-line bg-white p-4 sm:p-6"
         >
           <div className="space-y-6 sm:space-y-8">
             <FormSection
@@ -269,7 +269,7 @@ export default function ClientSetup() {
           </div>
 
           {statusMessage && (
-            <p className="mt-6 rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-medium leading-6 text-slate-700">
+            <p className="mt-6 rounded-2xl border border-line bg-canvas p-4 text-sm font-medium leading-6 text-ink/80">
               {statusMessage}
             </p>
           )}
@@ -277,7 +277,7 @@ export default function ClientSetup() {
           <button
             type="submit"
             disabled={isSaving || isSkipping}
-            className="mt-6 w-full rounded-2xl bg-blue-600 px-5 py-4 font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-6 w-full rounded-2xl bg-accent px-5 py-4 font-semibold text-white transition hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving ? "Saving Setup..." : "Save Setup"}
           </button>
@@ -289,10 +289,10 @@ export default function ClientSetup() {
 
 function SummaryCard({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 sm:p-5">
-      <p className="text-xs font-medium text-slate-500 sm:text-sm">{title}</p>
+    <div className="rounded-[18px] border border-line bg-white p-4 sm:p-5">
+      <p className="text-xs font-medium text-muted sm:text-sm">{title}</p>
 
-      <h2 className="mt-2 break-words text-lg font-bold text-slate-900 sm:text-xl">
+      <h2 className="mt-2 break-words text-lg font-bold text-ink sm:text-xl">
         {value}
       </h2>
     </div>
@@ -309,11 +309,11 @@ function FormSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-3xl border border-sky-100 bg-sky-50 p-4 sm:p-5">
+    <section className="rounded-[18px] border border-line bg-canvas p-4 sm:p-5">
       <div className="mb-5">
-        <h2 className="text-lg font-bold text-slate-900 sm:text-xl">{title}</h2>
+        <h2 className="text-lg font-bold text-ink sm:text-xl">{title}</h2>
 
-        <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
+        <p className="mt-1 text-sm leading-6 text-muted">{description}</p>
       </div>
 
       {children}
@@ -334,7 +334,7 @@ function Input({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-semibold text-slate-700">
+      <label className="mb-2 block text-sm font-semibold text-ink/80">
         {label}
       </label>
 
@@ -342,7 +342,7 @@ function Input({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+        className="w-full rounded-xl border border-line bg-white px-4 py-3 text-ink outline-none ring-0 placeholder:text-muted focus:border-accent/40 focus:ring-2 focus:ring-line"
       />
     </div>
   );
@@ -361,7 +361,7 @@ function TextArea({
 }) {
   return (
     <div className="mt-4">
-      <label className="mb-2 block text-sm font-semibold text-slate-700">
+      <label className="mb-2 block text-sm font-semibold text-ink/80">
         {label}
       </label>
 
@@ -370,7 +370,7 @@ function TextArea({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         rows={4}
-        className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+        className="w-full rounded-xl border border-line bg-white px-4 py-3 text-ink outline-none ring-0 placeholder:text-muted focus:border-accent/40 focus:ring-2 focus:ring-line"
       />
     </div>
   );

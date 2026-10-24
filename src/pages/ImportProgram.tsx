@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import TrainerLayout from "../components/TrainerLayout";
+import PageHeader from "../components/ui/PageHeader";
+import { btnGhost } from "../components/ui/styles";
 
 type ClientProfile = {
   id: string;
@@ -302,63 +305,37 @@ export default function ImportProgram() {
   }, [parsedWorkouts]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
-      <section className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:py-10">
-        <div className="mb-8 overflow-hidden rounded-3xl border border-sky-100 bg-white shadow-sm sm:rounded-[2rem]">
-          <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-6 text-white sm:px-6 sm:py-8 md:px-8">
-            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
-                  Notes Import
-                </p>
+    <TrainerLayout>
+        <PageHeader
+          eyebrow="Bring in past sessions"
+          title="Import notes"
+          description="Paste old workout notes, preview them, then save them to a client’s past workout history and copy library."
+          actions={
+            <Link to="/create-program" className={btnGhost}>
+              Create program
+            </Link>
+          }
+        />
 
-                <h1 className="mt-3 break-words text-3xl font-bold md:text-4xl">
-                  Import Historical Workouts
-                </h1>
-
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
-                  Paste old workout notes, preview them, then save them to a
-                  client’s past workout history and future copy library.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Link
-                  to="/create-program"
-                  className="w-full rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-50 sm:w-auto sm:py-2"
-                >
-                  Create Program
-                </Link>
-
-                <Link
-                  to="/trainer"
-                  className="w-full rounded-xl bg-white/15 px-4 py-3 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto sm:py-2"
-                >
-                  Back to Trainer
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-4 p-4 sm:p-6 md:grid-cols-4 md:p-8">
-            <SummaryCard title="Client" value={selectedClient?.full_name || "Not selected"} />
-            <SummaryCard title="Detected Workouts" value={`${parsedWorkouts.length}`} />
-            <SummaryCard title="Detected Exercises" value={`${totalExercises}`} />
-            <SummaryCard title="Source" value="Notes Import" />
-          </div>
+        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <SummaryCard title="Client" value={selectedClient?.full_name || "Not selected"} />
+          <SummaryCard title="Detected workouts" value={`${parsedWorkouts.length}`} />
+          <SummaryCard title="Detected exercises" value={`${totalExercises}`} />
+          <SummaryCard title="Source" value="Notes import" />
         </div>
 
-        <section className="rounded-3xl border border-sky-100 bg-white p-4 shadow-sm sm:p-6">
+
+        <section className="rounded-[18px] border border-line bg-white p-4 sm:p-6">
           <div className="grid gap-4 md:grid-cols-[1fr_180px]">
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
+              <label className="mb-2 block text-sm font-semibold text-ink/80">
                 Client
               </label>
 
               <select
                 value={selectedClientId}
                 onChange={(event) => setSelectedClientId(event.target.value)}
-                className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                className="w-full rounded-xl border border-line bg-white px-4 py-3 text-ink outline-none focus:border-accent/40 focus:ring-2 focus:ring-line"
               >
                 <option value="">Select client</option>
                 {clients.map((client) => (
@@ -379,12 +356,12 @@ export default function ImportProgram() {
           </div>
 
           {selectedClient && (
-            <div className="mt-5 rounded-2xl border border-sky-100 bg-sky-50 p-4">
-              <p className="text-sm font-medium text-slate-500">
+            <div className="mt-5 rounded-2xl border border-line bg-canvas p-4">
+              <p className="text-sm font-medium text-muted">
                 Selected Client
               </p>
 
-              <p className="mt-1 font-semibold text-slate-900">
+              <p className="mt-1 font-semibold text-ink">
                 These workouts will be saved to {selectedClient.full_name}’s
                 historical workout library.
               </p>
@@ -392,7 +369,7 @@ export default function ImportProgram() {
           )}
 
           <div className="mt-6">
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
+            <label className="mb-2 block text-sm font-semibold text-ink/80">
               Paste Notes
             </label>
 
@@ -401,7 +378,7 @@ export default function ImportProgram() {
               onChange={(event) => setRawNotes(event.target.value)}
               placeholder="Paste your notes here. Example: Feb 11th&#10;Warm up&#10;10 minute treadmill..."
               rows={16}
-              className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+              className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm leading-6 text-ink outline-none placeholder:text-muted focus:border-accent/40 focus:ring-2 focus:ring-line"
             />
           </div>
 
@@ -409,7 +386,7 @@ export default function ImportProgram() {
             <button
               type="button"
               onClick={previewImport}
-              className="rounded-2xl bg-blue-600 px-5 py-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+              className="rounded-2xl bg-accent px-5 py-4 text-sm font-semibold text-white transition hover:bg-accent-dark"
             >
               Preview Import
             </button>
@@ -421,28 +398,28 @@ export default function ImportProgram() {
                 setParsedWorkouts([]);
                 setStatusMessage("");
               }}
-              className="rounded-2xl border border-sky-100 bg-sky-50 px-5 py-4 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
+              className="rounded-2xl border border-line bg-canvas px-5 py-4 text-sm font-semibold text-accent transition hover:bg-accent-soft"
             >
               Clear
             </button>
           </div>
 
           {statusMessage && (
-            <p className="mt-6 rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-medium leading-6 text-slate-700">
+            <p className="mt-6 rounded-2xl border border-line bg-canvas p-4 text-sm font-medium leading-6 text-ink/80">
               {statusMessage}
             </p>
           )}
         </section>
 
         {parsedWorkouts.length > 0 && (
-          <section className="mt-8 rounded-3xl border border-sky-100 bg-white p-4 shadow-sm sm:p-6">
+          <section className="mt-8 rounded-[18px] border border-line bg-white p-4 sm:p-6">
             <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <h2 className="text-xl font-bold text-slate-900">
+                <h2 className="text-xl font-bold text-ink">
                   Preview Imported Workouts
                 </h2>
 
-                <p className="mt-1 text-sm leading-6 text-slate-500">
+                <p className="mt-1 text-sm leading-6 text-muted">
                   Review and edit the parsed workouts before saving.
                 </p>
               </div>
@@ -451,7 +428,7 @@ export default function ImportProgram() {
                 type="button"
                 onClick={saveHistoricalWorkouts}
                 disabled={isSaving}
-                className="rounded-2xl bg-emerald-600 px-5 py-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl bg-emerald-600 px-5 py-4 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSaving ? "Saving..." : "Save Historical Workouts"}
               </button>
@@ -461,15 +438,15 @@ export default function ImportProgram() {
               {parsedWorkouts.map((workout, workoutIndex) => (
                 <div
                   key={workout.formId}
-                  className="rounded-3xl border border-sky-100 bg-sky-50 p-4 sm:p-5"
+                  className="rounded-[18px] border border-line bg-canvas p-4 sm:p-5"
                 >
                   <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-accent">
                         {workout.originalDateLabel}
                       </p>
 
-                      <h3 className="mt-1 text-lg font-bold text-slate-900">
+                      <h3 className="mt-1 text-lg font-bold text-ink">
                         Workout {workoutIndex + 1}
                       </h3>
                     </div>
@@ -508,10 +485,10 @@ export default function ImportProgram() {
                     {workout.exercises.map((exercise, exerciseIndex) => (
                       <div
                         key={exercise.formId}
-                        className="rounded-2xl border border-sky-100 bg-white p-4"
+                        className="rounded-2xl border border-line bg-white p-4"
                       >
                         <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <h4 className="font-semibold text-slate-900">
+                          <h4 className="font-semibold text-ink">
                             Exercise {exerciseIndex + 1}
                           </h4>
 
@@ -635,8 +612,7 @@ export default function ImportProgram() {
             </div>
           </section>
         )}
-      </section>
-    </main>
+    </TrainerLayout>
   );
 }
 
@@ -787,10 +763,10 @@ function parseExerciseLine(line: string, section: string): ParsedExercise {
 
 function SummaryCard({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 sm:p-5">
-      <p className="text-xs font-medium text-slate-500 sm:text-sm">{title}</p>
+    <div className="rounded-[18px] border border-line bg-white p-4 sm:p-5">
+      <p className="text-xs font-medium text-muted sm:text-sm">{title}</p>
 
-      <h2 className="mt-2 break-words text-lg font-bold text-slate-900 sm:text-xl">
+      <h2 className="mt-2 break-words text-lg font-bold text-ink sm:text-xl">
         {value}
       </h2>
     </div>
@@ -812,7 +788,7 @@ function Input({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-semibold text-slate-700">
+      <label className="mb-2 block text-sm font-semibold text-ink/80">
         {label}
       </label>
 
@@ -821,7 +797,7 @@ function Input({
         type={type}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+        className="w-full rounded-xl border border-line bg-white px-4 py-3 text-ink outline-none ring-0 placeholder:text-muted focus:border-accent/40 focus:ring-2 focus:ring-line"
       />
     </div>
   );

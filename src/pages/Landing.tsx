@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 export default function Landing() {
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="min-h-screen bg-ink text-white">
       <section className="mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-6 py-16">
         <div className="max-w-3xl">
           <p className="mb-4 text-sm font-semibold uppercase tracking-[0.3em] text-blue-400">
@@ -23,14 +23,14 @@ export default function Landing() {
           <div className="flex flex-col gap-4 sm:flex-row">
             <Link
               to="/client"
-              className="rounded-xl bg-blue-500 px-6 py-3 text-center font-semibold text-white transition hover:bg-blue-600"
+              className="rounded-xl bg-blue-500 px-6 py-3 text-center font-semibold text-white transition hover:bg-accent"
             >
               Client Dashboard
             </Link>
 
             <Link
               to="/trainer"
-              className="rounded-xl border border-slate-600 px-6 py-3 text-center font-semibold text-white transition hover:bg-slate-800"
+              className="rounded-xl border border-slate-600 px-6 py-3 text-center font-semibold text-white transition hover:bg-ink/85"
             >
               Trainer Dashboard
             </Link>
@@ -38,25 +38,25 @@ export default function Landing() {
         </div>
 
         <div className="mt-14 grid gap-6 md:grid-cols-3">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+          <div className="rounded-2xl border border-slate-800 bg-ink p-6">
             <h2 className="mb-3 text-xl font-semibold">Programs</h2>
-            <p className="text-slate-400">
+            <p className="text-muted">
               Build structured workout plans for each client and keep everything
               organized.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+          <div className="rounded-2xl border border-slate-800 bg-ink p-6">
             <h2 className="mb-3 text-xl font-semibold">Progress</h2>
-            <p className="text-slate-400">
+            <p className="text-muted">
               Track assessments, workout history, completed sessions, and client
               improvements.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+          <div className="rounded-2xl border border-slate-800 bg-ink p-6">
             <h2 className="mb-3 text-xl font-semibold">Messages</h2>
-            <p className="text-slate-400">
+            <p className="text-muted">
               Keep trainer-client communication connected to the training plan.
             </p>
           </div>

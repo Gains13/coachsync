@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import { Eye } from "lucide-react";
+import TrainerLayout from "../components/TrainerLayout";
+import PageHeader from "../components/ui/PageHeader";
+import { btnGhost, btnPrimary } from "../components/ui/styles";
 
 type ClientProfile = {
   id: string;
@@ -408,120 +412,96 @@ export default function ClientDetails() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 p-8 text-slate-900">
-        <div className="mx-auto max-w-3xl rounded-3xl border border-sky-100 bg-white p-8 shadow-sm">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-600">
+      <TrainerLayout>
+        <div className="mx-auto max-w-3xl rounded-[18px] border border-line bg-white p-8 ">
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-accent">
             CoachSync
           </p>
 
           <h1 className="mt-3 text-2xl font-bold">Loading client...</h1>
 
-          <p className="mt-2 text-slate-500">
+          <p className="mt-2 text-muted">
             Pulling client details from Supabase.
           </p>
         </div>
-      </main>
+      </TrainerLayout>
     );
   }
 
   if (!profile) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 p-8 text-slate-900">
-        <div className="mx-auto max-w-3xl rounded-3xl border border-sky-100 bg-white p-8 shadow-sm">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-600">
+      <TrainerLayout>
+        <div className="mx-auto max-w-3xl rounded-[18px] border border-line bg-white p-8 ">
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-accent">
             CoachSync
           </p>
 
           <h1 className="mt-3 text-2xl font-bold">Client not found</h1>
 
           {debugMessage && (
-            <p className="mt-4 rounded-2xl bg-sky-50 p-4 text-slate-600">
+            <p className="mt-4 rounded-2xl bg-canvas p-4 text-muted">
               {debugMessage}
             </p>
           )}
 
           <Link
             to="/clients"
-            className="mt-5 inline-block rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            className="mt-5 inline-block rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-dark"
           >
             Back to Client List
           </Link>
         </div>
-      </main>
+      </TrainerLayout>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
-      <section className="mx-auto max-w-6xl px-6 py-10">
-        <div className="mb-8 overflow-hidden rounded-[2rem] border border-sky-100 bg-white shadow-sm">
-          <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-6 py-8 text-white md:px-8">
-            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-100">
-                  Client Details
-                </p>
+    <TrainerLayout>
+        <PageHeader
+          backTo="/clients"
+          backLabel="Clients"
+          eyebrow={`Client ID: ${profile.client_id}`}
+          title={profile.full_name}
+          actions={
+            <>
+              <Link
+                to={`/trainer/client-preview/${profile.id}`}
+                className={btnGhost}
+              >
+                <Eye className="h-4 w-4" />
+                Preview as client
+              </Link>
+              <Link
+                to={`/training-plans?client=${profile.id}`}
+                className={btnGhost}
+              >
+                Manage plans
+              </Link>
+              <Link
+                to={`/create-program?client=${profile.id}`}
+                className={btnPrimary}
+              >
+                Add program
+              </Link>
+            </>
+          }
+        />
 
-                <h1 className="mt-3 text-3xl font-bold md:text-4xl">
-                  {profile.full_name}
-                </h1>
-
-                <p className="mt-3 max-w-2xl text-blue-50">
-                  Client ID: {profile.client_id}
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Link
-                  to={`/trainer/client-preview/${profile.id}`}
-                  className="rounded-xl bg-amber-300 px-4 py-2 text-center text-sm font-black text-amber-950 hover:bg-amber-200"
-                >
-                  👁 View Client Dashboard
-                </Link>
-
-                <Link
-                  to={`/create-program?client=${profile.id}`}
-                  className="rounded-xl bg-white px-4 py-2 text-center text-sm font-semibold text-blue-700 hover:bg-blue-50"
-                >
-                  Add Program
-                </Link>
-
-                <Link
-                  to={`/training-plans?client=${profile.id}`}
-                  className="rounded-xl bg-white/15 px-4 py-2 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur hover:bg-white/25"
-                >
-                  Manage Plans
-                </Link>
-
-                <Link
-                  to="/clients"
-                  className="rounded-xl bg-white/15 px-4 py-2 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur hover:bg-white/25"
-                >
-                  Back to Client List
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-4 p-6 md:grid-cols-4 md:p-8">
-            <StatCard
-              title="Submitted Workouts"
-              value={`${submittedWorkouts.length}`}
-            />
-
-            <StatCard title="Assigned Weeks" value={`${planWeeks.length}`} />
-
-            <StatCard
-              title="Created"
-              value={new Date(profile.created_at).toLocaleDateString()}
-            />
-
-            <StatCard title="Training Plans" value={`${trainingPlans.length}`} />
-          </div>
+        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard
+            title="Submitted workouts"
+            value={`${submittedWorkouts.length}`}
+          />
+          <StatCard title="Assigned weeks" value={`${planWeeks.length}`} />
+          <StatCard
+            title="Created"
+            value={new Date(profile.created_at).toLocaleDateString()}
+          />
+          <StatCard title="Training plans" value={`${trainingPlans.length}`} />
         </div>
 
         {statusMessage && (
-          <p className="mb-6 rounded-2xl border border-sky-100 bg-white p-4 text-sm font-medium text-slate-700 shadow-sm">
+          <p className="mb-6 rounded-2xl border border-line bg-white p-4 text-sm font-medium text-ink/80 ">
             {statusMessage}
           </p>
         )}
@@ -557,7 +537,7 @@ export default function ClientDetails() {
                 />
               </div>
             ) : (
-              <p className="text-slate-500">No goals added yet.</p>
+              <p className="text-muted">No goals added yet.</p>
             )}
           </SectionCard>
 
@@ -594,13 +574,13 @@ export default function ClientDetails() {
                 </div>
               </div>
             ) : (
-              <p className="text-slate-500">No starting info added yet.</p>
+              <p className="text-muted">No starting info added yet.</p>
             )}
           </SectionCard>
 
           <SectionCard title="Submitted Workouts">
             {submittedWorkouts.length === 0 ? (
-              <p className="text-slate-500">
+              <p className="text-muted">
                 This client has not submitted any workouts yet.
               </p>
             ) : (
@@ -609,13 +589,13 @@ export default function ClientDetails() {
                   <Link
                     key={workout.id}
                     to={`/workout-history/${workout.id}`}
-                    className="block rounded-2xl border border-sky-100 bg-sky-50 p-4 hover:border-blue-200 hover:bg-blue-50"
+                    className="block rounded-2xl border border-line bg-canvas p-4 hover:border-accent/30 hover:bg-accent-soft"
                   >
-                    <p className="font-semibold text-slate-900">
+                    <p className="font-semibold text-ink">
                       {workout.workout_title}
                     </p>
 
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm text-muted">
                       Submitted:{" "}
                       {new Date(workout.submitted_at).toLocaleString()}
                     </p>
@@ -629,12 +609,12 @@ export default function ClientDetails() {
         <div className="mt-6">
           <SectionCard title="Assigned Program & Plan History">
             {planWeeks.length === 0 ? (
-              <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5">
-                <h3 className="font-semibold text-slate-900">
+              <div className="rounded-2xl border border-line bg-canvas p-5">
+                <h3 className="font-semibold text-ink">
                   No assigned program yet
                 </h3>
 
-                <p className="mt-2 text-sm text-slate-500">
+                <p className="mt-2 text-sm text-muted">
                   Click Add Program to build this client’s first week.
                 </p>
               </div>
@@ -643,24 +623,24 @@ export default function ClientDetails() {
                 {planWeeks.map((week) => (
                   <div
                     key={week.id}
-                    className="rounded-3xl border border-sky-100 bg-sky-50 p-5"
+                    className="rounded-[18px] border border-line bg-canvas p-5"
                   >
                     <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                       <div>
                         {(() => {
                           const plan = getPlanForWeek(week.plan_id);
                           return plan ? (
-                            <p className="mb-1 text-xs font-black uppercase tracking-[0.14em] text-blue-600">
+                            <p className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-accent">
                               {plan.name} • {plan.status}
                             </p>
                           ) : null;
                         })()}
 
-                        <h3 className="text-xl font-bold text-slate-900">
+                        <h3 className="text-xl font-bold text-ink">
                           Week {week.week_number}
                         </h3>
 
-                        <p className="mt-1 text-sm text-slate-500">
+                        <p className="mt-1 text-sm text-muted">
                           Status: {week.status}
                         </p>
                       </div>
@@ -675,7 +655,7 @@ export default function ClientDetails() {
 
                         <button
                           onClick={() => updateWeekStatus(week.id, "unlocked")}
-                          className="rounded-xl bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 ring-1 ring-blue-100 hover:bg-blue-100"
+                          className="rounded-xl bg-accent-soft px-3 py-2 text-sm font-semibold text-accent ring-1 ring-line hover:bg-accent-soft"
                         >
                           Unlock
                         </button>
@@ -699,7 +679,7 @@ export default function ClientDetails() {
                     </div>
 
                     {week.client_plan_workouts.length === 0 ? (
-                      <p className="rounded-2xl bg-white p-4 text-slate-500">
+                      <p className="rounded-2xl bg-white p-4 text-muted">
                         No workouts added to this week.
                       </p>
                     ) : (
@@ -709,11 +689,11 @@ export default function ClientDetails() {
                           .map((workout) => (
                             <div
                               key={workout.id}
-                              className="rounded-3xl border border-sky-100 bg-white p-5"
+                              className="rounded-[18px] border border-line bg-white p-5"
                             >
                               {editingWorkout?.id === workout.id ? (
-                                <div className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-                                  <h4 className="mb-4 font-semibold text-blue-900">
+                                <div className="mb-4 rounded-2xl border border-accent/30 bg-accent-soft p-4">
+                                  <h4 className="mb-4 font-semibold text-ink">
                                     Edit Workout
                                   </h4>
 
@@ -748,7 +728,7 @@ export default function ClientDetails() {
                                     <button
                                       type="button"
                                       onClick={saveWorkoutEdit}
-                                      className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                                      className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-dark"
                                     >
                                       Save Workout
                                     </button>
@@ -756,7 +736,7 @@ export default function ClientDetails() {
                                     <button
                                       type="button"
                                       onClick={() => setEditingWorkout(null)}
-                                      className="rounded-xl border border-sky-100 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-sky-50"
+                                      className="rounded-xl border border-line bg-white px-4 py-2 text-sm font-semibold text-ink/80 hover:bg-canvas"
                                     >
                                       Cancel
                                     </button>
@@ -765,11 +745,11 @@ export default function ClientDetails() {
                               ) : (
                                 <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                   <div>
-                                    <h4 className="font-semibold text-slate-900">
+                                    <h4 className="font-semibold text-ink">
                                       {workout.title}
                                     </h4>
 
-                                    <p className="mt-1 text-xs text-slate-500">
+                                    <p className="mt-1 text-xs text-muted">
                                       Order: {workout.workout_order}
                                     </p>
                                   </div>
@@ -777,7 +757,7 @@ export default function ClientDetails() {
                                   <div className="flex flex-wrap gap-2">
                                     <Link
                                       to={`/edit-workout/${workout.id}`}
-                                      className="rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                                      className="rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white hover:bg-accent-dark"
                                     >
                                       Full Editor
                                     </Link>
@@ -786,7 +766,7 @@ export default function ClientDetails() {
                                       onClick={() =>
                                         startEditingWorkout(workout)
                                       }
-                                      className="rounded-xl bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 ring-1 ring-blue-100 hover:bg-blue-100"
+                                      className="rounded-xl bg-accent-soft px-3 py-2 text-sm font-semibold text-accent ring-1 ring-line hover:bg-accent-soft"
                                     >
                                       Quick Edit
                                     </button>
@@ -804,7 +784,7 @@ export default function ClientDetails() {
                               )}
 
                               {workout.client_plan_exercises.length === 0 ? (
-                                <p className="rounded-2xl bg-sky-50 p-3 text-sm text-slate-500">
+                                <p className="rounded-2xl bg-canvas p-3 text-sm text-muted">
                                   No exercises added to this workout.
                                 </p>
                               ) : (
@@ -817,12 +797,12 @@ export default function ClientDetails() {
                                     .map((exercise) => (
                                       <div
                                         key={exercise.id}
-                                        className="rounded-2xl border border-sky-100 bg-sky-50 p-4"
+                                        className="rounded-2xl border border-line bg-canvas p-4"
                                       >
                                         {editingExercise?.id ===
                                         exercise.id ? (
-                                          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-                                            <h5 className="mb-4 font-semibold text-blue-900">
+                                          <div className="rounded-2xl border border-accent/30 bg-accent-soft p-4">
+                                            <h5 className="mb-4 font-semibold text-ink">
                                               Edit Exercise
                                             </h5>
 
@@ -925,7 +905,7 @@ export default function ClientDetails() {
                                               <button
                                                 type="button"
                                                 onClick={saveExerciseEdit}
-                                                className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                                                className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-dark"
                                               >
                                                 Save Exercise
                                               </button>
@@ -935,7 +915,7 @@ export default function ClientDetails() {
                                                 onClick={() =>
                                                   setEditingExercise(null)
                                                 }
-                                                className="rounded-xl border border-sky-100 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-sky-50"
+                                                className="rounded-xl border border-line bg-white px-4 py-2 text-sm font-semibold text-ink/80 hover:bg-canvas"
                                               >
                                                 Cancel
                                               </button>
@@ -944,11 +924,11 @@ export default function ClientDetails() {
                                         ) : (
                                           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                                             <div>
-                                              <p className="font-semibold text-slate-900">
+                                              <p className="font-semibold text-ink">
                                                 {exercise.exercise_name}
                                               </p>
 
-                                              <p className="mt-1 text-sm text-slate-500">
+                                              <p className="mt-1 text-sm text-muted">
                                                 {exercise.sets} sets x{" "}
                                                 {exercise.reps} reps • Weight:{" "}
                                                 {exercise.weight || "N/A"} •
@@ -960,7 +940,7 @@ export default function ClientDetails() {
                                                   href={exercise.video_link}
                                                   target="_blank"
                                                   rel="noreferrer"
-                                                  className="mt-2 inline-block text-sm font-semibold text-blue-600 hover:text-blue-700"
+                                                  className="mt-2 inline-block text-sm font-semibold text-accent hover:text-accent"
                                                 >
                                                   Video Link
                                                 </a>
@@ -972,7 +952,7 @@ export default function ClientDetails() {
                                                 onClick={() =>
                                                   startEditingExercise(exercise)
                                                 }
-                                                className="rounded-xl bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 ring-1 ring-blue-100 hover:bg-blue-100"
+                                                className="rounded-xl bg-accent-soft px-3 py-2 text-sm font-semibold text-accent ring-1 ring-line hover:bg-accent-soft"
                                               >
                                                 Edit Exercise
                                               </button>
@@ -1005,17 +985,16 @@ export default function ClientDetails() {
             )}
           </SectionCard>
         </div>
-      </section>
-    </main>
+    </TrainerLayout>
   );
 }
 
 function StatCard({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5">
-      <p className="text-sm font-medium text-slate-500">{title}</p>
+    <div className="rounded-[18px] border border-line bg-white p-4 sm:p-5">
+      <p className="text-sm text-muted">{title}</p>
 
-      <h2 className="mt-2 break-words text-xl font-bold text-slate-900">
+      <h2 className="mt-1 break-words text-xl font-bold text-ink">
         {value}
       </h2>
     </div>
@@ -1030,8 +1009,8 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-3xl border border-sky-100 bg-white p-6 shadow-sm">
-      <h2 className="mb-5 text-xl font-bold text-slate-900">{title}</h2>
+    <div className="rounded-[18px] border border-line bg-white p-6 ">
+      <h2 className="mb-5 text-xl font-bold text-ink">{title}</h2>
       {children}
     </div>
   );
@@ -1039,10 +1018,10 @@ function SectionCard({
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
-      <p className="text-sm font-medium text-slate-500">{label}</p>
+    <div className="rounded-2xl border border-line bg-canvas p-4">
+      <p className="text-sm font-medium text-muted">{label}</p>
 
-      <p className="mt-1 break-words font-semibold text-slate-900">{value}</p>
+      <p className="mt-1 break-words font-semibold text-ink">{value}</p>
     </div>
   );
 }
@@ -1062,7 +1041,7 @@ function Input({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-semibold text-slate-700">
+      <label className="mb-2 block text-sm font-semibold text-ink/80">
         {label}
       </label>
 
@@ -1071,7 +1050,7 @@ function Input({
         type={type}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+        className="w-full rounded-xl border border-line bg-white px-4 py-3 text-ink outline-none ring-0 placeholder:text-muted focus:border-accent/40 focus:ring-2 focus:ring-line"
       />
     </div>
   );

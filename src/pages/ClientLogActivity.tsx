@@ -219,16 +219,16 @@ export default function ClientLogActivity() {
   if (isLoading) {
     return (
       <ClientLayout unreadMessages={unreadMessages}>
-        <section className="rounded-[1.75rem] border border-sky-100 bg-white p-6 shadow-sm sm:rounded-[2rem] sm:p-8">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600 sm:text-sm sm:tracking-[0.3em]">
+        <section className="rounded-[18px] border border-line bg-white p-6 sm:rounded-[18px] sm:p-8">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent sm:text-sm sm:tracking-[0.3em]">
             CoachSync
           </p>
 
-          <h1 className="mt-3 text-2xl font-black text-slate-900">
+          <h1 className="mt-3 text-2xl font-bold text-ink">
             Loading activity log...
           </h1>
 
-          <p className="mt-2 text-sm leading-6 text-slate-500">
+          <p className="mt-2 text-sm leading-6 text-muted">
             Getting your activity form ready.
           </p>
         </section>
@@ -238,23 +238,23 @@ export default function ClientLogActivity() {
 
   return (
     <ClientLayout unreadMessages={unreadMessages}>
-      <section className="mb-4 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
-        <div className="bg-gradient-to-r from-emerald-600 to-sky-500 px-4 py-5 text-white sm:px-6 sm:py-8 md:px-8">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-100 sm:text-sm sm:tracking-[0.3em]">
+      <section className="mb-4 sm:mb-6">
+        <div className="mb-4">
+          <p className="text-sm text-muted">
             Personal Activity
           </p>
 
-          <h1 className="mt-2 break-words text-2xl font-black leading-tight sm:mt-3 sm:text-4xl">
+          <h1 className="break-words text-2xl font-bold leading-tight tracking-tight sm:text-[30px]">
             Log Activity
           </h1>
 
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-emerald-50 sm:mt-3 sm:text-base">
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
             Record a hike, bike ride, walk, gym workout, home workout, or any
             extra training you completed on your own.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-4 md:p-8">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
           <SummaryCard title="Type" value={activityType || "Not set"} />
           <SummaryCard title="Exercises" value={`${exercises.length}`} />
           <SummaryCard
@@ -267,31 +267,31 @@ export default function ClientLogActivity() {
 
       <form
         onSubmit={saveActivity}
-        className="rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6"
+        className="rounded-[18px] border border-line bg-white p-4 sm:rounded-[18px] sm:p-6"
       >
         <div className="mb-5">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">
             Activity Details
           </p>
 
-          <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+          <h2 className="mt-1 text-xl font-bold text-ink sm:text-2xl">
             What did you do?
           </h2>
 
-          <p className="mt-1 text-sm leading-6 text-slate-500">
+          <p className="mt-1 text-sm leading-6 text-muted">
             Add the main activity first, then include exercises if it was a gym
             or home workout.
           </p>
         </div>
 
         {statusMessage && (
-          <p className="mb-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-black text-emerald-700">
+          <p className="mb-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
             {statusMessage}
           </p>
         )}
 
         {errorMessage && (
-          <p className="mb-5 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-black text-red-700">
+          <p className="mb-5 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
             {errorMessage}
           </p>
         )}
@@ -301,7 +301,7 @@ export default function ClientLogActivity() {
             <select
               value={activityType}
               onChange={(event) => setActivityType(event.target.value)}
-              className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none focus:border-accent/40 focus:ring-4 focus:ring-line"
             >
               <option value="Gym Workout">Gym Workout</option>
               <option value="At-Home Workout">At-Home Workout</option>
@@ -320,7 +320,7 @@ export default function ClientLogActivity() {
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               placeholder="Example: 30-minute hike"
-              className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line"
             />
           </FormField>
 
@@ -330,7 +330,7 @@ export default function ClientLogActivity() {
               onChange={(event) => setDurationMinutes(event.target.value)}
               placeholder="30"
               inputMode="numeric"
-              className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line"
             />
           </FormField>
 
@@ -339,7 +339,7 @@ export default function ClientLogActivity() {
               value={location}
               onChange={(event) => setLocation(event.target.value)}
               placeholder="Gym, home, trail, campus..."
-              className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line"
             />
           </FormField>
 
@@ -347,7 +347,7 @@ export default function ClientLogActivity() {
             <select
               value={intensity}
               onChange={(event) => setIntensity(event.target.value)}
-              className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none focus:border-accent/40 focus:ring-4 focus:ring-line"
             >
               <option value="">Select intensity</option>
               <option value="Easy">Easy</option>
@@ -362,7 +362,7 @@ export default function ClientLogActivity() {
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               placeholder="How did it feel?"
-              className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line"
             />
           </FormField>
         </div>
@@ -370,11 +370,11 @@ export default function ClientLogActivity() {
         <div className="mt-8">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">
                 Exercise Details
               </p>
 
-              <h3 className="mt-1 text-lg font-black text-slate-900">
+              <h3 className="mt-1 text-lg font-bold text-ink">
                 Add exercises, sets, reps, weight, distance, or notes
               </h3>
             </div>
@@ -382,7 +382,7 @@ export default function ClientLogActivity() {
             <button
               type="button"
               onClick={addExercise}
-              className="w-full rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm font-black text-blue-700 transition hover:bg-blue-50 sm:w-auto"
+              className="w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-sm font-bold text-accent transition hover:bg-accent-soft sm:w-auto"
             >
               Add Exercise
             </button>
@@ -392,17 +392,17 @@ export default function ClientLogActivity() {
             {exercises.map((exercise, index) => (
               <div
                 key={index}
-                className="rounded-2xl border border-sky-100 bg-sky-50 p-4 sm:p-5"
+                className="rounded-2xl border border-line bg-canvas p-4 sm:p-5"
               >
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <h4 className="font-black text-slate-900">
+                  <h4 className="font-bold text-ink">
                     Exercise {index + 1}
                   </h4>
 
                   <button
                     type="button"
                     onClick={() => removeExercise(index)}
-                    className="w-full rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm font-black text-red-700 transition hover:bg-red-100 sm:w-auto"
+                    className="w-full rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm font-bold text-red-700 transition hover:bg-red-100 sm:w-auto"
                   >
                     Remove
                   </button>
@@ -420,7 +420,7 @@ export default function ClientLogActivity() {
                         )
                       }
                       placeholder="Bench press, hike, bike ride..."
-                      className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                      className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line"
                     />
                   </FormField>
 
@@ -431,7 +431,7 @@ export default function ClientLogActivity() {
                         updateExercise(index, "sets", event.target.value)
                       }
                       placeholder="3"
-                      className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                      className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line"
                     />
                   </FormField>
 
@@ -442,7 +442,7 @@ export default function ClientLogActivity() {
                         updateExercise(index, "reps", event.target.value)
                       }
                       placeholder="10"
-                      className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                      className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line"
                     />
                   </FormField>
 
@@ -453,7 +453,7 @@ export default function ClientLogActivity() {
                         updateExercise(index, "weight", event.target.value)
                       }
                       placeholder="95 lbs"
-                      className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                      className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line"
                     />
                   </FormField>
 
@@ -464,7 +464,7 @@ export default function ClientLogActivity() {
                         updateExercise(index, "distance", event.target.value)
                       }
                       placeholder="2 miles"
-                      className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                      className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line"
                     />
                   </FormField>
 
@@ -475,7 +475,7 @@ export default function ClientLogActivity() {
                         updateExercise(index, "duration", event.target.value)
                       }
                       placeholder="30 minutes"
-                      className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                      className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line"
                     />
                   </FormField>
                 </div>
@@ -489,7 +489,7 @@ export default function ClientLogActivity() {
                       }
                       placeholder="Optional notes for your trainer..."
                       rows={3}
-                      className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                      className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line"
                     />
                   </FormField>
                 </div>
@@ -502,7 +502,7 @@ export default function ClientLogActivity() {
           <button
             type="submit"
             disabled={isSaving}
-            className="w-full rounded-2xl bg-emerald-600 px-5 py-4 text-sm font-black text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            className="w-full rounded-2xl bg-emerald-600 px-5 py-4 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
           >
             {isSaving ? "Saving Activity..." : "Save Activity"}
           </button>
@@ -511,7 +511,7 @@ export default function ClientLogActivity() {
             type="button"
             onClick={clearForm}
             disabled={isSaving}
-            className="w-full rounded-2xl border border-sky-100 bg-white px-5 py-4 text-sm font-black text-slate-700 shadow-sm transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            className="w-full rounded-2xl border border-line bg-white px-5 py-4 text-sm font-bold text-ink/80 transition hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
           >
             Clear Form
           </button>
@@ -530,7 +530,7 @@ function FormField({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-black text-slate-700">
+      <label className="mb-2 block text-sm font-bold text-ink/80">
         {label}
       </label>
 
@@ -541,12 +541,12 @@ function FormField({
 
 function SummaryCard({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 shadow-sm">
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+    <div className="rounded-2xl border border-line bg-canvas p-4 ">
+      <p className="text-xs font-bold uppercase tracking-wide text-muted">
         {title}
       </p>
 
-      <h2 className="mt-2 line-clamp-2 break-words text-xl font-black leading-tight text-slate-900 sm:text-2xl">
+      <h2 className="mt-2 line-clamp-2 break-words text-xl font-bold leading-tight text-ink sm:text-2xl">
         {value}
       </h2>
     </div>

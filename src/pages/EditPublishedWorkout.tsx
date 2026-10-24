@@ -18,6 +18,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "../lib/supabaseClient";
+import TrainerLayout from "../components/TrainerLayout";
+import PageHeader from "../components/ui/PageHeader";
+import { btnGhost } from "../components/ui/styles";
 
 const WORKOUT_SECTIONS = [
   "Warm-Up",
@@ -815,33 +818,33 @@ const loadedExercises = (exerciseData || []) as unknown as ExerciseRow[];
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 p-6 text-slate-900">
-        <section className="mx-auto max-w-4xl rounded-[2rem] border border-sky-100 bg-white p-6 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-[0.25em] text-blue-600">
+      <TrainerLayout>
+        <section className="mx-auto max-w-4xl rounded-[18px] border border-line bg-white p-6 ">
+          <p className="text-xs font-bold uppercase tracking-[0.25em] text-accent">
             CoachSync
           </p>
 
-          <h1 className="mt-3 text-2xl font-black text-slate-900">
+          <h1 className="mt-3 text-2xl font-bold text-ink">
             Loading workout editor...
           </h1>
 
-          <p className="mt-2 text-sm leading-6 text-slate-500">
+          <p className="mt-2 text-sm leading-6 text-muted">
             Pulling the published workout from Supabase.
           </p>
         </section>
-      </main>
+      </TrainerLayout>
     );
   }
 
   if (!workout) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 p-6 text-slate-900">
-        <section className="mx-auto max-w-4xl rounded-[2rem] border border-red-100 bg-white p-6 shadow-sm">
+      <TrainerLayout>
+        <section className="mx-auto max-w-4xl rounded-[18px] border border-red-100 bg-white p-6 ">
           <p className="text-xs font-bold uppercase tracking-[0.25em] text-red-600">
             CoachSync
           </p>
 
-          <h1 className="mt-3 text-2xl font-black text-slate-900">
+          <h1 className="mt-3 text-2xl font-bold text-ink">
             Workout not found
           </h1>
 
@@ -853,81 +856,54 @@ const loadedExercises = (exerciseData || []) as unknown as ExerciseRow[];
 
           <Link
             to="/clients"
-            className="mt-5 inline-block rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white hover:bg-blue-700"
+            className="mt-5 inline-block rounded-2xl bg-accent px-4 py-3 text-sm font-bold text-white hover:bg-accent-dark"
           >
             Back to Clients
           </Link>
         </section>
-      </main>
+      </TrainerLayout>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
-      <section className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:py-10">
-        <div className="mb-6 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-8 sm:rounded-[2rem]">
-          <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-4 py-6 text-white sm:px-6 sm:py-8 md:px-8">
-            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
-                  Edit Published Workout
-                </p>
+    <TrainerLayout>
+        <PageHeader
+          backTo={`/clients/${workout.client_plan_weeks?.client_user_id || ""}`}
+          backLabel="Back to client"
+          eyebrow={`Week ${workout.client_plan_weeks?.week_number || "?"} · ${
+            workout.client_plan_weeks?.profiles?.full_name || "Unknown client"
+          }`}
+          title={workoutTitle || "Untitled workout"}
+          actions={
+            <button
+              type="button"
+              onClick={() => setShowPreview(true)}
+              className={btnGhost}
+            >
+              Preview
+            </button>
+          }
+        />
 
-                <h1 className="mt-3 break-words text-3xl font-black leading-tight md:text-5xl">
-                  {workoutTitle || "Untitled Workout"}
-                </h1>
-
-                <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-blue-50 sm:text-base">
-                  Week {workout.client_plan_weeks?.week_number || "?"} •{" "}
-                  {workout.client_plan_weeks?.profiles?.full_name ||
-                    "Unknown Client"}
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Link
-                  to={`/clients/${workout.client_plan_weeks?.client_user_id || ""}`}
-                  className="w-full rounded-2xl bg-white px-4 py-3 text-center text-sm font-black text-blue-700 transition hover:bg-blue-50 sm:w-auto"
-                >
-                  Back to Client
-                </Link>
-
-                <button
-                  type="button"
-                  onClick={() => setShowPreview(true)}
-                  className="w-full rounded-2xl bg-white/15 px-4 py-3 text-sm font-black text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto"
-                >
-                  Preview
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-3 p-4 sm:p-6 md:grid-cols-4 md:p-8">
-            <SummaryCard title="Exercises" value={String(totalActiveExercises)} />
-            <SummaryCard
-              title="Sections"
-              value={String(
-                groupedExercises.filter((group) => group.exercises.length > 0)
-                  .length
-              )}
-            />
-            <SummaryCard
-              title="Autosave"
-              value={
-                isAutosaving
-                  ? "Saving"
-                  : draftSavedAt
-                  ? "Saved"
-                  : "Ready"
-              }
-            />
-            <SummaryCard title="Mode" value="Published" />
-          </div>
+        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <SummaryCard title="Exercises" value={String(totalActiveExercises)} />
+          <SummaryCard
+            title="Sections"
+            value={String(
+              groupedExercises.filter((group) => group.exercises.length > 0)
+                .length
+            )}
+          />
+          <SummaryCard
+            title="Autosave"
+            value={isAutosaving ? "Saving" : draftSavedAt ? "Saved" : "Ready"}
+          />
+          <SummaryCard title="Mode" value="Published" />
         </div>
 
+
         {statusMessage && (
-          <p className="mb-5 rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-semibold leading-6 text-slate-700">
+          <p className="mb-5 rounded-2xl border border-line bg-canvas p-4 text-sm font-semibold leading-6 text-ink/80">
             {statusMessage}
           </p>
         )}
@@ -938,13 +914,13 @@ const loadedExercises = (exerciseData || []) as unknown as ExerciseRow[];
           </p>
         )}
 
-        <section className="mb-6 rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6">
+        <section className="mb-6 rounded-[18px] border border-line bg-white p-4 sm:rounded-[18px] sm:p-6">
           <div className="mb-4">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
               Workout Details
             </p>
 
-            <h2 className="mt-1 text-2xl font-black text-slate-900">
+            <h2 className="mt-1 text-2xl font-bold text-ink">
               Edit title and order
             </h2>
           </div>
@@ -966,7 +942,7 @@ const loadedExercises = (exerciseData || []) as unknown as ExerciseRow[];
             />
           </div>
 
-          <p className="mt-4 text-sm font-semibold leading-6 text-slate-500">
+          <p className="mt-4 text-sm font-semibold leading-6 text-muted">
             {draftSavedAt
               ? `Editing draft saved at ${new Date(draftSavedAt).toLocaleTimeString(
                   [],
@@ -979,18 +955,18 @@ const loadedExercises = (exerciseData || []) as unknown as ExerciseRow[];
           </p>
         </section>
 
-        <section className="rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6">
+        <section className="rounded-[18px] border border-line bg-white p-4 sm:rounded-[18px] sm:p-6">
           <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
                 Exercises
               </p>
 
-              <h2 className="mt-1 text-2xl font-black text-slate-900">
+              <h2 className="mt-1 text-2xl font-bold text-ink">
                 Edit guided workout flow
               </h2>
 
-              <p className="mt-1 text-sm leading-6 text-slate-500">
+              <p className="mt-1 text-sm leading-6 text-muted">
                 Update sections, exercises, sets, reps, rest, video links, and
                 trainer notes. This changes what the client sees in guided mode.
               </p>
@@ -1002,7 +978,7 @@ const loadedExercises = (exerciseData || []) as unknown as ExerciseRow[];
                   key={section}
                   type="button"
                   onClick={() => addExercise(section)}
-                  className="rounded-2xl bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-blue-100 transition hover:bg-blue-100"
+                  className="rounded-2xl bg-accent-soft px-3 py-2 text-xs font-bold text-accent ring-1 ring-line transition hover:bg-accent-soft"
                 >
                   + {section}
                 </button>
@@ -1038,20 +1014,20 @@ const loadedExercises = (exerciseData || []) as unknown as ExerciseRow[];
                   return (
                     <div
                       key={section}
-                      className="overflow-hidden rounded-[1.5rem] border border-sky-100 bg-sky-50"
+                      className="overflow-hidden rounded-[18px] border border-line bg-canvas"
                     >
-                      <div className="border-b border-sky-100 bg-gradient-to-br from-white via-sky-50 to-blue-50 p-4">
+                      <div className="border-b border-line bg-white p-4">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
-                            <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                            <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">
                               Client Section
                             </p>
 
-                            <h3 className="mt-1 text-xl font-black text-slate-900">
+                            <h3 className="mt-1 text-xl font-bold text-ink">
                               {section}
                             </h3>
 
-                            <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
+                            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
                               {SECTION_DESCRIPTIONS[section]}
                             </p>
                           </div>
@@ -1059,7 +1035,7 @@ const loadedExercises = (exerciseData || []) as unknown as ExerciseRow[];
                           <button
                             type="button"
                             onClick={() => addExercise(section)}
-                            className="rounded-2xl bg-blue-600 px-4 py-3 text-xs font-black text-white transition hover:bg-blue-700"
+                            className="rounded-2xl bg-accent px-4 py-3 text-xs font-bold text-white transition hover:bg-accent-dark"
                           >
                             Add to {section}
                           </button>
@@ -1099,7 +1075,7 @@ const loadedExercises = (exerciseData || []) as unknown as ExerciseRow[];
                     >
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                          <p className="text-sm font-black text-red-700">
+                          <p className="text-sm font-bold text-red-700">
                             Marked for deletion
                           </p>
                           <p className="mt-1 text-sm font-semibold text-red-600">
@@ -1110,7 +1086,7 @@ const loadedExercises = (exerciseData || []) as unknown as ExerciseRow[];
                         <button
                           type="button"
                           onClick={() => restoreExercise(exercise.formId)}
-                          className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-red-700 ring-1 ring-red-100 hover:bg-red-100"
+                          className="rounded-2xl bg-white px-4 py-3 text-sm font-bold text-red-700 ring-1 ring-red-100 hover:bg-red-100"
                         >
                           Restore
                         </button>
@@ -1127,7 +1103,7 @@ const loadedExercises = (exerciseData || []) as unknown as ExerciseRow[];
             type="button"
             onClick={discardLocalChanges}
             disabled={isSaving}
-            className="rounded-2xl border border-red-100 bg-white px-5 py-4 font-black text-red-600 shadow-sm transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl border border-red-100 bg-white px-5 py-4 font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Discard Unsaved Edits
           </button>
@@ -1136,7 +1112,7 @@ const loadedExercises = (exerciseData || []) as unknown as ExerciseRow[];
             type="button"
             onClick={() => setShowPreview(true)}
             disabled={isSaving}
-            className="rounded-2xl border border-blue-100 bg-white px-5 py-4 font-black text-blue-700 shadow-sm transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl border border-line bg-white px-5 py-4 font-bold text-accent transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-60"
           >
             Preview Client Flow
           </button>
@@ -1145,12 +1121,11 @@ const loadedExercises = (exerciseData || []) as unknown as ExerciseRow[];
             type="button"
             onClick={saveWorkoutChanges}
             disabled={isSaving}
-            className="rounded-2xl bg-blue-600 px-5 py-4 font-black text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-accent px-5 py-4 font-bold text-white transition hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving ? "Saving Changes..." : "Save Published Changes"}
           </button>
         </div>
-      </section>
 
       {showPreview && (
         <WorkoutPreviewModal
@@ -1162,7 +1137,7 @@ const loadedExercises = (exerciseData || []) as unknown as ExerciseRow[];
           onClose={() => setShowPreview(false)}
         />
       )}
-    </main>
+    </TrainerLayout>
   );
 }
 
@@ -1174,16 +1149,16 @@ function EmptySectionCard({
   addExercise: (section: string) => void;
 }) {
   return (
-    <div className="rounded-[1.5rem] border border-dashed border-sky-200 bg-white/70 p-4">
+    <div className="rounded-[18px] border border-dashed border-line bg-white/70 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted">
             Empty Section
           </p>
 
-          <h3 className="mt-1 text-lg font-black text-slate-700">{section}</h3>
+          <h3 className="mt-1 text-lg font-bold text-ink/80">{section}</h3>
 
-          <p className="mt-1 text-sm leading-6 text-slate-500">
+          <p className="mt-1 text-sm leading-6 text-muted">
             {SECTION_DESCRIPTIONS[section]}
           </p>
         </div>
@@ -1191,7 +1166,7 @@ function EmptySectionCard({
         <button
           type="button"
           onClick={() => addExercise(section)}
-          className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50"
+          className="rounded-2xl bg-white px-4 py-3 text-sm font-bold text-accent ring-1 ring-line transition hover:bg-accent-soft"
         >
           + Add Exercise
         </button>
@@ -1251,10 +1226,10 @@ function SortableExerciseEditor({
     <div
       ref={setNodeRef}
       style={style}
-      className={`overflow-hidden rounded-[1.35rem] border bg-white transition ${
+      className={`overflow-hidden rounded-2xl border bg-white transition ${
         isDragging
-          ? "z-20 border-blue-200 opacity-80 shadow-xl ring-2 ring-blue-200"
-          : "border-sky-100 shadow-sm"
+          ? "z-20 border-accent/30 opacity-80 shadow-xl ring-2 ring-accent/30"
+          : "border-line "
       }`}
     >
       <div className="p-4">
@@ -1264,27 +1239,27 @@ function SortableExerciseEditor({
               type="button"
               {...attributes}
               {...listeners}
-              className="mt-1 cursor-grab rounded-2xl bg-sky-50 px-3 py-2 text-sm font-black text-slate-600 ring-1 ring-sky-100 active:cursor-grabbing"
+              className="mt-1 cursor-grab rounded-2xl bg-canvas px-3 py-2 text-sm font-bold text-muted ring-1 ring-line active:cursor-grabbing"
               aria-label={`Drag Exercise ${displayIndex}`}
             >
               ☰
             </button>
 
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-blue-600">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-accent">
                 Movement {displayIndex}
               </p>
 
-              <h4 className="mt-1 break-words text-lg font-black text-slate-900">
+              <h4 className="mt-1 break-words text-lg font-bold text-ink">
                 {exercise.exerciseName.trim() || "New Exercise"}
               </h4>
 
-              <p className="mt-1 break-words text-sm font-semibold leading-6 text-slate-500">
+              <p className="mt-1 break-words text-sm font-semibold leading-6 text-muted">
                 {getExerciseSummary(exercise)}
               </p>
 
               {exercise.trainerNotes.trim() && !isExpanded && (
-                <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-500">
+                <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted">
                   Note: {exercise.trainerNotes}
                 </p>
               )}
@@ -1295,7 +1270,7 @@ function SortableExerciseEditor({
             <button
               type="button"
               onClick={() => setIsExpanded((current) => !current)}
-              className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-black text-white transition hover:bg-blue-700"
+              className="rounded-xl bg-accent px-3 py-2 text-xs font-bold text-white transition hover:bg-accent-dark"
             >
               {isExpanded ? "Collapse" : "Edit Details"}
             </button>
@@ -1304,7 +1279,7 @@ function SortableExerciseEditor({
               type="button"
               onClick={() => moveExercise(exercise.formId, "up")}
               disabled={visibleIndex === 0}
-              className="rounded-xl bg-white px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-accent ring-1 ring-line transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
             >
               Up
             </button>
@@ -1313,7 +1288,7 @@ function SortableExerciseEditor({
               type="button"
               onClick={() => moveExercise(exercise.formId, "down")}
               disabled={visibleIndex === totalVisibleExercises - 1}
-              className="rounded-xl bg-white px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-accent ring-1 ring-line transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
             >
               Down
             </button>
@@ -1321,7 +1296,7 @@ function SortableExerciseEditor({
             <button
               type="button"
               onClick={() => duplicateExercise(exercise.formId)}
-              className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 ring-1 ring-emerald-100 transition hover:bg-emerald-100"
+              className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100 transition hover:bg-emerald-100"
             >
               Duplicate
             </button>
@@ -1329,7 +1304,7 @@ function SortableExerciseEditor({
             <button
               type="button"
               onClick={() => removeExercise(exercise.formId)}
-              className="rounded-xl bg-red-50 px-3 py-2 text-xs font-black text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
+              className="rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
             >
               Remove
             </button>
@@ -1338,11 +1313,11 @@ function SortableExerciseEditor({
       </div>
 
       {isExpanded && (
-        <div className="border-t border-sky-100 bg-sky-50/60 p-4">
-          <div className="mb-4 rounded-2xl border border-blue-100 bg-white p-4">
+        <div className="border-t border-line bg-sky-50/60 p-4">
+          <div className="mb-4 rounded-2xl border border-line bg-white p-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div className="flex-1">
-                <label className="mb-2 block text-sm font-black text-slate-700">
+                <label className="mb-2 block text-sm font-bold text-ink/80">
                   Workout Library
                 </label>
 
@@ -1352,7 +1327,7 @@ function SortableExerciseEditor({
                     applyLibraryExercise(exercise.formId, event.target.value)
                   }
                   disabled={isLibraryLoading || exerciseLibrary.length === 0}
-                  className="w-full rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-ink outline-none focus:border-accent/40 focus:ring-4 focus:ring-line disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <option value="">
                     {isLibraryLoading
@@ -1391,7 +1366,7 @@ function SortableExerciseEditor({
                   })}
                 </select>
 
-                <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">
+                <p className="mt-2 text-xs font-semibold leading-5 text-muted">
                   Select a saved movement to auto-fill the name, section, sets,
                   reps/time, weight, rest, video link, and trainer notes.
                 </p>
@@ -1408,7 +1383,7 @@ function SortableExerciseEditor({
                   updateExercise(exercise.formId, "videoLink", "");
                   updateExercise(exercise.formId, "trainerNotes", "");
                 }}
-                className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-xs font-black text-slate-600 transition hover:bg-sky-50"
+                className="rounded-2xl border border-line bg-white px-4 py-3 text-xs font-bold text-muted transition hover:bg-canvas"
               >
                 Clear Fields
               </button>
@@ -1417,7 +1392,7 @@ function SortableExerciseEditor({
 
           <div className="grid gap-4 md:grid-cols-3">
             <div>
-              <label className="mb-2 block text-sm font-black text-slate-700">
+              <label className="mb-2 block text-sm font-bold text-ink/80">
                 Section
               </label>
 
@@ -1426,7 +1401,7 @@ function SortableExerciseEditor({
                 onChange={(event) =>
                   updateExercise(exercise.formId, "section", event.target.value)
                 }
-                className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-ink outline-none focus:border-accent/40 focus:ring-4 focus:ring-line"
               >
                 {WORKOUT_SECTIONS.map((section) => (
                   <option key={section} value={section}>
@@ -1491,7 +1466,7 @@ function SortableExerciseEditor({
             />
 
             <div className="md:col-span-3">
-              <label className="mb-2 block text-sm font-black text-slate-700">
+              <label className="mb-2 block text-sm font-bold text-ink/80">
                 Trainer Notes
               </label>
 
@@ -1506,7 +1481,7 @@ function SortableExerciseEditor({
                 }
                 placeholder="Example: Keep shoulders relaxed, move slowly, stop if pain increases."
                 rows={3}
-                className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-ink outline-none ring-0 placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line"
               />
             </div>
           </div>
@@ -1543,19 +1518,19 @@ function WorkoutPreviewModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/60 px-4 py-6 backdrop-blur-sm">
-      <div className="w-full max-w-5xl overflow-hidden rounded-[2rem] bg-white shadow-2xl">
-        <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-5 py-6 text-white sm:px-8">
+      <div className="w-full max-w-5xl overflow-hidden rounded-[18px] bg-white shadow-2xl">
+        <div className="bg-ink px-5 py-6 text-white sm:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-100">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/75">
                 Published Workout Preview
               </p>
 
-              <h2 className="mt-2 text-3xl font-black sm:text-4xl">
+              <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
                 {workoutTitle || "Untitled Workout"}
               </h2>
 
-              <p className="mt-2 text-sm font-semibold leading-6 text-blue-50">
+              <p className="mt-2 text-sm font-semibold leading-6 text-white/75">
                 Week {weekNumber || "?"}
                 {clientName ? ` • ${clientName}` : ""}
               </p>
@@ -1564,7 +1539,7 @@ function WorkoutPreviewModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-2xl bg-white/15 px-4 py-3 text-sm font-black text-white ring-1 ring-white/25 transition hover:bg-white/25"
+              className="rounded-2xl bg-white/15 px-4 py-3 text-sm font-bold text-white ring-1 ring-white/25 transition hover:bg-white/25"
             >
               Close
             </button>
@@ -1572,19 +1547,19 @@ function WorkoutPreviewModal({
 
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl bg-white/15 p-4 ring-1 ring-white/20">
-              <p className="text-xs font-bold uppercase tracking-wide text-blue-100">
+              <p className="text-xs font-bold uppercase tracking-wide text-white/75">
                 Exercises
               </p>
-              <p className="mt-1 text-2xl font-black">
+              <p className="mt-1 text-2xl font-bold">
                 {activeExercises.length}
               </p>
             </div>
 
             <div className="rounded-2xl bg-white/15 p-4 ring-1 ring-white/20">
-              <p className="text-xs font-bold uppercase tracking-wide text-blue-100">
+              <p className="text-xs font-bold uppercase tracking-wide text-white/75">
                 Sections
               </p>
-              <p className="mt-1 text-2xl font-black">
+              <p className="mt-1 text-2xl font-bold">
                 {
                   WORKOUT_SECTIONS.filter((section) =>
                     activeExercises.some(
@@ -1596,10 +1571,10 @@ function WorkoutPreviewModal({
             </div>
 
             <div className="rounded-2xl bg-white/15 p-4 ring-1 ring-white/20">
-              <p className="text-xs font-bold uppercase tracking-wide text-blue-100">
+              <p className="text-xs font-bold uppercase tracking-wide text-white/75">
                 Mode
               </p>
-              <p className="mt-1 text-2xl font-black">Guided</p>
+              <p className="mt-1 text-2xl font-bold">Guided</p>
             </div>
           </div>
         </div>
@@ -1611,7 +1586,7 @@ function WorkoutPreviewModal({
             issues.missingVideo > 0 ||
             issues.missingNotes > 0) && (
             <div className="mb-5 rounded-2xl border border-amber-100 bg-amber-50 p-4">
-              <p className="text-sm font-black text-amber-700">
+              <p className="text-sm font-bold text-amber-700">
                 Preview Checklist
               </p>
 
@@ -1636,8 +1611,8 @@ function WorkoutPreviewModal({
           )}
 
           {activeExercises.length === 0 ? (
-            <div className="rounded-3xl border border-red-100 bg-red-50 p-5">
-              <h3 className="text-xl font-black text-red-700">
+            <div className="rounded-[18px] border border-red-100 bg-red-50 p-5">
+              <h3 className="text-xl font-bold text-red-700">
                 No exercises to preview
               </h3>
               <p className="mt-2 text-sm font-semibold leading-6 text-red-600">
@@ -1656,20 +1631,20 @@ function WorkoutPreviewModal({
                 return (
                   <div
                     key={section}
-                    className="rounded-[1.5rem] border border-sky-100 bg-white p-4"
+                    className="rounded-[18px] border border-line bg-white p-4"
                   >
                     <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">
                           Section Intro
                         </p>
 
-                        <h4 className="mt-1 text-xl font-black text-slate-900">
+                        <h4 className="mt-1 text-xl font-bold text-ink">
                           {section}
                         </h4>
                       </div>
 
-                      <span className="w-fit rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-sky-100">
+                      <span className="w-fit rounded-full bg-canvas px-3 py-1 text-xs font-bold text-accent ring-1 ring-line">
                         {sectionExercises.length} movement
                         {sectionExercises.length === 1 ? "" : "s"}
                       </span>
@@ -1679,30 +1654,30 @@ function WorkoutPreviewModal({
                       {sectionExercises.map((exercise, index) => (
                         <div
                           key={exercise.formId}
-                          className="rounded-2xl border border-sky-100 bg-sky-50 p-4"
+                          className="rounded-2xl border border-line bg-canvas p-4"
                         >
                           <div className="flex gap-3">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-sm font-black text-blue-700 ring-1 ring-sky-100">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-sm font-bold text-accent ring-1 ring-line">
                               {index + 1}
                             </div>
 
                             <div className="min-w-0 flex-1">
-                              <p className="break-words font-black text-slate-900">
+                              <p className="break-words font-bold text-ink">
                                 {exercise.exerciseName}
                               </p>
 
-                              <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">
+                              <p className="mt-1 text-sm font-semibold leading-6 text-muted">
                                 {getExerciseSummary(exercise)}
                               </p>
 
                               {exercise.trainerNotes && (
-                                <p className="mt-2 text-sm leading-6 text-slate-600">
+                                <p className="mt-2 text-sm leading-6 text-muted">
                                   Trainer note: {exercise.trainerNotes}
                                 </p>
                               )}
 
                               {exercise.videoLink && (
-                                <p className="mt-2 text-xs font-black uppercase tracking-wide text-blue-600">
+                                <p className="mt-2 text-xs font-bold uppercase tracking-wide text-accent">
                                   Video attached
                                 </p>
                               )}
@@ -1721,7 +1696,7 @@ function WorkoutPreviewModal({
             <button
               type="button"
               onClick={onClose}
-              className="w-full rounded-2xl border border-sky-100 bg-white px-5 py-4 text-sm font-black text-slate-700 transition hover:bg-sky-50"
+              className="w-full rounded-2xl border border-line bg-white px-5 py-4 text-sm font-bold text-ink/80 transition hover:bg-canvas"
             >
               Keep Editing
             </button>
@@ -1729,7 +1704,7 @@ function WorkoutPreviewModal({
             <button
               type="button"
               onClick={onClose}
-              className="w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black text-white transition hover:bg-blue-700"
+              className="w-full rounded-2xl bg-accent px-5 py-4 text-sm font-bold text-white transition hover:bg-accent-dark"
             >
               Looks Good
             </button>
@@ -1742,12 +1717,12 @@ function WorkoutPreviewModal({
 
 function SummaryCard({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 sm:p-5">
-      <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+    <div className="rounded-[18px] border border-line bg-white p-4 sm:p-5">
+      <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted">
         {title}
       </p>
 
-      <h2 className="mt-2 break-words text-xl font-black text-slate-900 sm:text-2xl">
+      <h2 className="mt-2 break-words text-xl font-bold text-ink sm:text-2xl">
         {value}
       </h2>
     </div>
@@ -1769,7 +1744,7 @@ function Input({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-black text-slate-700">
+      <label className="mb-2 block text-sm font-bold text-ink/80">
         {label}
       </label>
 
@@ -1778,7 +1753,7 @@ function Input({
         type={type}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+        className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-ink outline-none ring-0 placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line"
       />
     </div>
   );

@@ -141,23 +141,23 @@ export default function ClientProgress() {
 
   return (
     <ClientLayout unreadMessages={unreadMessages}>
-      <section className="mb-4 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
-        <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-5 text-white sm:px-6 sm:py-8 md:px-8">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
+      <section className="mb-4 sm:mb-6">
+        <div className="mb-4">
+          <p className="text-sm text-muted">
             Workout Progress
           </p>
 
-          <h1 className="mt-2 break-words text-2xl font-black leading-tight sm:mt-3 sm:text-4xl">
+          <h1 className="break-words text-2xl font-bold leading-tight tracking-tight sm:text-[30px]">
             Progress
           </h1>
 
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
             Track progressive overload, strength improvements, and training
             volume over time.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-4 md:p-8">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
           <SummaryCard title="Workouts" value={`${totalWorkouts}`} />
 
           <SummaryCard title="Exercise Logs" value={`${totalExercises}`} />
@@ -171,36 +171,36 @@ export default function ClientProgress() {
         </div>
       </section>
 
-      <section className="rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+      <section className="rounded-[18px] border border-line bg-white p-4 sm:rounded-[18px] sm:p-6">
         <div className="mb-5">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">
             Training Improvements
           </p>
 
-          <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+          <h2 className="mt-1 text-xl font-bold text-ink sm:text-2xl">
             Progressive Overload
           </h2>
 
-          <p className="mt-1 text-sm leading-6 text-slate-500">
+          <p className="mt-1 text-sm leading-6 text-muted">
             This page focuses on whether you are improving your weights, reps,
             sets, and total training volume over time.
           </p>
         </div>
 
         {isLoading ? (
-          <p className="rounded-2xl bg-sky-50 p-5 text-sm font-semibold text-slate-600">
+          <p className="rounded-2xl bg-canvas p-5 text-sm font-semibold text-muted">
             Loading progress...
           </p>
         ) : (
           <div className="space-y-6">
             {statusMessage && (
-              <p className="rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-semibold text-slate-700">
+              <p className="rounded-2xl border border-line bg-canvas p-4 text-sm font-semibold text-ink/80">
                 {statusMessage}
               </p>
             )}
 
             {progressData.length === 0 ? (
-              <p className="rounded-2xl bg-sky-50 p-5 text-sm leading-6 text-slate-600">
+              <p className="rounded-2xl bg-canvas p-5 text-sm leading-6 text-muted">
                 No completed workout data yet. Once you submit workouts, your
                 lift progress will appear here.
               </p>
@@ -209,21 +209,21 @@ export default function ClientProgress() {
                 {progressData.map((item) => (
                   <div
                     key={item.exerciseName}
-                    className="rounded-2xl border border-sky-100 bg-sky-50 p-4 sm:p-5"
+                    className="rounded-2xl border border-line bg-canvas p-4 sm:p-5"
                   >
                     <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <h3 className="text-lg font-black text-slate-900">
+                        <h3 className="text-lg font-bold text-ink">
                           {item.exerciseName}
                         </h3>
 
-                        <p className="mt-1 text-sm font-medium text-slate-500">
+                        <p className="mt-1 text-sm font-medium text-muted">
                           Logged {item.entries} time
                           {item.entries === 1 ? "" : "s"}
                         </p>
                       </div>
 
-                      <p className="w-fit rounded-full bg-blue-50 px-3 py-1 text-sm font-black text-blue-700 ring-1 ring-blue-100">
+                      <p className="w-fit rounded-full bg-accent-soft px-3 py-1 text-sm font-bold text-accent ring-1 ring-line">
                         Best: {item.bestWeight || 0} lbs
                       </p>
                     </div>
@@ -278,12 +278,12 @@ function SummaryCard({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 shadow-sm">
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+    <div className="rounded-[18px] border border-line bg-white p-4 ">
+      <p className="text-xs font-medium text-muted">
         {title}
       </p>
 
-      <h2 className="mt-2 line-clamp-2 break-words text-xl font-black leading-tight text-slate-900 sm:text-2xl">
+      <h2 className="mt-2 line-clamp-2 break-words text-xl font-bold leading-tight text-ink sm:text-2xl">
         {value}
       </h2>
     </div>
@@ -292,12 +292,12 @@ function SummaryCard({
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-white p-4 ring-1 ring-sky-100">
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+    <div className="rounded-2xl bg-white p-4 ring-1 ring-line">
+      <p className="text-xs font-bold uppercase tracking-wide text-muted">
         {label}
       </p>
 
-      <p className="mt-1 break-words text-sm font-black text-slate-900 sm:text-base">
+      <p className="mt-1 break-words text-sm font-bold text-ink sm:text-base">
         {value}
       </p>
     </div>

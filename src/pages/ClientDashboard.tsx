@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import { Check, Eye, MessageCircle, Play, Plus, PersonStanding } from "lucide-react";
 import ClientLayout from "../components/ClientLayout";
 
 type ClientData = {
@@ -84,6 +85,7 @@ export default function ClientDashboard({
   const [goal, setGoal] = useState<GoalData | null>(null);
   const [activePlan, setActivePlan] = useState<TrainingPlan | null>(null);
   const [currentWeek, setCurrentWeek] = useState<number | null>(null);
+  const [totalWeeks, setTotalWeeks] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
 
   const [completedWorkoutCount, setCompletedWorkoutCount] = useState(0);
@@ -271,6 +273,12 @@ export default function ClientDashboard({
       null;
 
     setCurrentWeek(progressWeekNumber);
+    setTotalWeeks(
+      Math.max(
+        currentPlan?.planned_weeks || 0,
+        weeks[weeks.length - 1]?.week_number || 0
+      )
+    );
 
     if (progressWeekNumber) {
       const progressWeek = unlockedWeeks.find(
@@ -356,8 +364,8 @@ export default function ClientDashboard({
     return (
       <ClientLayout>
         <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="rounded-3xl border border-sky-100 bg-white p-6 text-center shadow-sm">
-            <p className="text-sm font-semibold text-slate-600">
+          <div className="rounded-2xl border border-line bg-white px-6 py-5 text-center">
+            <p className="text-sm font-medium text-muted">
               Loading your dashboard...
             </p>
           </div>
@@ -369,10 +377,12 @@ export default function ClientDashboard({
   if (!client) {
     return (
       <ClientLayout>
-        <div className="rounded-3xl border border-sky-100 bg-white p-6 shadow-sm sm:p-8">
-          <h1 className="text-2xl font-black">Client profile not found</h1>
+        <div className="rounded-[18px] border border-line bg-white p-6 sm:p-8">
+          <h1 className="font-display text-2xl font-bold">
+            Client profile not found
+          </h1>
 
-          <p className="mt-4 text-sm leading-6 text-slate-600 sm:text-base">
+          <p className="mt-3 text-sm leading-6 text-muted sm:text-base">
             Your account exists, but no profile has been set up yet. Contact
             your trainer.
           </p>
@@ -396,6 +406,25 @@ export default function ClientDashboard({
     weeklyWorkoutTotal > 0
       ? Math.round((weeklyWorkoutCompleted / weeklyWorkoutTotal) * 100)
       : 0;
+
+  const weeklyRemaining = Math.max(weeklyWorkoutTotal - weeklyWorkoutCompleted, 0);
+
+  const weeklyMessage =
+    weeklyWorkoutTotal === 0
+      ? "No workouts scheduled this week yet."
+      : weeklyRemaining === 0
+        ? "Week complete. Nice work."
+        : weeklyRemaining === 1
+          ? "One more to hit your week. Keep it going."
+          : `${weeklyRemaining} more to hit your week. Keep it going.`;
+
+  const planName = activePlan?.name || "Your training plan";
+  const planWeekLabel =
+    currentWeek && totalWeeks
+      ? `Week ${currentWeek} of ${totalWeeks}`
+      : currentWeek
+        ? `Week ${currentWeek}`
+        : "";
 
   function previewHref(clientHref: string) {
     if (!previewMode || !previewBasePath) return clientHref;
@@ -435,334 +464,286 @@ export default function ClientDashboard({
       clientName={client.full_name}
       clientUserId={previewClientUserId || ""}
     >
-      <section className="mb-4 overflow-hidden rounded-[1.5rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
-        <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-4 py-5 text-white sm:px-6 sm:py-8">
-          <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/15 text-xl font-black text-white shadow-sm ring-1 ring-white/20 sm:h-20 sm:w-20 sm:text-2xl">
-              {client.avatar_url ? (
-                <img
-                  src={client.avatar_url}
-                  alt={`${client.full_name} profile`}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                getInitials(client.full_name)
-              )}
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100">
-                Today
-              </p>
-
-              <h1 className="mt-1 break-words text-2xl font-black leading-tight sm:text-4xl">
-                Welcome back, {firstName}
-              </h1>
-
-              <p className="mt-2 text-sm font-semibold leading-6 text-blue-50">
-                {activePlan ? `${activePlan.name} is ready.` : "Your training plan is ready."}
-              </p>
-            </div>
-
-            <Link
-              to={previewHref("/client-settings")}
-              className="hidden shrink-0 rounded-2xl bg-white/15 px-4 py-3 text-sm font-black text-white ring-1 ring-white/20 transition hover:bg-white/25 sm:block"
-            >
-              Edit Profile
-            </Link>
-          </div>
-
-          {activePlan && (
-            <div className="mt-5 rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-blue-100">
-                Current Plan
-              </p>
-              <p className="mt-1 font-black text-white">
-                {activePlan.name}
-                {activePlan.plan_type === "fixed" && activePlan.planned_weeks
-                  ? ` • ${activePlan.planned_weeks} weeks`
-                  : ""}
-              </p>
-            </div>
+      {/* Header */}
+      <header className="mb-4 flex items-center gap-3 lg:mb-5 lg:items-start lg:justify-between">
+        <Link
+          to={previewHref("/client-settings")}
+          aria-label="Edit profile"
+          className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-ink text-sm font-bold text-white lg:hidden"
+        >
+          {client.avatar_url ? (
+            <img
+              src={client.avatar_url}
+              alt={`${client.full_name} profile`}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            getInitials(client.full_name)
           )}
+        </Link>
 
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-white/15 p-4 ring-1 ring-white/20">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-blue-100">
-                Current Week
-              </p>
-
-              <p className="mt-1 text-xl font-black">
-                {currentWeek ? `Week ${currentWeek}` : "Not set"}
-              </p>
-            </div>
-
-            <div className="rounded-2xl bg-white/15 p-4 ring-1 ring-white/20">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-blue-100">
-                This Week
-              </p>
-
-              <p className="mt-1 text-xl font-black">
-                {weeklyWorkoutCompleted}/{weeklyWorkoutTotal || 0}
-              </p>
-            </div>
-          </div>
-
-          <Link
-            to={previewHref("/client-settings")}
-            className="mt-3 flex items-center justify-between rounded-2xl bg-white px-4 py-3 text-blue-700 shadow-sm transition hover:bg-blue-50 sm:hidden"
-          >
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wide">
-                Profile
-              </p>
-
-              <p className="text-base font-black">Settings</p>
-            </div>
-
-            <span className="text-xl font-black">→</span>
-          </Link>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm text-muted">Today</p>
+          <h1 className="font-display text-[22px] font-bold leading-tight tracking-tight sm:text-[30px]">
+            Welcome back, {firstName}
+          </h1>
         </div>
-      </section>
+
+        {activePlan || currentWeek ? (
+          <Link
+            to={previewHref("/client-plan")}
+            className="hidden items-center gap-4 rounded-2xl border border-line bg-white px-4 py-2.5 transition hover:border-accent/30 lg:flex"
+          >
+            <div className="min-w-0">
+              <p className="text-xs text-muted">Current plan</p>
+              <p className="truncate text-sm font-semibold">
+                {planName}
+                {planWeekLabel ? ` · ${planWeekLabel}` : ""}
+              </p>
+            </div>
+            <WeekSegments current={currentWeek} total={totalWeeks} compact />
+          </Link>
+        ) : null}
+      </header>
+
+      {/* Plan progress (mobile) */}
+      {(activePlan || currentWeek) && (
+        <Link
+          to={previewHref("/client-plan")}
+          className="mb-4 block rounded-2xl border border-line bg-white px-4 py-3 lg:hidden"
+        >
+          <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+            <span className="truncate font-semibold">{planName}</span>
+            {planWeekLabel && (
+              <span className="shrink-0 text-muted">{planWeekLabel}</span>
+            )}
+          </div>
+          <WeekSegments current={currentWeek} total={totalWeeks} />
+        </Link>
+      )}
 
       {unreadMessages > 0 && (
         <Link
           to={previewHref("/client-messages")}
-          className="mb-4 block rounded-[1.5rem] border border-blue-200 bg-blue-50 p-4 shadow-sm transition hover:border-blue-300 hover:bg-blue-100 sm:mb-6 sm:p-5"
+          className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-accent/20 bg-accent-soft px-4 py-3 transition hover:border-accent/40"
         >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-base font-black text-blue-900 sm:text-lg">
-                You have {unreadMessages} unread message
-                {unreadMessages === 1 ? "" : "s"}
-              </h2>
-
-              <p className="mt-1 text-sm leading-6 text-blue-700">
-                Open your messages to read the latest update from your trainer.
-              </p>
-            </div>
-
-            <span className="w-fit rounded-2xl bg-blue-600 px-4 py-2 text-sm font-black text-white">
-              Open Messages →
-            </span>
+          <div className="flex min-w-0 items-center gap-3">
+            <MessageCircle className="h-5 w-5 shrink-0 text-accent" />
+            <p className="truncate text-sm font-semibold">
+              {unreadMessages} unread message{unreadMessages === 1 ? "" : "s"}{" "}
+              from your trainer
+            </p>
           </div>
+          <span className="shrink-0 text-sm font-semibold text-accent">
+            Open
+          </span>
         </Link>
       )}
 
-      <section className="mb-4 rounded-[1.5rem] border border-sky-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
-        <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr] lg:items-stretch">
-          <div className="rounded-[1.35rem] border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-sky-50 p-4 sm:p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
-                  Next Up
-                </p>
-
-                <h2 className="mt-2 break-words text-2xl font-black leading-tight text-slate-900 sm:text-3xl">
-                  {nextWorkout ? nextWorkout.title : "You’re caught up"}
-                </h2>
-
-                <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
-                  {nextWorkout
-                    ? `Week ${nextWorkout.weekNumber} • ${
-                        nextWorkout.exerciseCount
-                      } movement${nextWorkout.exerciseCount === 1 ? "" : "s"}`
-                    : "Review your plan, repeat a past workout, or log extra activity."}
-                </p>
-              </div>
-
-              <div className="shrink-0 rounded-2xl bg-white px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-blue-100">
-                {nextWorkout ? "Ready" : "Done"}
-              </div>
-            </div>
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              {nextWorkout ? (
-                <>
-                  <Link
-                    to={previewHref(`/preview-workout?workoutId=${nextWorkout.id}`)}
-                    className="rounded-2xl border border-blue-200 bg-white px-5 py-4 text-center text-sm font-black text-blue-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 active:scale-[0.99]"
-                  >
-                    👁 Preview Workout
-                  </Link>
-
-                  {previewMode ? (
-                    <button
-                      type="button"
-                      disabled
-                      className="cursor-not-allowed rounded-2xl bg-slate-200 px-5 py-4 text-center text-sm font-black text-slate-500 shadow-sm"
-                    >
-                      Start Workout — Client Only
-                    </button>
-                  ) : (
-                    <Link
-                      to={`/start-workout?workoutId=${nextWorkout.id}`}
-                      className="rounded-2xl bg-blue-600 px-5 py-4 text-center text-sm font-black text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.99]"
-                    >
-                      ▶ Start Workout
-                    </Link>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Link
-                    to={previewHref("/client-plan")}
-                    className="rounded-2xl bg-blue-600 px-5 py-4 text-center text-sm font-black text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.99]"
-                  >
-                    Open My Plan →
-                  </Link>
-
-                  <Link
-                    to={previewHref("/client-past-workouts")}
-                    className="rounded-2xl border border-sky-100 bg-white px-5 py-4 text-center text-sm font-black text-blue-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 active:scale-[0.99]"
-                  >
-                    Past Workouts →
-                  </Link>
-                </>
-              )}
-            </div>
+      {/* Next up + this week */}
+      <div className="grid gap-4 lg:grid-cols-[1.65fr_1fr]">
+        <section className="rounded-[22px] bg-ink p-5 text-white sm:p-7">
+          <div className="flex items-center gap-2.5">
+            <span className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide">
+              Next up
+            </span>
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              {nextWorkout ? "Ready" : "All done"}
+            </span>
           </div>
 
-          <div className="rounded-[1.35rem] border border-sky-100 bg-sky-50 p-4 sm:p-5">
-            <div className="flex items-center justify-between">
+          <h2 className="mt-4 break-words font-display text-[26px] font-extrabold leading-tight tracking-tight sm:text-4xl">
+            {nextWorkout ? formatWorkoutTitle(nextWorkout) : "You’re caught up"}
+          </h2>
+
+          <p className="mt-1.5 text-sm text-white/65">
+            {nextWorkout
+              ? `Week ${nextWorkout.weekNumber} · ${nextWorkout.exerciseCount} movement${
+                  nextWorkout.exerciseCount === 1 ? "" : "s"
+                }`
+              : "Review your plan, repeat a past workout, or log extra activity."}
+          </p>
+
+          <div className="mt-5 flex gap-2.5 sm:mt-6">
+            {nextWorkout ? (
+              <>
+                {previewMode ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="flex h-12 flex-1 cursor-not-allowed items-center justify-center rounded-xl bg-white/10 px-5 text-sm font-semibold text-white/60 sm:flex-none"
+                  >
+                    Start workout — client only
+                  </button>
+                ) : (
+                  <Link
+                    to={`/start-workout?workoutId=${nextWorkout.id}`}
+                    className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-accent px-6 text-sm font-semibold text-white transition hover:bg-accent-dark active:scale-[0.99] sm:flex-none"
+                  >
+                    <Play className="h-3 w-3 fill-current" />
+                    Start workout
+                  </Link>
+                )}
+
+                <Link
+                  to={previewHref(`/preview-workout?workoutId=${nextWorkout.id}`)}
+                  aria-label="Preview workout"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/15 text-sm font-semibold text-white transition hover:bg-white/5 sm:w-auto sm:px-5"
+                >
+                  <Eye className="h-5 w-5 sm:hidden" />
+                  <span className="hidden sm:inline">Preview workout</span>
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  to={previewHref("/client-plan")}
+                  className="flex h-12 flex-1 items-center justify-center rounded-xl bg-accent px-6 text-sm font-semibold text-white transition hover:bg-accent-dark sm:flex-none"
+                >
+                  Open my plan
+                </Link>
+                <Link
+                  to={previewHref("/client-past-workouts")}
+                  className="flex h-12 flex-1 items-center justify-center rounded-xl border border-white/15 px-5 text-sm font-semibold text-white transition hover:bg-white/5 sm:flex-none"
+                >
+                  Past workouts
+                </Link>
+              </>
+            )}
+          </div>
+        </section>
+
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-1 lg:gap-4">
+          {/* This week: compact bar on mobile, ring on desktop */}
+          <section className="rounded-[18px] border border-line bg-white p-4 lg:flex lg:flex-col lg:justify-between lg:p-6">
+            <p className="text-sm font-medium text-muted lg:font-display lg:text-[17px] lg:font-semibold lg:text-ink">
+              This week
+            </p>
+
+            <div className="lg:hidden">
+              <p className="mt-2 font-display text-2xl font-bold">
+                {weeklyWorkoutCompleted} of {weeklyWorkoutTotal}
+              </p>
+              <div className="mt-3 h-1.5 rounded-full bg-canvas">
+                <div
+                  className="h-1.5 rounded-full bg-accent transition-all"
+                  style={{ width: `${weeklyPercent}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="mt-5 hidden items-center gap-5 lg:flex">
+              <ProgressRing percent={weeklyPercent} />
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                  Weekly Progress
+                <p className="font-display text-2xl font-bold">
+                  {weeklyWorkoutCompleted} of {weeklyWorkoutTotal}
                 </p>
-
-                <h3 className="mt-1 text-3xl font-black text-slate-900">
-                  {weeklyPercent}%
-                </h3>
-              </div>
-
-              <div className="rounded-full bg-white px-4 py-2 text-sm font-black text-blue-700 ring-1 ring-sky-100">
-                {weeklyWorkoutCompleted}/{weeklyWorkoutTotal || 0}
+                <p className="text-sm text-muted">workouts done</p>
               </div>
             </div>
 
-            <div className="mt-4 h-3 rounded-full bg-white">
-              <div
-                className="h-3 rounded-full bg-blue-600 transition-all"
-                style={{ width: `${weeklyPercent}%` }}
-              />
-            </div>
-
-            <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">
-              Keep completing your assigned workouts to build consistency.
+            <p className="mt-5 hidden text-sm text-muted lg:block">
+              {weeklyMessage}
             </p>
-          </div>
+          </section>
+
+          {/* Log activity: mobile tile */}
+          <Link
+            to={previewHref("/client-log-activity")}
+            className="rounded-[18px] border border-line bg-white p-4 transition hover:border-violet-200 lg:hidden"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
+              <Plus className="h-5 w-5" />
+            </span>
+            <p className="mt-3 text-[15px] font-semibold">Log activity</p>
+            <p className="mt-0.5 truncate text-xs text-muted">
+              Walk, hike, ride...
+            </p>
+          </Link>
         </div>
-      </section>
+      </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <section className="rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
-              Last Completed Workout
-            </p>
+      {/* Last completed + log activity (desktop) */}
+      <div className="mt-4 hidden gap-4 lg:grid lg:grid-cols-2">
+        <section className="flex items-center gap-4 rounded-[18px] border border-line bg-white p-5">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+            <Check className="h-5 w-5" strokeWidth={2.5} />
+          </span>
 
-            <h2 className="mt-1 break-words text-xl font-black text-slate-900 sm:text-2xl">
-              {lastWorkoutTitle}
-            </h2>
-
-            <p className="mt-1 text-sm leading-6 text-slate-500">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-muted">Last completed</p>
+            <p className="truncate text-sm font-semibold">{lastWorkoutTitle}</p>
+            <p className="text-sm text-muted">
               {lastWorkoutDate
-                ? `Completed ${formatDate(lastWorkoutDate)}`
-                : "Once you complete a workout, it will show here."}
+                ? formatDateTime(lastWorkoutDate)
+                : "Your first workout will show here."}
             </p>
           </div>
 
-          {lastWorkout ? (
+          {lastWorkout && (
             <Link
               to={previewHref(`/workout-history/${lastWorkout.id}`)}
-              className="mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-slate-800 active:scale-[0.99] sm:w-auto"
+              className="text-sm font-semibold text-accent hover:underline"
             >
-              View Details →
-            </Link>
-          ) : (
-            <Link
-              to={previewHref("/client-plan")}
-              className="mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.99] sm:w-auto"
-            >
-              Start Your First Workout →
+              View
             </Link>
           )}
         </section>
 
-        <section className="rounded-[1.75rem] border border-emerald-100 bg-emerald-50 p-4 shadow-sm sm:rounded-3xl sm:p-6">
-          <div className="flex h-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">
-                Extra Activity
-              </p>
+        <section className="flex items-center gap-4 rounded-[18px] border border-line bg-white p-5">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+            <PersonStanding className="h-5 w-5" />
+          </span>
 
-              <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
-                Did you exercise on your own?
-              </h2>
-
-              <p className="mt-1 text-sm leading-6 text-slate-600">
-                Log a walk, gym session, at-home workout, hike, ride, or extra
-                training.
-              </p>
-            </div>
-
-            <Link
-              to={previewHref("/client-log-activity")}
-              className="w-full rounded-2xl bg-emerald-600 px-5 py-3 text-center text-sm font-black text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.99] sm:w-auto"
-            >
-              Log Activity →
-            </Link>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">Trained on your own?</p>
+            <p className="text-sm text-muted">
+              Log a walk, gym session, hike or ride.
+            </p>
           </div>
+
+          <Link
+            to={previewHref("/client-log-activity")}
+            className="shrink-0 rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-ink/85"
+          >
+            Log activity
+          </Link>
         </section>
       </div>
 
-      <section className="mt-4 rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:mt-6 sm:rounded-3xl sm:p-6">
-        <div className="mb-5">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
-            Quick Actions
-          </p>
-
-          <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
-            Training tools
-          </h2>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <QuickAction title="My Plan" href={previewHref("/client-plan")} />
-          <QuickAction title="Past Workouts" href={previewHref("/client-past-workouts")} />
-          <QuickAction title="Messages" href={previewHref("/client-messages")} />
-          <QuickAction title="Progress" href={previewHref("/client-progress")} />
-        </div>
-      </section>
-
-      <section className="mt-4 rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:mt-6 sm:rounded-3xl sm:p-6">
-        <div className="mb-5">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
-            Training Snapshot
-          </p>
-
-          <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+      {/* Activity so far */}
+      <section className="mt-4 rounded-[18px] border border-line bg-white p-4 lg:p-6">
+        <div className="mb-3 flex items-center justify-between lg:mb-5">
+          <h2 className="text-[15px] font-semibold lg:font-display lg:text-lg">
             Your activity so far
           </h2>
+          <Link
+            to={previewHref("/client-progress")}
+            className="hidden text-sm font-semibold text-accent hover:underline lg:block"
+          >
+            See progress
+          </Link>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-3">
           <MiniStat
-            label="Program Workouts"
-            value={`${completedWorkoutCount}`}
-            description="Completed assigned workouts"
+            label="Program workouts"
+            shortLabel="Program"
+            value={completedWorkoutCount}
+            description="Assigned workouts completed"
           />
-
           <MiniStat
-            label="Personal Activity"
-            value={`${personalActivityCount}`}
+            label="Personal activity"
+            shortLabel="Personal"
+            value={personalActivityCount}
             description="Extra workouts you logged"
           />
-
           <MiniStat
-            label="Imported Workouts"
-            value={`${importedWorkoutCount}`}
-            description="Past workouts from trainer notes"
+            label="Imported workouts"
+            shortLabel="Imported"
+            value={importedWorkoutCount}
+            description="From your trainer’s notes"
           />
         </div>
       </section>
@@ -788,7 +769,7 @@ function DashboardFrame({
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
+    <main className="min-h-screen bg-canvas font-sans text-ink">
       <div className="sticky top-0 z-50 border-b border-amber-200 bg-amber-50/95 px-4 py-3 shadow-sm backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -818,58 +799,129 @@ function DashboardFrame({
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-7xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+      <div className="mx-auto w-full max-w-[1200px] px-4 py-5 sm:px-6 lg:px-10 lg:py-7">
         {children}
       </div>
     </main>
   );
 }
 
-function QuickAction({ title, href }: { title: string; href: string }) {
+function WeekSegments({
+  current,
+  total,
+  compact = false,
+}: {
+  current: number | null;
+  total: number;
+  compact?: boolean;
+}) {
+  if (!total) return null;
+
   return (
-    <Link
-      to={href}
-      className="rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-black text-slate-900 transition hover:border-blue-200 hover:bg-blue-50"
-    >
-      {title} →
-    </Link>
+    <div className={`flex ${compact ? "w-[120px] gap-1" : "gap-1.5"}`}>
+      {Array.from({ length: total }, (_, index) => {
+        const week = index + 1;
+        const color =
+          current && week < current
+            ? "bg-accent"
+            : current === week
+              ? "bg-accent/40"
+              : "bg-line";
+
+        return (
+          <span key={week} className={`h-1.5 flex-1 rounded-full ${color}`} />
+        );
+      })}
+    </div>
+  );
+}
+
+function ProgressRing({ percent }: { percent: number }) {
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const clamped = Math.min(Math.max(percent, 0), 100);
+  const offset = circumference * (1 - clamped / 100);
+
+  return (
+    <div className="relative h-[92px] w-[92px] shrink-0">
+      <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
+        <circle
+          cx="50"
+          cy="50"
+          r={radius}
+          fill="none"
+          strokeWidth="9"
+          className="stroke-canvas"
+        />
+        <circle
+          cx="50"
+          cy="50"
+          r={radius}
+          fill="none"
+          strokeWidth="9"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          className="stroke-accent transition-all"
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center font-display text-xl font-bold">
+        {percent}%
+      </span>
+    </div>
   );
 }
 
 function MiniStat({
   label,
+  shortLabel,
   value,
   description,
 }: {
   label: string;
-  value: string;
+  shortLabel: string;
+  value: number;
   description: string;
 }) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 shadow-sm">
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-        {label}
-      </p>
-
-      <h3 className="mt-2 text-2xl font-black text-slate-900">{value}</h3>
-
-      <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
+    <div className="lg:rounded-2xl lg:bg-canvas lg:p-5">
+      <p className="font-display text-2xl font-bold lg:text-3xl">{value}</p>
+      <p className="mt-1 text-sm text-muted lg:hidden">{shortLabel}</p>
+      <p className="mt-2 hidden text-sm font-semibold lg:block">{label}</p>
+      <p className="mt-0.5 hidden text-sm text-muted lg:block">{description}</p>
     </div>
   );
 }
 
-function formatDate(value: string | null) {
-  if (!value) return "Date not recorded";
+function formatWorkoutTitle(workout: NextWorkout) {
+  if (/^day\s*\d/i.test(workout.title)) return workout.title;
+  return `Day ${workout.workoutOrder} · ${workout.title}`;
+}
 
+function formatDateTime(value: string) {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
     return "Date not recorded";
   }
 
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  const time = date.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  if (date.toDateString() === today.toDateString()) return `Today, ${time}`;
+  if (date.toDateString() === yesterday.toDateString()) {
+    return `Yesterday, ${time}`;
+  }
+
   return date.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
-    year: "numeric",
+    year: date.getFullYear() === today.getFullYear() ? undefined : "numeric",
   });
 }

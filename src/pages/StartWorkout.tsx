@@ -1568,16 +1568,16 @@ export default function StartWorkout({
   if (isLoading) {
     return (
       <WorkoutFrame unreadMessages={unreadMessages} embedded={!!previewBasePath}>
-        <section className="rounded-[1.75rem] border border-sky-100 bg-white p-6 shadow-sm sm:rounded-[2rem] sm:p-8">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600 sm:text-sm sm:tracking-[0.3em]">
+        <section className="rounded-[18px] border border-line bg-white p-6 sm:rounded-[18px] sm:p-8">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent sm:text-sm sm:tracking-[0.3em]">
             CoachSync
           </p>
 
-          <h1 className="mt-3 text-2xl font-black text-slate-900">
+          <h1 className="mt-3 text-2xl font-bold text-ink">
             Loading workout...
           </h1>
 
-          <p className="mt-2 text-sm leading-6 text-slate-500">
+          <p className="mt-2 text-sm leading-6 text-muted">
             Getting your guided workout ready.
           </p>
         </section>
@@ -1588,16 +1588,16 @@ export default function StartWorkout({
   if (!workout || !workoutId) {
     return (
       <WorkoutFrame unreadMessages={unreadMessages} embedded={!!previewBasePath}>
-        <section className="rounded-[1.75rem] border border-sky-100 bg-white p-6 shadow-sm sm:rounded-[2rem] sm:p-8">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600 sm:text-sm sm:tracking-[0.3em]">
+        <section className="rounded-[18px] border border-line bg-white p-6 sm:rounded-[18px] sm:p-8">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent sm:text-sm sm:tracking-[0.3em]">
             CoachSync
           </p>
 
-          <h1 className="mt-3 text-2xl font-black text-slate-900">
+          <h1 className="mt-3 text-2xl font-bold text-ink">
             Workout not found
           </h1>
 
-          <p className="mt-2 text-sm leading-6 text-slate-500">
+          <p className="mt-2 text-sm leading-6 text-muted">
             Go back to your dashboard and start the current workout from My Plan.
           </p>
 
@@ -1609,7 +1609,7 @@ export default function StartWorkout({
 
           <Link
             to={previewExitPath}
-            className="mt-5 inline-block rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white hover:bg-blue-700"
+            className="mt-5 inline-block rounded-2xl bg-accent px-4 py-3 text-sm font-bold text-white hover:bg-accent-dark"
           >
             Back to My Plan
           </Link>
@@ -1627,13 +1627,13 @@ export default function StartWorkout({
             trainerMode={trainerPreviewMode}
           />
         )}
-        <section className="overflow-hidden rounded-[1.75rem] border border-sky-100 bg-slate-950 shadow-sm sm:rounded-[2rem]">
+        <section className="overflow-hidden rounded-[18px] border border-line bg-ink sm:rounded-[18px]">
           <div className="bg-[radial-gradient(circle_at_top,_rgba(37,99,235,0.55),_transparent_35%),linear-gradient(135deg,_#020617,_#0f172a,_#1d4ed8)] px-5 py-8 text-center text-white sm:px-8 sm:py-12">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-300">
               Rest Timer
             </p>
 
-            <h1 className="mt-5 text-7xl font-black sm:text-8xl">
+            <h1 className="mt-5 text-7xl font-bold sm:text-8xl">
               {formatSeconds(restSeconds)}
             </h1>
 
@@ -1644,17 +1644,17 @@ export default function StartWorkout({
             <button
               type="button"
               onClick={() => setAudioCountdownEnabled((current) => !current)}
-              className="mt-4 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-black text-white hover:bg-white/20"
+              className="mt-4 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-bold text-white hover:bg-white/20"
             >
               Audio Countdown: {audioCountdownEnabled ? "On" : "Off"}
             </button>
 
-            <div className="mx-auto mt-6 max-w-md rounded-3xl border border-white/10 bg-white/10 p-5 text-left shadow-2xl backdrop-blur">
+            <div className="mx-auto mt-6 max-w-md rounded-[18px] border border-white/10 bg-white/10 p-5 text-left shadow-2xl backdrop-blur">
               <p className="text-xs font-bold uppercase tracking-wide text-blue-200">
                 Current Movement
               </p>
 
-              <h2 className="mt-2 text-2xl font-black">
+              <h2 className="mt-2 text-2xl font-bold">
                 {activeExercise.exerciseName || "Unnamed Exercise"}
               </h2>
 
@@ -1669,7 +1669,7 @@ export default function StartWorkout({
               <button
                 type="button"
                 onClick={goBackStep}
-                className="rounded-2xl border border-white/20 bg-white/10 px-4 py-4 text-sm font-black text-white hover:bg-white/20"
+                className="rounded-2xl border border-white/20 bg-white/10 px-4 py-4 text-sm font-bold text-white hover:bg-white/20"
               >
                 Back
               </button>
@@ -1677,7 +1677,7 @@ export default function StartWorkout({
               <button
                 type="button"
                 onClick={() => adjustRestSeconds(-10)}
-                className="rounded-2xl border border-white/20 bg-white/10 px-4 py-4 text-sm font-black text-white hover:bg-white/20"
+                className="rounded-2xl border border-white/20 bg-white/10 px-4 py-4 text-sm font-bold text-white hover:bg-white/20"
               >
                 -10 sec
               </button>
@@ -1685,7 +1685,7 @@ export default function StartWorkout({
               <button
                 type="button"
                 onClick={() => adjustRestSeconds(10)}
-                className="rounded-2xl border border-white/20 bg-white/10 px-4 py-4 text-sm font-black text-white hover:bg-white/20"
+                className="rounded-2xl border border-white/20 bg-white/10 px-4 py-4 text-sm font-bold text-white hover:bg-white/20"
               >
                 +10 sec
               </button>
@@ -1693,7 +1693,7 @@ export default function StartWorkout({
               <button
                 type="button"
                 onClick={skipRest}
-                className="rounded-2xl bg-blue-600 px-4 py-4 text-sm font-black text-white hover:bg-blue-700"
+                className="rounded-2xl bg-accent px-4 py-4 text-sm font-bold text-white hover:bg-accent-dark"
               >
                 Skip Rest
               </button>
@@ -1713,19 +1713,19 @@ export default function StartWorkout({
             trainerMode={trainerPreviewMode}
           />
         )}
-        <section className="mb-4 overflow-hidden rounded-[1.5rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
-          <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-4 py-5 text-white sm:px-6 sm:py-8">
+        <section className="mb-4 overflow-hidden rounded-[18px] border border-line bg-white sm:mb-6 sm:rounded-[18px]">
+          <div className="bg-ink px-4 py-5 text-white sm:px-6 sm:py-8">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/75">
                   {previewMode ? "Preview Complete" : "Final Review"}
                 </p>
 
-                <h1 className="mt-2 line-clamp-2 break-words text-2xl font-black leading-tight sm:text-4xl">
+                <h1 className="mt-2 line-clamp-2 break-words text-2xl font-bold leading-tight sm:text-4xl">
                   {workout.title}
                 </h1>
 
-                <p className="mt-2 max-w-xl text-sm leading-6 text-blue-50">
+                <p className="mt-2 max-w-xl text-sm leading-6 text-white/75">
                   {previewMode
                     ? "You reached the end of this workout preview. Nothing has been recorded."
                     : "Add notes, complete the pain check, then submit."}
@@ -1735,7 +1735,7 @@ export default function StartWorkout({
               <button
                 type="button"
                 onClick={goBackStep}
-                className="shrink-0 rounded-2xl bg-white/15 px-3 py-2 text-xs font-black text-white ring-1 ring-white/25 backdrop-blur transition hover:bg-white/25"
+                className="shrink-0 rounded-2xl bg-white/15 px-3 py-2 text-xs font-bold text-white ring-1 ring-white/25 backdrop-blur transition hover:bg-white/25"
               >
                 Back
               </button>
@@ -1743,26 +1743,26 @@ export default function StartWorkout({
           </div>
 
           <div className="p-4 sm:p-6">
-            <div className="rounded-[1.25rem] border border-sky-100 bg-sky-50 p-4 sm:rounded-3xl sm:p-5">
+            <div className="rounded-[1.25rem] border border-line bg-canvas p-4 sm:rounded-[18px] sm:p-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
                     Progress
                   </p>
 
-                  <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+                  <h2 className="mt-1 text-xl font-bold text-ink sm:text-2xl">
                     {completedCount} / {loggedExercises.length}
                   </h2>
                 </div>
 
-                <div className="rounded-full bg-white px-4 py-2 text-sm font-black text-blue-700 ring-1 ring-sky-100">
+                <div className="rounded-full bg-white px-4 py-2 text-sm font-bold text-accent ring-1 ring-line">
                   {completionPercent}%
                 </div>
               </div>
 
               <div className="mt-4 h-3 rounded-full bg-white">
                 <div
-                  className="h-3 rounded-full bg-blue-600 transition-all"
+                  className="h-3 rounded-full bg-accent transition-all"
                   style={{ width: `${completionPercent}%` }}
                 />
               </div>
@@ -1771,20 +1771,20 @@ export default function StartWorkout({
         </section>
 
         {successMessage && (
-          <div className="mb-4 rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-5 text-center text-sm font-black text-emerald-700 shadow-sm sm:mb-6 sm:rounded-3xl">
+          <div className="mb-4 rounded-[18px] border border-emerald-100 bg-emerald-50 p-5 text-center text-sm font-bold text-emerald-700 sm:mb-6 sm:rounded-[18px]">
             {successMessage} Opening your completed workout...
           </div>
         )}
 
         {errorMessage && (
-          <div className="mb-4 rounded-[1.5rem] border border-red-100 bg-red-50 p-5 text-center text-sm font-black text-red-700 shadow-sm sm:mb-6 sm:rounded-3xl">
+          <div className="mb-4 rounded-[18px] border border-red-100 bg-red-50 p-5 text-center text-sm font-bold text-red-700 sm:mb-6 sm:rounded-[18px]">
             {errorMessage}
           </div>
         )}
 
         {!previewMode && (
-          <section className="mb-4 rounded-[1.5rem] border border-sky-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
-            <label className="mb-2 block text-sm font-black text-slate-700">
+          <section className="mb-4 rounded-[18px] border border-line bg-white p-4 sm:mb-6 sm:rounded-[18px] sm:p-6">
+            <label className="mb-2 block text-sm font-bold text-ink/80">
               Overall Workout Notes
             </label>
 
@@ -1794,13 +1794,13 @@ export default function StartWorkout({
               disabled={isSubmitting}
               placeholder="Optional notes about the whole workout"
               rows={4}
-              className="w-full rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-sm text-ink outline-none ring-0 placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line disabled:cursor-not-allowed disabled:opacity-60"
             />
           </section>
         )}
 
-        <section className="mb-4 rounded-[1.5rem] border border-sky-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
-          <h2 className="text-xl font-black text-slate-900">
+        <section className="mb-4 rounded-[18px] border border-line bg-white p-4 sm:mb-6 sm:rounded-[18px] sm:p-6">
+          <h2 className="text-xl font-bold text-ink">
             Completed Exercise Summary
           </h2>
 
@@ -1815,26 +1815,26 @@ export default function StartWorkout({
                   className={`rounded-2xl border p-4 ${
                     exercise.completed
                       ? "border-emerald-100 bg-emerald-50"
-                      : "border-slate-200 bg-slate-50"
+                      : "border-line bg-canvas"
                   }`}
                 >
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <p className="font-black text-slate-900">
+                      <p className="font-bold text-ink">
                         {exercise.exerciseName || "Unnamed Exercise"}
                       </p>
 
-                      <p className="mt-1 text-sm font-semibold text-slate-500">
+                      <p className="mt-1 text-sm font-semibold text-muted">
                         {exercise.section} • {setsCompleted} of {totalSets} sets
                         completed
                       </p>
                     </div>
 
                     <span
-                      className={`w-fit rounded-full px-3 py-1 text-xs font-black ${
+                      className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${
                         exercise.completed
                           ? "bg-emerald-100 text-emerald-700"
-                          : "bg-slate-200 text-slate-600"
+                          : "bg-slate-200 text-muted"
                       }`}
                     >
                       {exercise.completed ? "Completed" : "Incomplete"}
@@ -1842,13 +1842,13 @@ export default function StartWorkout({
                   </div>
 
                   {exercise.difficulty && (
-                    <p className="mt-2 text-sm font-semibold text-slate-600">
+                    <p className="mt-2 text-sm font-semibold text-muted">
                       Difficulty: {exercise.difficulty}
                     </p>
                   )}
 
                   {exercise.notes && (
-                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                    <p className="mt-1 text-sm leading-6 text-muted">
                       Notes: {exercise.notes}
                     </p>
                   )}
@@ -1859,17 +1859,17 @@ export default function StartWorkout({
         </section>
 
         {!previewMode && (
-          <section className="rounded-[1.5rem] border border-red-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+          <section className="rounded-[18px] border border-red-100 bg-white p-4 sm:rounded-[18px] sm:p-6">
             <div className="mb-5">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-red-600">
               Pain & Discomfort Check
             </p>
 
-            <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+            <h2 className="mt-1 text-xl font-bold text-ink sm:text-2xl">
               Did you feel any pain today?
             </h2>
 
-            <p className="mt-1 text-sm leading-6 text-slate-500">
+            <p className="mt-1 text-sm leading-6 text-muted">
               This helps your trainer adjust your plan and keep your training
               safe.
             </p>
@@ -1880,10 +1880,10 @@ export default function StartWorkout({
               type="button"
               onClick={() => handlePainReportedChange(false)}
               disabled={isSubmitting}
-              className={`rounded-2xl border px-4 py-4 text-left text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
+              className={`rounded-2xl border px-4 py-4 text-left text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60 ${
                 !painReported
                   ? "border-emerald-200 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-100"
-                  : "border-sky-100 bg-sky-50 text-slate-600 hover:bg-white"
+                  : "border-line bg-canvas text-muted hover:bg-white"
               }`}
             >
               No pain or discomfort
@@ -1893,10 +1893,10 @@ export default function StartWorkout({
               type="button"
               onClick={() => handlePainReportedChange(true)}
               disabled={isSubmitting}
-              className={`rounded-2xl border px-4 py-4 text-left text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
+              className={`rounded-2xl border px-4 py-4 text-left text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60 ${
                 painReported
                   ? "border-red-200 bg-red-50 text-red-700 ring-2 ring-red-100"
-                  : "border-sky-100 bg-sky-50 text-slate-600 hover:bg-white"
+                  : "border-line bg-canvas text-muted hover:bg-white"
               }`}
             >
               Yes, I felt pain/discomfort
@@ -1907,7 +1907,7 @@ export default function StartWorkout({
             <div className="mt-5 rounded-2xl border border-red-100 bg-red-50 p-4">
               <div className="grid gap-4 md:grid-cols-3">
                 <div>
-                  <label className="mb-2 block text-sm font-black text-slate-700">
+                  <label className="mb-2 block text-sm font-bold text-ink/80">
                     Pain Location
                   </label>
 
@@ -1916,12 +1916,12 @@ export default function StartWorkout({
                     onChange={(event) => setPainLocation(event.target.value)}
                     disabled={isSubmitting}
                     placeholder="Hip, shoulder, knee, back..."
-                    className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-black text-slate-700">
+                  <label className="mb-2 block text-sm font-bold text-ink/80">
                     Pain Level
                   </label>
 
@@ -1929,7 +1929,7 @@ export default function StartWorkout({
                     value={painLevel}
                     onChange={(event) => setPainLevel(event.target.value)}
                     disabled={isSubmitting}
-                    className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-ink outline-none focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <option value="">Select 1–10</option>
                     <option value="1">1 - Very mild</option>
@@ -1946,7 +1946,7 @@ export default function StartWorkout({
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-black text-slate-700">
+                  <label className="mb-2 block text-sm font-bold text-ink/80">
                     Exercise Related to Pain
                   </label>
 
@@ -1955,13 +1955,13 @@ export default function StartWorkout({
                     onChange={(event) => setPainExercise(event.target.value)}
                     disabled={isSubmitting}
                     placeholder="Box Step-Up, Chest Press..."
-                    className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                   />
                 </div>
               </div>
 
               <div className="mt-4">
-                <label className="mb-2 block text-sm font-black text-slate-700">
+                <label className="mb-2 block text-sm font-bold text-ink/80">
                   Pain Notes
                 </label>
 
@@ -1971,7 +1971,7 @@ export default function StartWorkout({
                   disabled={isSubmitting}
                   placeholder="Describe what happened, when you felt it, and anything your trainer should know."
                   rows={4}
-                  className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-red-300 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
             </div>
@@ -1983,7 +1983,7 @@ export default function StartWorkout({
           <div className="mt-6 grid gap-3 sm:mt-8 sm:grid-cols-2">
             <Link
               to={previewExitPath}
-              className="rounded-2xl border border-sky-100 bg-white px-5 py-4 text-center text-sm font-black text-slate-700 hover:bg-sky-50"
+              className="rounded-2xl border border-line bg-white px-5 py-4 text-center text-sm font-bold text-ink/80 hover:bg-canvas"
             >
               Back to My Plan
             </Link>
@@ -1992,14 +1992,14 @@ export default function StartWorkout({
               <button
                 type="button"
                 disabled
-                className="cursor-not-allowed rounded-2xl bg-slate-200 px-5 py-4 text-center text-sm font-black text-slate-500"
+                className="cursor-not-allowed rounded-2xl bg-slate-200 px-5 py-4 text-center text-sm font-bold text-muted"
               >
                 Start Workout — Client Only
               </button>
             ) : (
               <Link
                 to={`/start-workout?workoutId=${workout.id}`}
-                className="rounded-2xl bg-blue-600 px-5 py-4 text-center text-sm font-black text-white shadow-sm hover:bg-blue-700"
+                className="rounded-2xl bg-accent px-5 py-4 text-center text-sm font-bold text-white hover:bg-accent-dark"
               >
                 Start This Workout →
               </Link>
@@ -2010,7 +2010,7 @@ export default function StartWorkout({
           type="button"
           onClick={submitWorkout}
           disabled={isSubmitting || loggedExercises.length === 0}
-          className="mt-6 w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 sm:mt-8"
+          className="mt-6 w-full rounded-2xl bg-accent px-5 py-4 text-sm font-bold text-white hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60 sm:mt-8"
         >
           {isSubmitting
             ? "Submitting workout..."
@@ -2038,26 +2038,26 @@ export default function StartWorkout({
             trainerMode={trainerPreviewMode}
           />
         )}
-        <section className="overflow-hidden rounded-[1.5rem] border border-sky-100 bg-white shadow-sm sm:rounded-[2rem]">
-          <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-5 py-7 text-white sm:px-8 sm:py-12">
+        <section className="overflow-hidden rounded-[18px] border border-line bg-white sm:rounded-[18px]">
+          <div className="bg-ink px-5 py-7 text-white sm:px-8 sm:py-12">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-200">
               Up Next
             </p>
 
-            <h1 className="mt-3 text-4xl font-black leading-tight sm:text-6xl">
+            <h1 className="mt-3 text-4xl font-bold leading-tight sm:text-6xl">
               {activeExercise.section}
             </h1>
 
-            <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-blue-100 sm:text-base">
+            <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-white/75 sm:text-base">
               Preview the section, then move through each movement set by set.
             </p>
 
             <div className="mt-5 flex flex-wrap gap-2">
-              <span className="rounded-full bg-white/15 px-3 py-2 text-xs font-black text-white ring-1 ring-white/20">
+              <span className="rounded-full bg-white/15 px-3 py-2 text-xs font-bold text-white ring-1 ring-white/20">
                 Section {currentSectionPosition} of {groupedExercises.length}
               </span>
 
-              <span className="rounded-full bg-white/15 px-3 py-2 text-xs font-black text-white ring-1 ring-white/20">
+              <span className="rounded-full bg-white/15 px-3 py-2 text-xs font-bold text-white ring-1 ring-white/20">
                 {sectionExercises.length} movements
               </span>
             </div>
@@ -2066,16 +2066,16 @@ export default function StartWorkout({
           <div className="p-5 sm:p-8">
             <div className="mb-5 flex items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-600">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-accent">
                   Section Preview
                 </p>
 
-                <h2 className="mt-1 text-2xl font-black text-slate-900">
+                <h2 className="mt-1 text-2xl font-bold text-ink">
                   What’s inside
                 </h2>
               </div>
 
-              <div className="rounded-full bg-sky-50 px-4 py-2 text-sm font-black text-blue-700 ring-1 ring-sky-100">
+              <div className="rounded-full bg-canvas px-4 py-2 text-sm font-bold text-accent ring-1 ring-line">
                 {sectionExercises.length} total
               </div>
             </div>
@@ -2084,18 +2084,18 @@ export default function StartWorkout({
               {sectionExercises.map(({ exercise }, index) => (
                 <div
                   key={exercise.exerciseId}
-                  className="flex items-center gap-4 rounded-2xl border border-sky-100 bg-sky-50 p-4"
+                  className="flex items-center gap-4 rounded-2xl border border-line bg-canvas p-4"
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-sm font-black text-blue-700 ring-1 ring-sky-100">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-sm font-bold text-accent ring-1 ring-line">
                     {index + 1}
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="break-words text-base font-black text-slate-900">
+                    <p className="break-words text-base font-bold text-ink">
                       {exercise.exerciseName || "Unnamed Exercise"}
                     </p>
 
-                    <p className="mt-1 text-sm font-semibold text-slate-500">
+                    <p className="mt-1 text-sm font-semibold text-muted">
                       {exercise.plannedSets || "N/A"} sets x{" "}
                       {exercise.plannedReps || "N/A"} reps
                       {exercise.plannedRest
@@ -2113,7 +2113,7 @@ export default function StartWorkout({
                 setShowSectionIntro(false);
                 setShowExerciseNavigator(true);
               }}
-              className="mt-6 w-full rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm font-black text-blue-700 hover:bg-blue-100"
+              className="mt-6 w-full rounded-2xl border border-accent/30 bg-accent-soft px-5 py-4 text-sm font-bold text-accent hover:bg-accent-soft"
             >
               View / Switch Any Exercise
             </button>
@@ -2123,7 +2123,7 @@ export default function StartWorkout({
                 type="button"
                 onClick={goBackStep}
                 disabled={activeStepIndex === 0}
-                className="w-full rounded-2xl border border-sky-100 bg-white px-5 py-4 text-sm font-black text-slate-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-1/3"
+                className="w-full rounded-2xl border border-line bg-white px-5 py-4 text-sm font-bold text-ink/80 hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-50 sm:w-1/3"
               >
                 Back
               </button>
@@ -2131,7 +2131,7 @@ export default function StartWorkout({
               <button
                 type="button"
                 onClick={() => setShowSectionIntro(false)}
-                className="w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black text-white shadow-sm hover:bg-blue-700 sm:w-2/3"
+                className="w-full rounded-2xl bg-accent px-5 py-4 text-sm font-bold text-white hover:bg-accent-dark sm:w-2/3"
               >
                 Start {activeExercise.section}
               </button>
@@ -2152,20 +2152,20 @@ export default function StartWorkout({
         )}
       <div className="pb-32 md:pb-0">
         {successMessage && (
-          <div className="mb-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-center text-sm font-black text-emerald-700 shadow-sm">
+          <div className="mb-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-center text-sm font-bold text-emerald-700 ">
             {successMessage} Opening your completed workout...
           </div>
         )}
 
         {errorMessage && (
-          <div className="mb-3 rounded-2xl border border-red-100 bg-red-50 p-4 text-center text-sm font-black text-red-700 shadow-sm">
+          <div className="mb-3 rounded-2xl border border-red-100 bg-red-50 p-4 text-center text-sm font-bold text-red-700 ">
             {errorMessage}
           </div>
         )}
 
         {!previewMode && !isRepeatMode && (!isOnline || usingLocalBackup) && (
-          <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900 shadow-sm">
-            <p className="font-black">
+          <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900 ">
+            <p className="font-bold">
               {!isOnline ? "Offline workout mode" : "Local backup active"}
             </p>
             <p className="mt-1 leading-6">
@@ -2177,8 +2177,8 @@ export default function StartWorkout({
         )}
 
         {guidedSteps.length === 0 || !activeExercise ? (
-          <section className="rounded-[1.5rem] border border-red-100 bg-red-50 p-5 text-center shadow-sm sm:rounded-3xl">
-            <h2 className="text-lg font-black text-red-700">
+          <section className="rounded-[18px] border border-red-100 bg-red-50 p-5 text-center sm:rounded-[18px]">
+            <h2 className="text-lg font-bold text-red-700">
               No exercises are available
             </h2>
 
@@ -2189,19 +2189,19 @@ export default function StartWorkout({
           </section>
         ) : (
           <>
-            <section className="mb-3 rounded-[1.35rem] border border-blue-100 bg-blue-600 p-4 text-white shadow-sm">
+            <section className="mb-3 rounded-2xl border border-line bg-accent p-4 text-white ">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-blue-100">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/75">
                     {activeExercise.section}
                   </p>
 
-                  <h2 className="mt-1 break-words text-lg font-black leading-tight">
+                  <h2 className="mt-1 break-words text-lg font-bold leading-tight">
                     Exercise {currentExerciseInSectionPosition} of{" "}
                     {totalExercisesInCurrentSection}
                   </h2>
 
-                  <p className="mt-1 text-xs font-bold text-blue-100">
+                  <p className="mt-1 text-xs font-bold text-white/75">
                     {previewMode
                       ? "Preview mode • nothing saved"
                       : isRepeatMode
@@ -2218,7 +2218,7 @@ export default function StartWorkout({
                   </p>
                 </div>
 
-                <div className="shrink-0 rounded-2xl bg-white/20 px-4 py-2 text-sm font-black ring-1 ring-white/20">
+                <div className="shrink-0 rounded-2xl bg-white/20 px-4 py-2 text-sm font-bold ring-1 ring-white/20">
                   {activeStepIndex + 1}/{guidedSteps.length}
                 </div>
               </div>
@@ -2237,7 +2237,7 @@ export default function StartWorkout({
                 onClick={() =>
                   setShowExerciseNavigator((currentValue) => !currentValue)
                 }
-                className="rounded-2xl border border-blue-200 bg-white px-4 py-3 text-sm font-black text-blue-700 shadow-sm hover:bg-blue-50"
+                className="rounded-2xl border border-accent/30 bg-white px-4 py-3 text-sm font-bold text-accent hover:bg-accent-soft"
               >
                 {showExerciseNavigator
                   ? "Hide Exercise List"
@@ -2248,29 +2248,29 @@ export default function StartWorkout({
                 type="button"
                 onClick={skipCurrentExercise}
                 disabled={isSubmitting}
-                className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-black text-orange-700 shadow-sm hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Machine Busy? Skip for Now
               </button>
             </div>
 
             {showExerciseNavigator && (
-              <section className="mb-3 rounded-[1.5rem] border border-sky-100 bg-white p-4 shadow-sm sm:p-5">
+              <section className="mb-3 rounded-[18px] border border-line bg-white p-4 sm:p-5">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-blue-600">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-accent">
                       Full Workout
                     </p>
-                    <h2 className="mt-1 text-xl font-black text-slate-900">
+                    <h2 className="mt-1 text-xl font-bold text-ink">
                       Choose any exercise
                     </h2>
-                    <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">
+                    <p className="mt-1 text-sm font-semibold leading-6 text-muted">
                       Tap a movement to jump to it. Completed sets and notes stay
                       saved when you switch.
                     </p>
                   </div>
 
-                  <div className="w-fit rounded-full bg-sky-50 px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-sky-100">
+                  <div className="w-fit rounded-full bg-canvas px-3 py-2 text-xs font-bold text-accent ring-1 ring-line">
                     {completedCount}/{loggedExercises.length} complete
                   </div>
                 </div>
@@ -2279,10 +2279,10 @@ export default function StartWorkout({
                   {groupedExercises.map((group) => (
                     <div key={group.section}>
                       <div className="mb-2 flex items-center justify-between gap-3">
-                        <h3 className="text-sm font-black text-slate-900">
+                        <h3 className="text-sm font-bold text-ink">
                           {group.section}
                         </h3>
-                        <span className="text-xs font-bold text-slate-500">
+                        <span className="text-xs font-bold text-muted">
                           {
                             group.exercises.filter(
                               ({ exercise }) => exercise.completed
@@ -2316,25 +2316,25 @@ export default function StartWorkout({
                               onClick={() => jumpToExercise(targetStepIndex)}
                               className={`w-full rounded-2xl border p-3 text-left transition ${
                                 isCurrent
-                                  ? "border-blue-300 bg-blue-50 ring-2 ring-blue-100"
-                                  : "border-sky-100 bg-sky-50 hover:border-blue-200 hover:bg-blue-50"
+                                  ? "border-accent/40 bg-accent-soft ring-2 ring-line"
+                                  : "border-line bg-canvas hover:border-accent/30 hover:bg-accent-soft"
                               }`}
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0 flex-1">
                                   <div className="flex flex-wrap items-center gap-2">
-                                    <p className="break-words text-sm font-black text-slate-900">
+                                    <p className="break-words text-sm font-bold text-ink">
                                       {exercise.exerciseName || "Unnamed Exercise"}
                                     </p>
 
                                     {isCurrent && (
-                                      <span className="rounded-full bg-blue-600 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-white">
+                                      <span className="rounded-full bg-accent px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
                                         Current
                                       </span>
                                     )}
                                   </div>
 
-                                  <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                                  <p className="mt-1 text-xs font-semibold leading-5 text-muted">
                                     {exercise.plannedSets || "N/A"} sets ×{" "}
                                     {exercise.plannedReps || "N/A"}
                                     {exercise.plannedWeight
@@ -2347,12 +2347,12 @@ export default function StartWorkout({
                                 </div>
 
                                 <span
-                                  className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-black ${
+                                  className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${
                                     exercise.completed
                                       ? "bg-emerald-100 text-emerald-700"
                                       : targetCompletedSets > 0
                                       ? "bg-amber-100 text-amber-800"
-                                      : "bg-white text-slate-600 ring-1 ring-sky-100"
+                                      : "bg-white text-muted ring-1 ring-line"
                                   }`}
                                 >
                                   {statusLabel}
@@ -2368,26 +2368,26 @@ export default function StartWorkout({
               </section>
             )}
 
-            <section className="overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm">
-              <div className="bg-gradient-to-br from-white via-sky-50 to-blue-50 p-5">
+            <section className="overflow-hidden rounded-[18px] border border-line bg-white ">
+              <div className="bg-white p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-600">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-accent">
                       Current Movement
                     </p>
 
-                    <h1 className="mt-2 break-words text-4xl font-black leading-tight text-slate-900">
+                    <h1 className="mt-2 break-words text-4xl font-bold leading-tight text-ink">
                       {activeExercise.exerciseName || "Unnamed Exercise"}
                     </h1>
 
-                    <p className="mt-3 text-sm font-black text-slate-500">
+                    <p className="mt-3 text-sm font-bold text-muted">
                       Set {activeSetNumber} of {currentTotalSets}
                     </p>
                   </div>
 
                   <Link
                     to={previewExitPath}
-                    className="shrink-0 rounded-2xl border border-sky-100 bg-white px-3 py-2 text-xs font-black text-slate-600 shadow-sm hover:bg-sky-50"
+                    className="shrink-0 rounded-2xl border border-line bg-white px-3 py-2 text-xs font-bold text-muted hover:bg-canvas"
                   >
                     {previewMode ? "Exit Preview" : "Exit"}
                   </Link>
@@ -2396,46 +2396,46 @@ export default function StartWorkout({
 
               <div className="p-5">
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="rounded-2xl border border-sky-100 bg-sky-50 p-3">
-                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                  <div className="rounded-2xl border border-line bg-canvas p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted">
                       Reps/Time
                     </p>
 
-                    <p className="mt-1 break-words text-lg font-black leading-tight text-slate-900">
+                    <p className="mt-1 break-words text-lg font-bold leading-tight text-ink">
                       {activeExercise.plannedReps || "N/A"}
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-sky-100 bg-sky-50 p-3">
-                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                  <div className="rounded-2xl border border-line bg-canvas p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted">
                       Weight
                     </p>
 
-                    <p className="mt-1 break-words text-lg font-black leading-tight text-slate-900">
+                    <p className="mt-1 break-words text-lg font-bold leading-tight text-ink">
                       {activeExercise.plannedWeight || "N/A"}
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-sky-100 bg-sky-50 p-3">
-                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                  <div className="rounded-2xl border border-line bg-canvas p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted">
                       Rest
                     </p>
 
-                    <p className="mt-1 break-words text-lg font-black leading-tight text-slate-900">
+                    <p className="mt-1 break-words text-lg font-bold leading-tight text-ink">
                       {activeExercise.plannedRest || "60 sec"}
                     </p>
                   </div>
                 </div>
 
                 {isTimedExercise(activeExercise) && (
-                  <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                  <div className="mt-5 rounded-2xl border border-line bg-accent-soft p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-wide text-blue-600">
+                        <p className="text-[10px] font-bold uppercase tracking-wide text-accent">
                           Timed Exercise
                         </p>
 
-                        <p className="mt-1 text-sm font-bold text-slate-600">
+                        <p className="mt-1 text-sm font-bold text-muted">
                           Use this countdown for set {activeSetNumber}.
                         </p>
 
@@ -2444,13 +2444,13 @@ export default function StartWorkout({
                           onClick={() =>
                             setAudioCountdownEnabled((current) => !current)
                           }
-                          className="mt-2 rounded-full border border-blue-100 bg-white px-3 py-1 text-[11px] font-black text-blue-700 hover:bg-blue-100"
+                          className="mt-2 rounded-full border border-line bg-white px-3 py-1 text-[11px] font-bold text-accent hover:bg-accent-soft"
                         >
                           Audio: {audioCountdownEnabled ? "On" : "Off"}
                         </button>
                       </div>
 
-                      <p className="text-4xl font-black text-blue-700">
+                      <p className="text-4xl font-bold text-accent">
                         {formatSeconds(
                           exerciseSeconds || getTimedExerciseSeconds(activeExercise)
                         )}
@@ -2458,12 +2458,12 @@ export default function StartWorkout({
                     </div>
 
                     {isPreStartRunning && (
-                      <div className="mt-4 rounded-2xl border border-blue-100 bg-white p-4 text-center">
-                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-blue-600">
+                      <div className="mt-4 rounded-2xl border border-line bg-white p-4 text-center">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-accent">
                           Starting In
                         </p>
 
-                        <p className="mt-1 text-4xl font-black text-blue-700">
+                        <p className="mt-1 text-4xl font-bold text-accent">
                           {preStartSeconds > 0 ? preStartSeconds : "Start"}
                         </p>
                       </div>
@@ -2475,7 +2475,7 @@ export default function StartWorkout({
                           type="button"
                           onClick={startExerciseTimer}
                           disabled={isPreStartRunning}
-                          className="rounded-2xl bg-blue-600 px-3 py-3 text-sm font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded-2xl bg-accent px-3 py-3 text-sm font-bold text-white hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {isPreStartRunning ? "Starting..." : "Start"}
                         </button>
@@ -2483,7 +2483,7 @@ export default function StartWorkout({
                         <button
                           type="button"
                           onClick={pauseExerciseTimer}
-                          className="rounded-2xl bg-slate-900 px-3 py-3 text-sm font-black text-white hover:bg-slate-950"
+                          className="rounded-2xl bg-ink px-3 py-3 text-sm font-bold text-white hover:bg-ink"
                         >
                           Pause
                         </button>
@@ -2492,7 +2492,7 @@ export default function StartWorkout({
                       <button
                         type="button"
                         onClick={resetExerciseTimer}
-                        className="rounded-2xl border border-blue-100 bg-white px-3 py-3 text-sm font-black text-blue-700 hover:bg-blue-100"
+                        className="rounded-2xl border border-line bg-white px-3 py-3 text-sm font-bold text-accent hover:bg-accent-soft"
                       >
                         Reset
                       </button>
@@ -2501,7 +2501,7 @@ export default function StartWorkout({
                         type="button"
                         onClick={completeCurrentSet}
                         disabled={isSubmitting}
-                        className="rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-3 text-sm font-black text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-3 text-sm font-bold text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         Done
                       </button>
@@ -2509,20 +2509,20 @@ export default function StartWorkout({
                   </div>
                 )}
 
-                <div className="mt-5 rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                <div className="mt-5 rounded-2xl border border-line bg-canvas p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-black text-slate-700">
+                    <p className="text-sm font-bold text-ink/80">
                       Set Progress
                     </p>
 
-                    <p className="text-sm font-black text-blue-700">
+                    <p className="text-sm font-bold text-accent">
                       {currentCompletedSets} / {currentTotalSets}
                     </p>
                   </div>
 
                   <div className="mt-3 h-3 rounded-full bg-white">
                     <div
-                      className="h-3 rounded-full bg-blue-600 transition-all"
+                      className="h-3 rounded-full bg-accent transition-all"
                       style={{ width: `${setProgressPercent}%` }}
                     />
                   </div>
@@ -2533,7 +2533,7 @@ export default function StartWorkout({
                     href={activeExercise.videoLink}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-4 block w-full rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-center text-sm font-black text-blue-700 hover:bg-blue-100"
+                    className="mt-4 block w-full rounded-2xl border border-line bg-accent-soft px-4 py-3 text-center text-sm font-bold text-accent hover:bg-accent-soft"
                   >
                     Watch Exercise Video
                   </a>
@@ -2544,7 +2544,7 @@ export default function StartWorkout({
                   onClick={() =>
                     setShowExerciseDetails((currentValue) => !currentValue)
                   }
-                  className="mt-4 w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm font-black text-slate-700 hover:bg-sky-50"
+                  className="mt-4 w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm font-bold text-ink/80 hover:bg-canvas"
                 >
                   {showExerciseDetails
                     ? "Hide Difficulty / Notes"
@@ -2552,10 +2552,10 @@ export default function StartWorkout({
                 </button>
 
                 {showExerciseDetails && (
-                  <div className="mt-4 rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                  <div className="mt-4 rounded-2xl border border-line bg-canvas p-4">
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
-                        <label className="mb-2 block text-sm font-black text-slate-700">
+                        <label className="mb-2 block text-sm font-bold text-ink/80">
                           Difficulty
                         </label>
 
@@ -2568,7 +2568,7 @@ export default function StartWorkout({
                             )
                           }
                           disabled={isSubmitting}
-                          className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none ring-0 focus:border-accent/40 focus:ring-4 focus:ring-line disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <option value="">Select difficulty</option>
                           <option value="Easy">Easy</option>
@@ -2581,7 +2581,7 @@ export default function StartWorkout({
                       </div>
 
                       <div>
-                        <label className="mb-2 block text-sm font-black text-slate-700">
+                        <label className="mb-2 block text-sm font-bold text-ink/80">
                           Exercise Notes
                         </label>
 
@@ -2592,14 +2592,14 @@ export default function StartWorkout({
                           }
                           disabled={isSubmitting}
                           placeholder="Optional note for your trainer"
-                          className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line disabled:cursor-not-allowed disabled:opacity-60"
                         />
                       </div>
                     </div>
                   </div>
                 )}
 
-                <div className="mt-4 flex items-center justify-between gap-3 text-xs font-bold text-slate-500">
+                <div className="mt-4 flex items-center justify-between gap-3 text-xs font-bold text-muted">
                   <span>
                     {completedCount} of {loggedExercises.length} completed
                   </span>
@@ -2608,7 +2608,7 @@ export default function StartWorkout({
                     type="button"
                     onClick={resetWorkoutProgress}
                     disabled={isSubmitting}
-                    className="font-black text-red-600 disabled:opacity-60"
+                    className="font-bold text-red-600 disabled:opacity-60"
                   >
                     Clear Progress
                   </button>
@@ -2616,13 +2616,13 @@ export default function StartWorkout({
               </div>
             </section>
 
-            <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-sky-100 bg-white/95 p-4 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur md:static md:mt-6 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
+            <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-line bg-white/95 p-4 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur md:static md:mt-6 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
               <div className="mx-auto grid max-w-3xl grid-cols-3 gap-3">
                 <button
                   type="button"
                   onClick={goBackStep}
                   disabled={activeStepIndex === 0 && activeSetNumber === 1}
-                  className="rounded-2xl border border-sky-100 bg-white px-3 py-4 text-sm font-black text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-2xl border border-line bg-white px-3 py-4 text-sm font-bold text-ink/80 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Back
                 </button>
@@ -2631,7 +2631,7 @@ export default function StartWorkout({
                   type="button"
                   onClick={() => setShowExerciseNavigator(true)}
                   disabled={isSubmitting}
-                  className="rounded-2xl border border-blue-100 bg-blue-50 px-3 py-4 text-sm font-black text-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-2xl border border-line bg-accent-soft px-3 py-4 text-sm font-bold text-accent disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Exercises
                 </button>
@@ -2640,7 +2640,7 @@ export default function StartWorkout({
                   type="button"
                   onClick={completeCurrentSet}
                   disabled={isSubmitting}
-                  className="rounded-2xl bg-blue-600 px-3 py-4 text-sm font-black text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-2xl bg-accent px-3 py-4 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Complete
                 </button>
@@ -2663,7 +2663,7 @@ function PreviewNotice({
   return (
     <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700">
           {trainerMode ? "Trainer • Client Workout Preview" : "Workout Preview"}
         </p>
         <p className="mt-1 text-sm font-semibold leading-6 text-amber-900">
@@ -2675,7 +2675,7 @@ function PreviewNotice({
 
       <Link
         to={exitPath}
-        className="shrink-0 rounded-xl bg-white px-4 py-2 text-center text-xs font-black text-amber-800 ring-1 ring-amber-200 hover:bg-amber-100"
+        className="shrink-0 rounded-xl bg-white px-4 py-2 text-center text-xs font-bold text-amber-800 ring-1 ring-amber-200 hover:bg-amber-100"
       >
         Exit Preview
       </Link>

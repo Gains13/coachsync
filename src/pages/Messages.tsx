@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import ClientLayout from "../components/ClientLayout";
+import TrainerLayout from "../components/TrainerLayout";
 
 type Message = {
   id: string;
@@ -288,19 +289,19 @@ export default function Messages() {
 
   const pageContent = (
     <>
-      <section className="mb-4 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
-        <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-5 text-white sm:px-6 sm:py-8 md:px-8">
+      <section className="mb-4 sm:mb-6">
+        <div className="mb-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
+              <p className="text-sm text-muted">
                 CoachSync Messages
               </p>
 
-              <h1 className="mt-2 break-words text-2xl font-black leading-tight sm:mt-3 sm:text-4xl">
+              <h1 className="break-words text-2xl font-bold leading-tight tracking-tight sm:text-[30px]">
                 Messages
               </h1>
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
                 {role === "client"
                   ? "Read updates from your trainer and send a reply."
                   : "Review client messages, reply by client, and keep communication organized."}
@@ -311,7 +312,7 @@ export default function Messages() {
               <button
                 type="button"
                 onClick={loadMessages}
-                className="w-full rounded-2xl bg-white/15 px-4 py-3 text-center text-sm font-black text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto"
+                className="w-full rounded-2xl bg-white border border-line px-4 py-3 text-center text-sm font-bold text-ink ring-1 ring-line backdrop-blur transition hover:bg-canvas sm:w-auto"
               >
                 Refresh
               </button>
@@ -319,7 +320,7 @@ export default function Messages() {
               {role === "trainer" && (
                 <Link
                   to="/trainer"
-                  className="w-full rounded-2xl bg-white px-4 py-3 text-center text-sm font-black text-blue-700 transition hover:bg-blue-50 sm:w-auto"
+                  className="w-full rounded-2xl bg-white px-4 py-3 text-center text-sm font-bold text-accent transition hover:bg-accent-soft sm:w-auto"
                 >
                   Back to Dashboard
                 </Link>
@@ -328,7 +329,7 @@ export default function Messages() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-3 md:p-8">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
           <SummaryCard title="Messages" value={`${totalMessages}`} />
 
           <SummaryCard
@@ -408,11 +409,7 @@ export default function Messages() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
-      <section className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:py-10">
-        {pageContent}
-      </section>
-    </main>
+    <TrainerLayout>{pageContent}</TrainerLayout>
   );
 }
 
@@ -442,12 +439,12 @@ function SendMessageForm({
   return (
     <form
       onSubmit={sendMessage}
-      className="mb-4 rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6"
+      className="mb-4 rounded-[18px] border border-line bg-white p-4 sm:mb-6 sm:rounded-[18px] sm:p-6"
     >
       <div className="mb-5">
-        <h2 className="text-xl font-black text-slate-900">Send Message</h2>
+        <h2 className="text-xl font-bold text-ink">Send Message</h2>
 
-        <p className="mt-1 text-sm leading-6 text-slate-500">
+        <p className="mt-1 text-sm leading-6 text-muted">
           {role === "client"
             ? "Send a reply directly to your trainer."
             : "Choose a client, then send a reply or follow-up message."}
@@ -456,14 +453,14 @@ function SendMessageForm({
 
       {role === "trainer" && (
         <div className="mb-4">
-          <label className="mb-2 block text-sm font-black text-slate-700">
+          <label className="mb-2 block text-sm font-bold text-ink/80">
             Client
           </label>
 
           <select
             value={selectedClientId}
             onChange={(event) => setSelectedClientId(event.target.value)}
-            className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+            className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line"
           >
             <option value="">Select client</option>
             {clients.map((client) => (
@@ -474,9 +471,9 @@ function SendMessageForm({
           </select>
 
           {selectedClient && (
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-muted">
               Sending to:{" "}
-              <span className="font-black text-slate-700">
+              <span className="font-bold text-ink/80">
                 {selectedClient.full_name}
               </span>
             </p>
@@ -484,7 +481,7 @@ function SendMessageForm({
         </div>
       )}
 
-      <label className="mb-2 block text-sm font-black text-slate-700">
+      <label className="mb-2 block text-sm font-bold text-ink/80">
         Message
       </label>
 
@@ -497,11 +494,11 @@ function SendMessageForm({
             : "Reply to the client..."
         }
         rows={4}
-        className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+        className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line"
       />
 
       {statusMessage && (
-        <p className="mt-4 rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-semibold leading-6 text-slate-700">
+        <p className="mt-4 rounded-2xl border border-line bg-canvas p-4 text-sm font-semibold leading-6 text-ink/80">
           {statusMessage}
         </p>
       )}
@@ -509,7 +506,7 @@ function SendMessageForm({
       <button
         type="submit"
         disabled={isSending}
-        className="mt-4 w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+        className="mt-4 w-full rounded-2xl bg-accent px-5 py-4 text-sm font-bold text-white transition hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
       >
         {isSending ? "Sending..." : "Send Message"}
       </button>
@@ -551,14 +548,14 @@ function MessageHistorySection({
 }) {
   return (
     <>
-      <div className="mb-4 rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
+      <div className="mb-4 rounded-[18px] border border-line bg-white p-4 sm:mb-6 sm:rounded-[18px] sm:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-xl font-black text-slate-900">
+            <h2 className="text-xl font-bold text-ink">
               Message History
             </h2>
 
-            <p className="mt-1 text-sm leading-6 text-slate-500">
+            <p className="mt-1 text-sm leading-6 text-muted">
               {role === "client"
                 ? "Your conversation with your trainer."
                 : "Search by client name, client ID, or message content."}
@@ -571,7 +568,7 @@ function MessageHistorySection({
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
                 placeholder="Search messages..."
-                className="w-full rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-sm text-ink outline-none ring-0 placeholder:text-muted focus:border-accent/40 focus:bg-white focus:ring-4 focus:ring-line"
               />
             </div>
           )}
@@ -608,16 +605,16 @@ function MessageHistorySection({
           {clientGroups.map((group) => (
             <div
               key={group.clientUserId}
-              className="overflow-hidden rounded-3xl border border-sky-100 bg-white shadow-sm"
+              className="overflow-hidden rounded-[18px] border border-line bg-white "
             >
-              <div className="border-b border-sky-100 bg-sky-50 p-5 sm:p-6">
+              <div className="border-b border-line bg-canvas p-5 sm:p-6">
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <h2 className="text-2xl font-black text-slate-900">
+                    <h2 className="text-2xl font-bold text-ink">
                       {getClientName(group.clientUserId)}
                     </h2>
 
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm text-muted">
                       Client ID: {getClientId(group.clientUserId)}
                     </p>
                   </div>
@@ -632,14 +629,14 @@ function MessageHistorySection({
 
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
-                      className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white transition hover:bg-blue-700"
+                      className="rounded-2xl bg-accent px-4 py-3 text-sm font-bold text-white transition hover:bg-accent-dark"
                     >
                       Reply
                     </button>
 
                     <Link
                       to={`/clients/${group.clientUserId}`}
-                      className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-center text-sm font-black text-blue-700 transition hover:bg-blue-50"
+                      className="rounded-2xl border border-line bg-white px-4 py-3 text-center text-sm font-bold text-accent transition hover:bg-accent-soft"
                     >
                       View Client
                     </Link>
@@ -680,7 +677,7 @@ function ClientConversation({
   );
 
   return (
-    <div className="mb-4 rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
+    <div className="mb-4 rounded-[18px] border border-line bg-white p-4 sm:mb-6 sm:rounded-[18px] sm:p-6">
       <div className="space-y-4">
         {sortedMessages.map((message) => (
           <MessageBubble
@@ -709,18 +706,18 @@ function MessageBubble({
   return (
     <div
       className={`rounded-2xl border p-4 sm:p-5 ${
-        sentByMe ? "border-blue-100 bg-blue-50" : "border-sky-100 bg-sky-50"
+        sentByMe ? "border-line bg-accent-soft" : "border-line bg-canvas"
       }`}
     >
       <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-        <p className="font-black text-slate-900">{senderLabel}</p>
+        <p className="font-bold text-ink">{senderLabel}</p>
 
-        <p className="text-xs font-medium text-slate-500 sm:text-sm">
+        <p className="text-xs font-medium text-muted sm:text-sm">
           {new Date(message.created_at).toLocaleString()}
         </p>
       </div>
 
-      <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700 sm:text-base">
+      <p className="whitespace-pre-wrap text-sm leading-6 text-ink/80 sm:text-base">
         {message.message_body}
       </p>
     </div>
@@ -729,12 +726,12 @@ function MessageBubble({
 
 function SummaryCard({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 shadow-sm sm:p-5">
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+    <div className="rounded-[18px] border border-line bg-white p-4 sm:p-5">
+      <p className="text-xs font-medium text-muted">
         {title}
       </p>
 
-      <h2 className="mt-2 line-clamp-2 break-words text-xl font-black leading-tight text-slate-900 sm:text-2xl">
+      <h2 className="mt-2 line-clamp-2 break-words text-xl font-bold leading-tight text-ink sm:text-2xl">
         {value}
       </h2>
     </div>
@@ -749,14 +746,14 @@ function EmptyState({
   description: string;
 }) {
   return (
-    <div className="mb-4 rounded-[1.75rem] border border-sky-100 bg-white p-6 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-8">
-      <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-xl ring-1 ring-sky-100">
+    <div className="mb-4 rounded-[18px] border border-line bg-white p-6 sm:mb-6 sm:rounded-[18px] sm:p-8">
+      <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-canvas text-xl ring-1 ring-line">
         💬
       </div>
 
-      <h2 className="text-xl font-black text-slate-900">{title}</h2>
+      <h2 className="text-xl font-bold text-ink">{title}</h2>
 
-      <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
+      <p className="mt-2 text-sm leading-6 text-muted">{description}</p>
     </div>
   );
 }

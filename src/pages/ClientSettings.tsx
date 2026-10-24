@@ -292,8 +292,8 @@ export default function ClientSettings() {
   if (loading) {
     return (
       <ClientLayout unreadMessages={unreadMessages}>
-        <section className="rounded-[1.75rem] border border-sky-100 bg-white p-6 shadow-sm sm:rounded-[2rem] sm:p-8">
-          <p className="text-sm font-semibold text-slate-600">
+        <section className="rounded-[18px] border border-line bg-white p-6 sm:rounded-[18px] sm:p-8">
+          <p className="text-sm font-semibold text-muted">
             Loading settings...
           </p>
         </section>
@@ -306,17 +306,17 @@ export default function ClientSettings() {
 
   return (
     <ClientLayout unreadMessages={unreadMessages}>
-      <section className="overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:rounded-[2rem]">
-        <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-5 text-white sm:px-6 sm:py-8 md:px-8">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
+      <section className="overflow-hidden rounded-[18px] border border-line bg-white sm:rounded-[18px]">
+        <div className="mb-4">
+          <p className="text-sm text-muted">
             Client Settings
           </p>
 
-          <h1 className="mt-2 break-words text-2xl font-black leading-tight sm:mt-3 sm:text-4xl">
+          <h1 className="break-words text-2xl font-bold leading-tight tracking-tight sm:text-[30px]">
             Account Settings
           </h1>
 
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
             Manage your profile photo, password, and account access.
           </p>
         </div>
@@ -334,10 +334,10 @@ export default function ClientSettings() {
             </div>
           )}
 
-          <div className="rounded-[1.5rem] border border-sky-100 bg-sky-50 p-4 sm:rounded-3xl sm:p-6">
+          <div className="rounded-[18px] border border-line bg-canvas p-4 sm:rounded-[18px] sm:p-6">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[2rem] border border-white bg-blue-600 text-2xl font-black text-white shadow-sm ring-4 ring-white">
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-white bg-accent text-2xl font-bold text-white ring-4 ring-white">
                   {displayAvatarUrl ? (
                     <img
                       src={displayAvatarUrl}
@@ -350,15 +350,15 @@ export default function ClientSettings() {
                 </div>
 
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">
                     Profile Photo
                   </p>
 
-                  <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+                  <h2 className="mt-1 text-xl font-bold text-ink sm:text-2xl">
                     {displayName}
                   </h2>
 
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                  <p className="mt-1 text-sm leading-6 text-muted">
                     This photo will appear on your dashboard.
                   </p>
                 </div>
@@ -369,15 +369,15 @@ export default function ClientSettings() {
                   type="button"
                   onClick={handleRemoveAvatar}
                   disabled={uploadingAvatar}
-                  className="rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm font-black text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Remove Photo
                 </button>
               )}
             </div>
 
-            <div className="mt-6 rounded-2xl border border-sky-100 bg-white p-4">
-              <label className="block text-sm font-black text-slate-700">
+            <div className="mt-6 rounded-2xl border border-line bg-white p-4">
+              <label className="block text-sm font-bold text-ink/80">
                 Choose New Photo
               </label>
 
@@ -386,10 +386,10 @@ export default function ClientSettings() {
                 accept="image/*"
                 onChange={handleAvatarFileChange}
                 disabled={uploadingAvatar}
-                className="mt-2 w-full rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-700 file:mr-4 file:rounded-xl file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-sm file:font-black file:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-sm text-ink/80 file:mr-4 file:rounded-xl file:border-0 file:bg-accent file:px-4 file:py-2 file:text-sm file:font-bold file:text-white disabled:cursor-not-allowed disabled:opacity-60"
               />
 
-              <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">
+              <p className="mt-2 text-xs font-semibold leading-5 text-muted">
                 Use a clear square photo if possible. Maximum size: 5MB.
               </p>
 
@@ -397,26 +397,26 @@ export default function ClientSettings() {
                 type="button"
                 onClick={handleUploadAvatar}
                 disabled={uploadingAvatar || !selectedAvatarFile}
-                className="mt-4 w-full rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300 sm:w-auto"
+                className="mt-4 w-full rounded-2xl bg-accent px-5 py-3 text-sm font-bold text-white transition hover:bg-accent-dark disabled:cursor-not-allowed disabled:bg-blue-300 sm:w-auto"
               >
                 {uploadingAvatar ? "Uploading Photo..." : "Save Profile Photo"}
               </button>
             </div>
           </div>
 
-          <div className="rounded-[1.5rem] border border-sky-100 bg-sky-50 p-4 sm:rounded-3xl sm:p-6">
-            <h2 className="text-xl font-black text-slate-900 sm:text-2xl">
+          <div className="rounded-[18px] border border-line bg-canvas p-4 sm:rounded-[18px] sm:p-6">
+            <h2 className="text-xl font-bold text-ink sm:text-2xl">
               Change Password
             </h2>
 
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+            <p className="mt-2 text-sm leading-6 text-muted">
               Use this page to replace your temporary password with a new
               password you can remember.
             </p>
 
             <form onSubmit={handleChangePassword} className="mt-6 space-y-5">
               <div>
-                <label className="block text-sm font-black text-slate-700">
+                <label className="block text-sm font-bold text-ink/80">
                   New Password
                 </label>
 
@@ -425,12 +425,12 @@ export default function ClientSettings() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Enter new password"
-                  className="mt-2 w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                  className="mt-2 w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-accent/40 focus:ring-4 focus:ring-line"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-black text-slate-700">
+                <label className="block text-sm font-bold text-ink/80">
                   Confirm New Password
                 </label>
 
@@ -439,14 +439,14 @@ export default function ClientSettings() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm new password"
-                  className="mt-2 w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                  className="mt-2 w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-accent/40 focus:ring-4 focus:ring-line"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                className="w-full rounded-2xl bg-accent px-5 py-3 text-sm font-bold text-white transition hover:bg-accent-dark disabled:cursor-not-allowed disabled:bg-blue-300"
               >
                 {saving ? "Updating Password..." : "Update Password"}
               </button>

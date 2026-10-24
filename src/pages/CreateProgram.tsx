@@ -18,6 +18,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "../lib/supabaseClient";
+import TrainerLayout from "../components/TrainerLayout";
+import PageHeader from "../components/ui/PageHeader";
+import { btnGhost } from "../components/ui/styles";
 
 const WORKOUT_SECTIONS = [
   "Warm-Up",
@@ -1958,82 +1961,53 @@ export default function CreateProgram() {
   );
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
-      <section className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:py-10">
-        <div className="mb-6 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-8 sm:rounded-[2rem]">
-          <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-4 py-6 text-white sm:px-6 sm:py-8 md:px-8">
-            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
-                  Guided Program Builder
-                </p>
+    <TrainerLayout>
+        <PageHeader
+          eyebrow="Program builder"
+          title="Create program"
+          description="Build workouts the way clients will experience them: section by section, movement by movement, set by set."
+          actions={
+            selectedClientId ? (
+              <Link to={`/clients/${selectedClientId}`} className={btnGhost}>
+                View client
+              </Link>
+            ) : undefined
+          }
+        />
 
-                <h1 className="mt-3 break-words text-3xl font-black leading-tight md:text-5xl">
-                  Create Client Program
-                </h1>
-
-                <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-blue-50 sm:text-base">
-                  Build workouts exactly how clients will experience them:
-                  section by section, movement by movement, set by set.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                {selectedClientId && (
-                  <Link
-                    to={`/clients/${selectedClientId}`}
-                    className="w-full rounded-2xl bg-white px-4 py-3 text-center text-sm font-black text-blue-700 transition hover:bg-blue-50 sm:w-auto"
-                  >
-                    View Client
-                  </Link>
-                )}
-
-                <Link
-                  to="/trainer"
-                  className="w-full rounded-2xl bg-white/15 px-4 py-3 text-center text-sm font-black text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto"
-                >
-                  Back to Trainer
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-3 p-4 sm:p-6 md:grid-cols-4 md:p-8">
-            <SummaryCard title="Workouts" value={String(totalWorkoutCount)} />
-            <SummaryCard title="Exercises" value={String(totalExerciseCount)} />
-            <SummaryCard title="Sections Used" value={String(totalSectionCount)} />
-            <SummaryCard
-              title="Plan"
-              value={selectedPlan?.name || "Select plan"}
-            />
-          </div>
+        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <SummaryCard title="Workouts" value={String(totalWorkoutCount)} />
+          <SummaryCard title="Exercises" value={String(totalExerciseCount)} />
+          <SummaryCard title="Sections used" value={String(totalSectionCount)} />
+          <SummaryCard title="Plan" value={selectedPlan?.name || "Select plan"} />
         </div>
+
 
         <form
           onSubmit={saveProgram}
-          className="rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6"
+          className="rounded-[18px] border border-line bg-white p-4 sm:rounded-[18px] sm:p-6"
         >
-          <div className="rounded-[1.5rem] border border-sky-100 bg-sky-50 p-4 sm:p-5">
+          <div className="rounded-[18px] border border-line bg-canvas p-4 sm:p-5">
             <div className="mb-4">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
                 Program Setup
               </p>
 
-              <h2 className="mt-1 text-2xl font-black text-slate-900">
+              <h2 className="mt-1 text-2xl font-bold text-ink">
                 Choose client, plan, and week
               </h2>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div>
-                <label className="mb-2 block text-sm font-black text-slate-700">
+                <label className="mb-2 block text-sm font-bold text-ink/80">
                   Target Client
                 </label>
 
                 <select
                   value={selectedClientId}
                   onChange={(event) => handleClientChange(event.target.value)}
-                  className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                  className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-ink outline-none focus:border-accent/40 focus:ring-4 focus:ring-line"
                 >
                   <option value="">Select target client</option>
                   {clients.map((client) => (
@@ -2045,7 +2019,7 @@ export default function CreateProgram() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-black text-slate-700">
+                <label className="mb-2 block text-sm font-bold text-ink/80">
                   Training Plan
                 </label>
 
@@ -2053,7 +2027,7 @@ export default function CreateProgram() {
                   value={selectedPlanId}
                   onChange={(event) => setSelectedPlanId(event.target.value)}
                   disabled={!selectedClientId || isLoadingPlans}
-                  className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-ink outline-none focus:border-accent/40 focus:ring-4 focus:ring-line disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <option value="">
                     {isLoadingPlans ? "Loading plans..." : "Select training plan"}
@@ -2069,7 +2043,7 @@ export default function CreateProgram() {
                 {selectedClientId && (
                   <Link
                     to={`/training-plans?client=${selectedClientId}`}
-                    className="mt-2 inline-block text-xs font-black text-blue-700 hover:text-blue-900"
+                    className="mt-2 inline-block text-xs font-bold text-accent hover:text-ink"
                   >
                     Manage / create plans →
                   </Link>
@@ -2085,14 +2059,14 @@ export default function CreateProgram() {
               />
 
               <div>
-                <label className="mb-2 block text-sm font-black text-slate-700">
+                <label className="mb-2 block text-sm font-bold text-ink/80">
                   Week Status
                 </label>
 
                 <select
                   value={weekStatus}
                   onChange={(event) => setWeekStatus(event.target.value)}
-                  className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                  className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-ink outline-none focus:border-accent/40 focus:ring-4 focus:ring-line"
                 >
                   <option value="unlocked">Unlocked</option>
                   <option value="locked">Locked</option>
@@ -2103,21 +2077,21 @@ export default function CreateProgram() {
           </div>
 
           {selectedClient && (
-            <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+            <div className="mt-5 rounded-2xl border border-line bg-accent-soft p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm font-black text-blue-700">
+                  <p className="text-sm font-bold text-accent">
                     Target Client
                   </p>
 
-                  <p className="mt-1 text-sm font-semibold leading-6 text-slate-700">
+                  <p className="mt-1 text-sm font-semibold leading-6 text-ink/80">
                     This workout/week will be saved to {selectedClient.full_name} —{" "}
                     {selectedClient.client_id}
                     {selectedPlan ? ` inside ${selectedPlan.name}` : ""}. If Week {weekNumber}
                     already exists in this plan, the workout will be added into that week.
                   </p>
 
-                  <p className="mt-2 text-xs font-bold text-blue-700">
+                  <p className="mt-2 text-xs font-bold text-accent">
                     {isLoadingExerciseHistory
                       ? "Loading submitted exercise history..."
                       : `${Object.keys(exerciseHistoryByName).length} submitted exercise result${
@@ -2132,7 +2106,7 @@ export default function CreateProgram() {
                   type="button"
                   onClick={() => loadClientExerciseHistory(selectedClient.id)}
                   disabled={isLoadingExerciseHistory}
-                  className="rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm font-black text-blue-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-2xl border border-line bg-white px-4 py-3 text-sm font-bold text-accent transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Refresh Submitted History
                 </button>
@@ -2140,18 +2114,18 @@ export default function CreateProgram() {
             </div>
           )}
 
-          <div className="mt-5 rounded-[1.5rem] border border-indigo-100 bg-indigo-50 p-4 sm:p-5">
+          <div className="mt-5 rounded-[18px] border border-indigo-100 bg-indigo-50 p-4 sm:p-5">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-indigo-600">
                   Smart Program Import
                 </p>
 
-                <h2 className="mt-1 text-xl font-black text-slate-900">
+                <h2 className="mt-1 text-xl font-bold text-ink">
                   Paste a program from Word or Google Docs
                 </h2>
 
-                <p className="mt-1 text-sm leading-6 text-slate-600">
+                <p className="mt-1 text-sm leading-6 text-muted">
                   Paste a workout table like Alex's NASM progression document,
                   and CoachSync will build the exercise cards for you.
                 </p>
@@ -2160,7 +2134,7 @@ export default function CreateProgram() {
               <button
                 type="button"
                 onClick={() => setShowSmartImporter((current) => !current)}
-                className="rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-black text-white transition hover:bg-indigo-700"
+                className="rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-indigo-700"
               >
                 {showSmartImporter ? "Hide Importer" : "Open Importer"}
               </button>
@@ -2168,7 +2142,7 @@ export default function CreateProgram() {
 
             {showSmartImporter && (
               <div className="mt-4 rounded-2xl border border-indigo-100 bg-white p-4">
-                <label className="mb-2 block text-sm font-black text-slate-700">
+                <label className="mb-2 block text-sm font-bold text-ink/80">
                   Paste Program Text
                 </label>
 
@@ -2177,7 +2151,7 @@ export default function CreateProgram() {
                   onChange={(event) => setSmartImportText(event.target.value)}
                   rows={10}
                   placeholder={`Example:\nWarm-Up\nFoam Roll    1    30s    None    None\nActivation (core/balance)\nDead Bug    2    8-10 reps    None    10-15 sec\nResistance Training\nSeated Chest Press    2    12-15 reps    30 lbs    60-120 sec`}
-                  className="w-full rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
+                  className="w-full rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-ink outline-none focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
                 />
 
                 {smartImportMessage && (
@@ -2190,7 +2164,7 @@ export default function CreateProgram() {
                   <button
                     type="button"
                     onClick={importSmartProgramText}
-                    className="rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-black text-white transition hover:bg-indigo-700"
+                    className="rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-indigo-700"
                   >
                     Import Into Program Builder
                   </button>
@@ -2201,7 +2175,7 @@ export default function CreateProgram() {
                       setSmartImportText("");
                       setSmartImportMessage("");
                     }}
-                    className="rounded-2xl border border-indigo-100 bg-white px-4 py-3 text-sm font-black text-indigo-700 transition hover:bg-indigo-50"
+                    className="rounded-2xl border border-indigo-100 bg-white px-4 py-3 text-sm font-bold text-indigo-700 transition hover:bg-indigo-50"
                   >
                     Clear
                   </button>
@@ -2214,11 +2188,11 @@ export default function CreateProgram() {
             <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm font-black text-emerald-700">
+                  <p className="text-sm font-bold text-emerald-700">
                     Draft Autosave
                   </p>
 
-                  <p className="mt-1 text-sm font-semibold leading-6 text-slate-700">
+                  <p className="mt-1 text-sm font-semibold leading-6 text-ink/80">
                     {isSavingDraft
                       ? "Saving program draft..."
                       : draftSavedAt
@@ -2236,7 +2210,7 @@ export default function CreateProgram() {
                   type="button"
                   onClick={resetProgramDraft}
                   disabled={isSaving || isSavingDraft}
-                  className="rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm font-black text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Clear Draft
                 </button>
@@ -2246,18 +2220,18 @@ export default function CreateProgram() {
 
           {selectedClientId && (
             <div className="mt-6 grid gap-5 xl:grid-cols-2">
-              <div className="rounded-[1.5rem] border border-blue-100 bg-blue-50 p-4 sm:p-5">
+              <div className="rounded-[18px] border border-line bg-accent-soft p-4 sm:p-5">
                 <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">
                       Copy Assigned Workout
                     </p>
 
-                    <h2 className="mt-1 text-xl font-black text-slate-900">
+                    <h2 className="mt-1 text-xl font-bold text-ink">
                       Use existing workout
                     </h2>
 
-                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                    <p className="mt-1 text-sm leading-6 text-muted">
                       Copy a previous assigned workout, then edit it before
                       saving.
                     </p>
@@ -2273,14 +2247,14 @@ export default function CreateProgram() {
 
                       loadExistingWorkouts(copySourceClientId);
                     }}
-                    className="rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm font-black text-blue-700 transition hover:bg-blue-50"
+                    className="rounded-2xl border border-line bg-white px-4 py-3 text-sm font-bold text-accent transition hover:bg-accent-soft"
                   >
                     Refresh
                   </button>
                 </div>
 
                 <div className="mb-4">
-                  <label className="mb-2 block text-sm font-black text-slate-700">
+                  <label className="mb-2 block text-sm font-bold text-ink/80">
                     Copy From Client
                   </label>
 
@@ -2289,7 +2263,7 @@ export default function CreateProgram() {
                     onChange={(event) =>
                       setCopySourceClientId(event.target.value)
                     }
-                    className="w-full rounded-2xl border border-blue-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                    className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-ink outline-none focus:border-accent/40 focus:ring-4 focus:ring-line"
                   >
                     <option value="">Select source client</option>
                     {clients.map((client) => (
@@ -2300,7 +2274,7 @@ export default function CreateProgram() {
                   </select>
 
                   {copySourceClient && (
-                    <p className="mt-2 text-sm font-semibold text-slate-600">
+                    <p className="mt-2 text-sm font-semibold text-muted">
                       Source: {copySourceClient.full_name} —{" "}
                       {copySourceClient.client_id}
                     </p>
@@ -2308,15 +2282,15 @@ export default function CreateProgram() {
                 </div>
 
                 {isLoadingExistingWorkouts ? (
-                  <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
+                  <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-muted">
                     Loading source workouts...
                   </p>
                 ) : !copySourceClientId ? (
-                  <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
+                  <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-muted">
                     Choose a source client to see workouts you can copy.
                   </p>
                 ) : existingWorkouts.length === 0 ? (
-                  <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
+                  <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-muted">
                     No previous assigned workouts found for this source client
                     yet.
                   </p>
@@ -2324,7 +2298,7 @@ export default function CreateProgram() {
                   <>
                     <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
                       <div>
-                        <label className="mb-2 block text-sm font-black text-slate-700">
+                        <label className="mb-2 block text-sm font-bold text-ink/80">
                           Select Workout
                         </label>
 
@@ -2333,7 +2307,7 @@ export default function CreateProgram() {
                           onChange={(event) =>
                             setSelectedWorkoutToCopy(event.target.value)
                           }
-                          className="w-full rounded-2xl border border-blue-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                          className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-ink outline-none focus:border-accent/40 focus:ring-4 focus:ring-line"
                         >
                           <option value="">Choose source workout</option>
                           {existingWorkouts.map((workout) => (
@@ -2349,7 +2323,7 @@ export default function CreateProgram() {
                       <button
                         type="button"
                         onClick={copySelectedWorkout}
-                        className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white transition hover:bg-blue-700"
+                        className="rounded-2xl bg-accent px-4 py-3 text-sm font-bold text-white transition hover:bg-accent-dark"
                       >
                         Copy
                       </button>
@@ -2361,18 +2335,18 @@ export default function CreateProgram() {
                           key={workout.id}
                           type="button"
                           onClick={() => copyWorkoutById(workout.id)}
-                          className="rounded-2xl border border-blue-100 bg-white p-4 text-left transition hover:border-blue-200 hover:bg-blue-50"
+                          className="rounded-2xl border border-line bg-white p-4 text-left transition hover:border-accent/30 hover:bg-accent-soft"
                         >
-                          <p className="text-xs font-bold uppercase tracking-wide text-blue-600">
+                          <p className="text-xs font-bold uppercase tracking-wide text-accent">
                             {workout.source_client_name} • Week{" "}
                             {workout.week_number}
                           </p>
 
-                          <h3 className="mt-1 font-black text-slate-900">
+                          <h3 className="mt-1 font-bold text-ink">
                             {workout.title}
                           </h3>
 
-                          <p className="mt-1 text-sm font-semibold text-slate-500">
+                          <p className="mt-1 text-sm font-semibold text-muted">
                             {workout.client_plan_exercises.length} exercise
                             {workout.client_plan_exercises.length === 1
                               ? ""
@@ -2385,18 +2359,18 @@ export default function CreateProgram() {
                 )}
               </div>
 
-              <div className="rounded-[1.5rem] border border-amber-100 bg-amber-50 p-4 sm:p-5">
+              <div className="rounded-[18px] border border-amber-100 bg-amber-50 p-4 sm:p-5">
                 <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-600">
                       Historical Templates
                     </p>
 
-                    <h2 className="mt-1 text-xl font-black text-slate-900">
+                    <h2 className="mt-1 text-xl font-bold text-ink">
                       Use imported workout
                     </h2>
 
-                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                    <p className="mt-1 text-sm leading-6 text-muted">
                       Copy a historical workout into this guided program.
                     </p>
                   </div>
@@ -2404,7 +2378,7 @@ export default function CreateProgram() {
                   <button
                     type="button"
                     onClick={loadHistoricalTemplates}
-                    className="rounded-2xl border border-amber-100 bg-white px-4 py-3 text-sm font-black text-amber-700 transition hover:bg-amber-50"
+                    className="rounded-2xl border border-amber-100 bg-white px-4 py-3 text-sm font-bold text-amber-700 transition hover:bg-amber-50"
                   >
                     Refresh
                   </button>
@@ -2412,7 +2386,7 @@ export default function CreateProgram() {
 
                 <div className="mb-4 grid gap-3 md:grid-cols-2">
                   <div>
-                    <label className="mb-2 block text-sm font-black text-slate-700">
+                    <label className="mb-2 block text-sm font-bold text-ink/80">
                       Filter by Client
                     </label>
 
@@ -2422,7 +2396,7 @@ export default function CreateProgram() {
                         setSelectedHistoricalClientId(event.target.value);
                         setSelectedHistoricalTemplateId("");
                       }}
-                      className="w-full rounded-2xl border border-amber-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-amber-300 focus:ring-4 focus:ring-amber-100"
+                      className="w-full rounded-2xl border border-amber-100 bg-white px-4 py-3 text-ink outline-none focus:border-amber-300 focus:ring-4 focus:ring-amber-100"
                     >
                       <option value="all">All clients</option>
                       {historicalClientsWithTemplates.map((client) => (
@@ -2434,7 +2408,7 @@ export default function CreateProgram() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-black text-slate-700">
+                    <label className="mb-2 block text-sm font-bold text-ink/80">
                       Select Template
                     </label>
 
@@ -2443,7 +2417,7 @@ export default function CreateProgram() {
                       onChange={(event) =>
                         setSelectedHistoricalTemplateId(event.target.value)
                       }
-                      className="w-full rounded-2xl border border-amber-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-amber-300 focus:ring-4 focus:ring-amber-100"
+                      className="w-full rounded-2xl border border-amber-100 bg-white px-4 py-3 text-ink outline-none focus:border-amber-300 focus:ring-4 focus:ring-amber-100"
                     >
                       <option value="">Choose template</option>
                       {filteredHistoricalTemplates.map((template) => (
@@ -2462,15 +2436,15 @@ export default function CreateProgram() {
                 </div>
 
                 {isLoadingHistoricalTemplates ? (
-                  <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
+                  <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-muted">
                     Loading imported past workout templates...
                   </p>
                 ) : historicalTemplates.length === 0 ? (
-                  <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
+                  <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-muted">
                     No imported historical workouts found yet.
                   </p>
                 ) : filteredHistoricalTemplates.length === 0 ? (
-                  <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
+                  <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-muted">
                     No templates found for this client.
                   </p>
                 ) : (
@@ -2478,7 +2452,7 @@ export default function CreateProgram() {
                     <button
                       type="button"
                       onClick={copySelectedHistoricalTemplate}
-                      className="mb-4 rounded-2xl bg-amber-500 px-4 py-3 text-sm font-black text-white transition hover:bg-amber-600"
+                      className="mb-4 rounded-2xl bg-amber-500 px-4 py-3 text-sm font-bold text-white transition hover:bg-amber-600"
                     >
                       Copy Selected Template
                     </button>
@@ -2500,11 +2474,11 @@ export default function CreateProgram() {
                               {formatDate(template.workout_date)}
                             </p>
 
-                            <h3 className="mt-1 font-black text-slate-900">
+                            <h3 className="mt-1 font-bold text-ink">
                               {template.title || "Untitled Past Workout"}
                             </h3>
 
-                            <p className="mt-1 text-sm font-semibold text-slate-500">
+                            <p className="mt-1 text-sm font-semibold text-muted">
                               {
                                 template.client_historical_workout_exercises
                                   .length
@@ -2527,15 +2501,15 @@ export default function CreateProgram() {
           <div className="mt-8">
             <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
                   Guided Sessions
                 </p>
 
-                <h2 className="mt-1 text-2xl font-black text-slate-900">
+                <h2 className="mt-1 text-2xl font-bold text-ink">
                   Workouts / Sessions
                 </h2>
 
-                <p className="mt-1 text-sm leading-6 text-slate-500">
+                <p className="mt-1 text-sm leading-6 text-muted">
                   Build each workout by section so the client sees warm-up,
                   activation, SAQ, resistance, and cool-down in the correct flow.
                 </p>
@@ -2544,7 +2518,7 @@ export default function CreateProgram() {
               <button
                 type="button"
                 onClick={addWorkout}
-                className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white transition hover:bg-blue-700"
+                className="rounded-2xl bg-accent px-4 py-3 text-sm font-bold text-white transition hover:bg-accent-dark"
               >
                 Add Workout
               </button>
@@ -2554,29 +2528,29 @@ export default function CreateProgram() {
               {workouts.map((workout, workoutIndex) => (
                 <div
                   key={workout.formId}
-                  className="overflow-hidden rounded-[1.75rem] border border-sky-100 bg-sky-50 shadow-sm sm:rounded-[2rem]"
+                  className="overflow-hidden rounded-[18px] border border-line bg-canvas sm:rounded-[18px]"
                 >
-                  <div className="border-b border-sky-100 bg-white p-4 sm:p-5">
+                  <div className="border-b border-line bg-white p-4 sm:p-5">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">
                           Workout {workoutIndex + 1}
                         </p>
 
-                        <h3 className="mt-1 break-words text-2xl font-black text-slate-900">
+                        <h3 className="mt-1 break-words text-2xl font-bold text-ink">
                           {workout.title.trim() || "Untitled Workout"}
                         </h3>
 
                         <div className="mt-3 flex flex-wrap gap-2">
-                          <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-sky-100">
+                          <span className="rounded-full bg-canvas px-3 py-1 text-xs font-bold text-accent ring-1 ring-line">
                             {getWorkoutExerciseCount(workout)} exercises
                           </span>
 
-                          <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-sky-100">
+                          <span className="rounded-full bg-canvas px-3 py-1 text-xs font-bold text-accent ring-1 ring-line">
                             {getWorkoutSectionCount(workout)} sections
                           </span>
 
-                          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-100">
+                          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">
                             Guided-ready
                           </span>
                         </div>
@@ -2586,7 +2560,7 @@ export default function CreateProgram() {
                         <button
                           type="button"
                           onClick={() => duplicateWorkoutInForm(workoutIndex)}
-                          className="rounded-2xl bg-sky-50 px-4 py-3 text-sm font-black text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50"
+                          className="rounded-2xl bg-canvas px-4 py-3 text-sm font-bold text-accent ring-1 ring-line transition hover:bg-accent-soft"
                         >
                           Duplicate
                         </button>
@@ -2594,7 +2568,7 @@ export default function CreateProgram() {
                         <button
                           type="button"
                           onClick={() => removeWorkout(workoutIndex)}
-                          className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-black text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
+                          className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
                         >
                           Remove
                         </button>
@@ -2614,14 +2588,14 @@ export default function CreateProgram() {
                   </div>
 
                   <div className="p-4 sm:p-5">
-                    <div className="mb-4 rounded-[1.5rem] border border-blue-100 bg-blue-50 p-4">
+                    <div className="mb-4 rounded-[18px] border border-line bg-accent-soft p-4">
                       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                         <div>
-                          <h4 className="text-lg font-black text-slate-900">
+                          <h4 className="text-lg font-bold text-ink">
                             Add exercises by section
                           </h4>
 
-                          <p className="mt-1 text-sm leading-6 text-slate-600">
+                          <p className="mt-1 text-sm leading-6 text-muted">
                             These are the same section headings the client will
                             see in the guided workout.
                           </p>
@@ -2633,7 +2607,7 @@ export default function CreateProgram() {
                               key={section}
                               type="button"
                               onClick={() => addExercise(workoutIndex, section)}
-                              className="rounded-2xl bg-white px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-blue-100 transition hover:bg-blue-50"
+                              className="rounded-2xl bg-white px-3 py-2 text-xs font-bold text-accent ring-1 ring-line transition hover:bg-accent-soft"
                             >
                               + {section}
                             </button>
@@ -2685,27 +2659,27 @@ export default function CreateProgram() {
                             return (
                               <div
                                 key={section}
-                                className="overflow-hidden rounded-[1.5rem] border border-sky-100 bg-white shadow-sm"
+                                className="overflow-hidden rounded-[18px] border border-line bg-white "
                               >
-                                <div className="border-b border-sky-100 bg-gradient-to-br from-white via-sky-50 to-blue-50 p-4">
+                                <div className="border-b border-line bg-white p-4">
                                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                     <div>
-                                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">
                                         Client Section Intro
                                       </p>
 
-                                      <h5 className="mt-1 text-xl font-black text-slate-900">
+                                      <h5 className="mt-1 text-xl font-bold text-ink">
                                         {section}
                                       </h5>
 
-                                      <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
+                                      <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
                                         {SECTION_DESCRIPTIONS[section] ||
                                           "Section exercises for this workout."}
                                       </p>
                                     </div>
 
                                     <div className="flex flex-col gap-2 sm:items-end">
-                                      <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-sky-100">
+                                      <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-bold text-accent ring-1 ring-line">
                                         {completedSectionExercises.length} added
                                       </span>
 
@@ -2714,7 +2688,7 @@ export default function CreateProgram() {
                                         onClick={() =>
                                           addExercise(workoutIndex, section)
                                         }
-                                        className="rounded-2xl bg-blue-600 px-4 py-3 text-xs font-black text-white transition hover:bg-blue-700"
+                                        className="rounded-2xl bg-accent px-4 py-3 text-xs font-bold text-white transition hover:bg-accent-dark"
                                       >
                                         Add to {section}
                                       </button>
@@ -2771,7 +2745,7 @@ export default function CreateProgram() {
           </div>
 
           {statusMessage && (
-            <p className="mt-6 rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-semibold leading-6 text-slate-700">
+            <p className="mt-6 rounded-2xl border border-line bg-canvas p-4 text-sm font-semibold leading-6 text-ink/80">
               {statusMessage}
             </p>
           )}
@@ -2780,7 +2754,7 @@ export default function CreateProgram() {
             <button
               type="button"
               onClick={() => setShowPreview(true)}
-              className="w-full rounded-2xl border border-blue-100 bg-white px-5 py-4 font-black text-blue-700 shadow-sm transition hover:bg-blue-50"
+              className="w-full rounded-2xl border border-line bg-white px-5 py-4 font-bold text-accent transition hover:bg-accent-soft"
             >
               Preview Client Experience
             </button>
@@ -2788,7 +2762,7 @@ export default function CreateProgram() {
             <button
               type="submit"
               disabled={isSaving}
-              className="w-full rounded-2xl bg-blue-600 px-5 py-4 font-black text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-2xl bg-accent px-5 py-4 font-bold text-white transition hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSaving ? "Saving Program..." : "Save Program Week / Add to Week"}
             </button>
@@ -2810,8 +2784,7 @@ export default function CreateProgram() {
             />
           )}
         </form>
-      </section>
-    </main>
+    </TrainerLayout>
   );
 }
 
@@ -2825,16 +2798,16 @@ function EmptySectionCard({
   addExercise: (workoutIndex: number, section: string) => void;
 }) {
   return (
-    <div className="rounded-[1.5rem] border border-dashed border-sky-200 bg-white/70 p-4">
+    <div className="rounded-[18px] border border-dashed border-line bg-white/70 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted">
             Empty Section
           </p>
 
-          <h5 className="mt-1 text-lg font-black text-slate-700">{section}</h5>
+          <h5 className="mt-1 text-lg font-bold text-ink/80">{section}</h5>
 
-          <p className="mt-1 text-sm leading-6 text-slate-500">
+          <p className="mt-1 text-sm leading-6 text-muted">
             {SECTION_DESCRIPTIONS[section] ||
               "Add an exercise here if this section belongs in the workout."}
           </p>
@@ -2843,7 +2816,7 @@ function EmptySectionCard({
         <button
           type="button"
           onClick={() => addExercise(workoutIndex, section)}
-          className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50"
+          className="rounded-2xl bg-white px-4 py-3 text-sm font-bold text-accent ring-1 ring-line transition hover:bg-accent-soft"
         >
           + Add Exercise
         </button>
@@ -2933,12 +2906,12 @@ function SortableExerciseCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`overflow-hidden rounded-[1.35rem] border bg-white transition ${
+      className={`overflow-hidden rounded-2xl border bg-white transition ${
         isDragging
-          ? "z-20 border-blue-200 opacity-80 shadow-xl ring-2 ring-blue-200"
+          ? "z-20 border-accent/30 opacity-80 shadow-xl ring-2 ring-accent/30"
           : hasExerciseName
-          ? "border-sky-100 shadow-sm"
-          : "border-dashed border-slate-200"
+          ? "border-line "
+          : "border-dashed border-line"
       }`}
     >
       <div className="p-4">
@@ -2948,29 +2921,29 @@ function SortableExerciseCard({
               type="button"
               {...attributes}
               {...listeners}
-              className="mt-1 cursor-grab rounded-2xl bg-sky-50 px-3 py-2 text-sm font-black text-slate-600 ring-1 ring-sky-100 active:cursor-grabbing"
+              className="mt-1 cursor-grab rounded-2xl bg-canvas px-3 py-2 text-sm font-bold text-muted ring-1 ring-line active:cursor-grabbing"
               aria-label={`Drag Exercise ${displayIndex}`}
             >
               ☰
             </button>
 
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-blue-600">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-accent">
                 Movement {displayIndex}
               </p>
 
-              <h5 className="mt-1 break-words text-lg font-black text-slate-900">
+              <h5 className="mt-1 break-words text-lg font-bold text-ink">
                 {exercise.exerciseName.trim() || "New Exercise"}
               </h5>
 
-              <p className="mt-1 break-words text-sm font-semibold leading-6 text-slate-500">
+              <p className="mt-1 break-words text-sm font-semibold leading-6 text-muted">
                 {summaryParts.length > 0
                   ? summaryParts.join(" • ")
                   : "Add exercise details to make this guided-workout ready."}
               </p>
 
               {exercise.trainerNotes.trim() && !isExpanded && (
-                <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-500">
+                <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted">
                   Note: {exercise.trainerNotes}
                 </p>
               )}
@@ -2981,17 +2954,17 @@ function SortableExerciseCard({
                   onClick={() => setSelectedExerciseHistory(exerciseHistory)}
                   className="mt-3 w-full rounded-2xl border border-amber-100 bg-amber-50 p-3 text-left transition hover:bg-amber-100"
                 >
-                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-700">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700">
                     Last Submitted Result
                   </p>
 
-                  <p className="mt-1 text-sm font-black text-slate-900">
+                  <p className="mt-1 text-sm font-bold text-ink">
                     {formatDate(exerciseHistory.completedAt)} • {exerciseHistory.sets || "N/A"} sets • {exerciseHistory.reps || "N/A"}
                     {exerciseHistory.weight ? ` • ${exerciseHistory.weight}` : ""}
                   </p>
 
                   {exerciseHistory.notes && (
-                    <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-slate-600">
+                    <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-muted">
                       Client note: {exerciseHistory.notes}
                     </p>
                   )}
@@ -3004,7 +2977,7 @@ function SortableExerciseCard({
             <button
               type="button"
               onClick={() => setIsExpanded((current) => !current)}
-              className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-black text-white transition hover:bg-blue-700"
+              className="rounded-xl bg-accent px-3 py-2 text-xs font-bold text-white transition hover:bg-accent-dark"
             >
               {isExpanded ? "Collapse" : "Edit Details"}
             </button>
@@ -3013,7 +2986,7 @@ function SortableExerciseCard({
               type="button"
               onClick={() => moveExercise(workoutIndex, exerciseIndex, "up")}
               disabled={exerciseIndex === 0}
-              className="rounded-xl bg-white px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-accent ring-1 ring-line transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
             >
               Up
             </button>
@@ -3022,7 +2995,7 @@ function SortableExerciseCard({
               type="button"
               onClick={() => moveExercise(workoutIndex, exerciseIndex, "down")}
               disabled={exerciseIndex === totalExercises - 1}
-              className="rounded-xl bg-white px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-sky-100 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-accent ring-1 ring-line transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
             >
               Down
             </button>
@@ -3030,7 +3003,7 @@ function SortableExerciseCard({
             <button
               type="button"
               onClick={() => removeExercise(workoutIndex, exerciseIndex)}
-              className="rounded-xl bg-red-50 px-3 py-2 text-xs font-black text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
+              className="rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
             >
               Remove
             </button>
@@ -3039,11 +3012,11 @@ function SortableExerciseCard({
       </div>
 
       {isExpanded && (
-        <div className="border-t border-sky-100 bg-sky-50/60 p-4">
-          <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+        <div className="border-t border-line bg-sky-50/60 p-4">
+          <div className="mb-4 rounded-2xl border border-line bg-accent-soft p-4">
             <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
               <div>
-                <label className="mb-2 block text-sm font-black text-slate-700">
+                <label className="mb-2 block text-sm font-bold text-ink/80">
                   Choose Exercise From Library
                 </label>
 
@@ -3057,7 +3030,7 @@ function SortableExerciseCard({
                     )
                   }
                   disabled={isLoadingExerciseLibrary}
-                  className="w-full rounded-2xl border border-blue-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-ink outline-none focus:border-accent/40 focus:ring-4 focus:ring-line disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <option value="">
                     {isLoadingExerciseLibrary
@@ -3092,7 +3065,7 @@ function SortableExerciseCard({
                   })}
                 </select>
 
-                <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">
+                <p className="mt-2 text-xs font-semibold leading-5 text-muted">
                   Auto-fills section, sets, reps, weight, rest, video link, and
                   notes.
                 </p>
@@ -3101,7 +3074,7 @@ function SortableExerciseCard({
               <button
                 type="button"
                 onClick={() => saveExerciseToLibrary(exercise)}
-                className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-blue-700 ring-1 ring-blue-100 transition hover:bg-blue-50"
+                className="rounded-2xl bg-white px-4 py-3 text-sm font-bold text-accent ring-1 ring-line transition hover:bg-accent-soft"
               >
                 Save This Exercise
               </button>
@@ -3110,7 +3083,7 @@ function SortableExerciseCard({
 
           <div className="grid gap-4 md:grid-cols-3">
             <div>
-              <label className="mb-2 block text-sm font-black text-slate-700">
+              <label className="mb-2 block text-sm font-bold text-ink/80">
                 Section
               </label>
 
@@ -3124,7 +3097,7 @@ function SortableExerciseCard({
                     event.target.value
                   )
                 }
-                className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-ink outline-none focus:border-accent/40 focus:ring-4 focus:ring-line"
               >
                 {WORKOUT_SECTIONS.map((section) => (
                   <option key={section} value={section}>
@@ -3161,20 +3134,20 @@ function SortableExerciseCard({
                       onClick={() => setSelectedExerciseHistory(exerciseHistory)}
                       className="w-full text-left"
                     >
-                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-700">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700">
                         Last Submitted Result Found
                       </p>
 
-                      <p className="mt-1 text-sm font-black text-slate-900">
+                      <p className="mt-1 text-sm font-bold text-ink">
                         {formatDate(exerciseHistory.completedAt)} • {exerciseHistory.weight || "No weight"}
                       </p>
 
-                      <p className="mt-1 text-xs font-semibold leading-5 text-slate-600">
+                      <p className="mt-1 text-xs font-semibold leading-5 text-muted">
                         Click to view sets, reps/time, weight, difficulty, and notes.
                       </p>
                     </button>
                   ) : (
-                    <p className="text-xs font-bold text-slate-500">
+                    <p className="text-xs font-bold text-muted">
                       No submitted result found for this exercise yet.
                     </p>
                   )}
@@ -3192,11 +3165,11 @@ function SortableExerciseCard({
             />
 
             <div>
-              <label className="mb-2 block text-sm font-black text-slate-700">
+              <label className="mb-2 block text-sm font-bold text-ink/80">
                 Exercise Type
               </label>
 
-              <div className="grid grid-cols-2 gap-2 rounded-2xl border border-sky-100 bg-white p-2">
+              <div className="grid grid-cols-2 gap-2 rounded-2xl border border-line bg-white p-2">
                 <button
                   type="button"
                   onClick={() =>
@@ -3207,10 +3180,10 @@ function SortableExerciseCard({
                       "reps"
                     )
                   }
-                  className={`rounded-xl px-3 py-2 text-sm font-black transition ${
+                  className={`rounded-xl px-3 py-2 text-sm font-bold transition ${
                     exercise.exerciseType === "reps"
-                      ? "bg-blue-600 text-white shadow-sm"
-                      : "bg-sky-50 text-slate-600 hover:bg-blue-50"
+                      ? "bg-accent text-white "
+                      : "bg-canvas text-muted hover:bg-accent-soft"
                   }`}
                 >
                   Reps
@@ -3226,10 +3199,10 @@ function SortableExerciseCard({
                       "timed"
                     )
                   }
-                  className={`rounded-xl px-3 py-2 text-sm font-black transition ${
+                  className={`rounded-xl px-3 py-2 text-sm font-bold transition ${
                     exercise.exerciseType === "timed"
-                      ? "bg-blue-600 text-white shadow-sm"
-                      : "bg-sky-50 text-slate-600 hover:bg-blue-50"
+                      ? "bg-accent text-white "
+                      : "bg-canvas text-muted hover:bg-accent-soft"
                   }`}
                 >
                   Timed
@@ -3276,7 +3249,7 @@ function SortableExerciseCard({
             />
 
             <div className="md:col-span-3">
-              <label className="mb-2 block text-sm font-black text-slate-700">
+              <label className="mb-2 block text-sm font-bold text-ink/80">
                 Trainer Notes
               </label>
 
@@ -3292,7 +3265,7 @@ function SortableExerciseCard({
                 }
                 placeholder="Example: Keep shoulders relaxed, move slowly, stop if pain increases."
                 rows={3}
-                className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-ink outline-none ring-0 placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line"
               />
             </div>
           </div>
@@ -3312,18 +3285,18 @@ function ExerciseHistoryModal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6">
-      <div className="w-full max-w-lg rounded-[2rem] border border-sky-100 bg-white p-5 shadow-2xl">
+      <div className="w-full max-w-lg rounded-[18px] border border-line bg-white p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">
               Last Submitted Exercise
             </p>
 
-            <h2 className="mt-2 text-2xl font-black text-slate-900">
+            <h2 className="mt-2 text-2xl font-bold text-ink">
               {history.exerciseName}
             </h2>
 
-            <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">
+            <p className="mt-1 text-sm font-semibold leading-6 text-muted">
               {formatDate(history.completedAt)} • {history.workoutTitle}
             </p>
           </div>
@@ -3331,7 +3304,7 @@ function ExerciseHistoryModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-600 hover:bg-slate-50"
+            className="rounded-2xl border border-line bg-white px-3 py-2 text-sm font-bold text-muted hover:bg-canvas"
           >
             Close
           </button>
@@ -3346,7 +3319,7 @@ function ExerciseHistoryModal({
 
         {history.difficulty && (
           <div className="mt-4 rounded-2xl border border-orange-100 bg-orange-50 p-4">
-            <p className="text-xs font-black uppercase text-orange-700">
+            <p className="text-xs font-bold uppercase text-orange-700">
               Client Difficulty
             </p>
             <p className="mt-1 text-sm font-bold text-orange-800">
@@ -3356,11 +3329,11 @@ function ExerciseHistoryModal({
         )}
 
         {history.notes && (
-          <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs font-black uppercase text-slate-500">
+          <div className="mt-4 rounded-2xl border border-line bg-canvas p-4">
+            <p className="text-xs font-bold uppercase text-muted">
               Client Notes
             </p>
-            <p className="mt-1 text-sm leading-6 text-slate-700">
+            <p className="mt-1 text-sm leading-6 text-ink/80">
               {history.notes}
             </p>
           </div>
@@ -3372,9 +3345,9 @@ function ExerciseHistoryModal({
 
 function HistoryStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-sky-50 p-4">
-      <p className="text-xs font-black uppercase text-slate-500">{label}</p>
-      <p className="mt-1 break-words text-lg font-black text-slate-900">
+    <div className="rounded-2xl bg-canvas p-4">
+      <p className="text-xs font-bold uppercase text-muted">{label}</p>
+      <p className="mt-1 break-words text-lg font-bold text-ink">
         {value}
       </p>
     </div>
@@ -3406,19 +3379,19 @@ function WorkoutPreviewModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/60 px-4 py-6 backdrop-blur-sm">
-      <div className="w-full max-w-5xl overflow-hidden rounded-[2rem] bg-white shadow-2xl">
-        <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-blue-600 px-5 py-6 text-white sm:px-8">
+      <div className="w-full max-w-5xl overflow-hidden rounded-[18px] bg-white shadow-2xl">
+        <div className="bg-ink px-5 py-6 text-white sm:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-100">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/75">
                 Client Experience Preview
               </p>
 
-              <h2 className="mt-2 text-3xl font-black sm:text-4xl">
+              <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
                 Week {weekNumber || "1"} Preview
               </h2>
 
-              <p className="mt-2 text-sm font-semibold leading-6 text-blue-50">
+              <p className="mt-2 text-sm font-semibold leading-6 text-white/75">
                 {selectedClientName
                   ? `Previewing how ${selectedClientName} will experience this program.`
                   : "Preview how the client will experience this program."}
@@ -3428,7 +3401,7 @@ function WorkoutPreviewModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-2xl bg-white/15 px-4 py-3 text-sm font-black text-white ring-1 ring-white/25 transition hover:bg-white/25"
+              className="rounded-2xl bg-white/15 px-4 py-3 text-sm font-bold text-white ring-1 ring-white/25 transition hover:bg-white/25"
             >
               Close
             </button>
@@ -3436,32 +3409,32 @@ function WorkoutPreviewModal({
 
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl bg-white/15 p-4 ring-1 ring-white/20">
-              <p className="text-xs font-bold uppercase tracking-wide text-blue-100">
+              <p className="text-xs font-bold uppercase tracking-wide text-white/75">
                 Workouts
               </p>
-              <p className="mt-1 text-2xl font-black">{validWorkouts.length}</p>
+              <p className="mt-1 text-2xl font-bold">{validWorkouts.length}</p>
             </div>
 
             <div className="rounded-2xl bg-white/15 p-4 ring-1 ring-white/20">
-              <p className="text-xs font-bold uppercase tracking-wide text-blue-100">
+              <p className="text-xs font-bold uppercase tracking-wide text-white/75">
                 Exercises
               </p>
-              <p className="mt-1 text-2xl font-black">{totalExercises}</p>
+              <p className="mt-1 text-2xl font-bold">{totalExercises}</p>
             </div>
 
             <div className="rounded-2xl bg-white/15 p-4 ring-1 ring-white/20">
-              <p className="text-xs font-bold uppercase tracking-wide text-blue-100">
+              <p className="text-xs font-bold uppercase tracking-wide text-white/75">
                 Mode
               </p>
-              <p className="mt-1 text-2xl font-black">Guided</p>
+              <p className="mt-1 text-2xl font-bold">Guided</p>
             </div>
           </div>
         </div>
 
         <div className="max-h-[75vh] overflow-y-auto p-5 sm:p-8">
           {validWorkouts.length === 0 ? (
-            <div className="rounded-3xl border border-red-100 bg-red-50 p-5">
-              <h3 className="text-xl font-black text-red-700">
+            <div className="rounded-[18px] border border-red-100 bg-red-50 p-5">
+              <h3 className="text-xl font-bold text-red-700">
                 Nothing to preview yet
               </h3>
 
@@ -3477,18 +3450,18 @@ function WorkoutPreviewModal({
                 return (
                   <div
                     key={workout.formId}
-                    className="overflow-hidden rounded-[1.75rem] border border-sky-100 bg-sky-50 shadow-sm"
+                    className="overflow-hidden rounded-[18px] border border-line bg-canvas "
                   >
-                    <div className="border-b border-sky-100 bg-white p-5">
-                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                    <div className="border-b border-line bg-white p-5">
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">
                         Workout {workoutIndex + 1}
                       </p>
 
-                      <h3 className="mt-1 text-2xl font-black text-slate-900">
+                      <h3 className="mt-1 text-2xl font-bold text-ink">
                         {workout.title.trim() || "Untitled Workout"}
                       </h3>
 
-                      <p className="mt-2 text-sm font-semibold text-slate-500">
+                      <p className="mt-2 text-sm font-semibold text-muted">
                         {getWorkoutExerciseCount(workout)} exercises • {" "}
                         {getWorkoutSectionCount(workout)} sections
                       </p>
@@ -3501,7 +3474,7 @@ function WorkoutPreviewModal({
                         issues.missingVideo > 0 ||
                         issues.missingNotes > 0) && (
                         <div className="mb-5 rounded-2xl border border-amber-100 bg-amber-50 p-4">
-                          <p className="text-sm font-black text-amber-700">
+                          <p className="text-sm font-bold text-amber-700">
                             Preview Checklist
                           </p>
 
@@ -3538,20 +3511,20 @@ function WorkoutPreviewModal({
                           return (
                             <div
                               key={section}
-                              className="rounded-[1.5rem] border border-sky-100 bg-white p-4"
+                              className="rounded-[18px] border border-line bg-white p-4"
                             >
                               <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
-                                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">
                                     Section Intro
                                   </p>
 
-                                  <h4 className="mt-1 text-xl font-black text-slate-900">
+                                  <h4 className="mt-1 text-xl font-bold text-ink">
                                     {section}
                                   </h4>
                                 </div>
 
-                                <span className="w-fit rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-sky-100">
+                                <span className="w-fit rounded-full bg-canvas px-3 py-1 text-xs font-bold text-accent ring-1 ring-line">
                                   {sectionExercises.length} movement
                                   {sectionExercises.length === 1 ? "" : "s"}
                                 </span>
@@ -3561,30 +3534,30 @@ function WorkoutPreviewModal({
                                 {sectionExercises.map((exercise, index) => (
                                   <div
                                     key={exercise.formId}
-                                    className="rounded-2xl border border-sky-100 bg-sky-50 p-4"
+                                    className="rounded-2xl border border-line bg-canvas p-4"
                                   >
                                     <div className="flex gap-3">
-                                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-sm font-black text-blue-700 ring-1 ring-sky-100">
+                                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-sm font-bold text-accent ring-1 ring-line">
                                         {index + 1}
                                       </div>
 
                                       <div className="min-w-0 flex-1">
-                                        <p className="break-words font-black text-slate-900">
+                                        <p className="break-words font-bold text-ink">
                                           {exercise.exerciseName}
                                         </p>
 
-                                        <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">
+                                        <p className="mt-1 text-sm font-semibold leading-6 text-muted">
                                           {getExerciseSummary(exercise)}
                                         </p>
 
                                         {exercise.trainerNotes && (
-                                          <p className="mt-2 text-sm leading-6 text-slate-600">
+                                          <p className="mt-2 text-sm leading-6 text-muted">
                                             Trainer note: {exercise.trainerNotes}
                                           </p>
                                         )}
 
                                         {exercise.videoLink && (
-                                          <p className="mt-2 text-xs font-black uppercase tracking-wide text-blue-600">
+                                          <p className="mt-2 text-xs font-bold uppercase tracking-wide text-accent">
                                             Video attached
                                           </p>
                                         )}
@@ -3608,7 +3581,7 @@ function WorkoutPreviewModal({
             <button
               type="button"
               onClick={onClose}
-              className="w-full rounded-2xl border border-sky-100 bg-white px-5 py-4 text-sm font-black text-slate-700 transition hover:bg-sky-50"
+              className="w-full rounded-2xl border border-line bg-white px-5 py-4 text-sm font-bold text-ink/80 transition hover:bg-canvas"
             >
               Keep Editing
             </button>
@@ -3616,7 +3589,7 @@ function WorkoutPreviewModal({
             <button
               type="button"
               onClick={onClose}
-              className="w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black text-white transition hover:bg-blue-700"
+              className="w-full rounded-2xl bg-accent px-5 py-4 text-sm font-bold text-white transition hover:bg-accent-dark"
             >
               Looks Good
             </button>
@@ -3629,13 +3602,13 @@ function WorkoutPreviewModal({
 
 function SummaryCard({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-2xl border
-    border-sky-100 bg-sky-50 p-4 sm:p-5">
-      <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+    <div className="rounded-[18px] border
+ border-line bg-white p-4 sm:p-5">
+      <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted">
         {title}
       </p>
 
-      <h2 className="mt-2 break-words text-xl font-black text-slate-900 sm:text-2xl">
+      <h2 className="mt-2 break-words text-xl font-bold text-ink sm:text-2xl">
         {value}
       </h2>
     </div>
@@ -3657,7 +3630,7 @@ function Input({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-black text-slate-700">
+      <label className="mb-2 block text-sm font-bold text-ink/80">
         {label}
       </label>
 
@@ -3666,7 +3639,7 @@ function Input({
         type={type}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-2xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+        className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-ink outline-none ring-0 placeholder:text-muted focus:border-accent/40 focus:ring-4 focus:ring-line"
       />
     </div>
   );

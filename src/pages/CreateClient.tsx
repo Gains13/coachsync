@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import TrainerLayout from "../components/TrainerLayout";
+import PageHeader from "../components/ui/PageHeader";
 
 export default function CreateClient() {
   const [email, setEmail] = useState("");
@@ -191,46 +192,18 @@ Once you log in, you’ll be able to view your plan, workouts, goals, and progre
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
-      <section className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:py-10">
-        <div className="mb-5 overflow-hidden rounded-3xl border border-sky-100 bg-white shadow-sm sm:mb-8 sm:rounded-[2rem]">
-          <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-6 text-white sm:px-6 sm:py-8 md:px-8">
-            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
-                  Trainer Tools
-                </p>
+    <TrainerLayout>
+        <PageHeader
+          backTo="/clients"
+          backLabel="Clients"
+          title="Add client"
+          description="Creates their CoachSync login, assessment and goals. A temporary password is generated for you to send them."
+        />
 
-                <h1 className="mt-3 break-words text-2xl font-bold leading-tight sm:text-3xl md:text-4xl">
-                  Create Client Profile
-                </h1>
-
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
-                  Create the client’s CoachSync login, assessment, and goals.
-                  The app will generate a temporary password for you to send
-                  manually.
-                </p>
-              </div>
-
-              <Link
-                to="/trainer"
-                className="w-full rounded-xl bg-white/15 px-4 py-3 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto sm:py-2"
-              >
-                Back to Trainer
-              </Link>
-            </div>
-          </div>
-
-          <div className="grid gap-3 p-4 sm:grid-cols-3 sm:p-6 md:p-8">
-            <SummaryCard title="Step 1" value="Client Info" />
-            <SummaryCard title="Step 2" value="Assessment" />
-            <SummaryCard title="Step 3" value="Goals" />
-          </div>
-        </div>
 
         <form
           onSubmit={createClientProfile}
-          className="rounded-3xl border border-sky-100 bg-white p-4 shadow-sm sm:p-6"
+          className="rounded-[18px] border border-line bg-white p-4 sm:p-6"
         >
           <div className="space-y-6 sm:space-y-8">
             <FormSection
@@ -261,7 +234,7 @@ Once you log in, you’ll be able to view your plan, workouts, goals, and progre
                 />
               </div>
 
-              <p className="mt-3 text-sm leading-6 text-slate-500">
+              <p className="mt-3 text-sm leading-6 text-muted">
                 Client ID should be simple lowercase text like adam, suzanne, or
                 robert.
               </p>
@@ -353,13 +326,13 @@ Once you log in, you’ll be able to view your plan, workouts, goals, and progre
           </div>
 
           {statusMessage && (
-            <p className="mt-6 rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-medium leading-6 text-slate-700">
+            <p className="mt-6 rounded-2xl border border-line bg-canvas p-4 text-sm font-medium leading-6 text-ink/80">
               {statusMessage}
             </p>
           )}
 
           {temporaryPassword && createdClientEmail && (
-            <div className="mt-6 rounded-3xl border border-emerald-100 bg-emerald-50 p-5">
+            <div className="mt-6 rounded-[18px] border border-emerald-100 bg-emerald-50 p-5">
               <h2 className="text-lg font-bold text-emerald-900">
                 Client Login Details
               </h2>
@@ -369,7 +342,7 @@ Once you log in, you’ll be able to view your plan, workouts, goals, and progre
                 this screen.
               </p>
 
-              <div className="mt-4 space-y-3 rounded-2xl bg-white p-4 text-sm text-slate-700">
+              <div className="mt-4 space-y-3 rounded-2xl bg-white p-4 text-sm text-ink/80">
                 <p>
                   <span className="font-bold">Login link:</span>{" "}
                   https://coachsync-rust.vercel.app
@@ -389,7 +362,7 @@ Once you log in, you’ll be able to view your plan, workouts, goals, and progre
               <button
                 type="button"
                 onClick={copyLoginDetails}
-                className="mt-4 w-full rounded-2xl bg-emerald-600 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-700 sm:w-auto"
+                className="mt-4 w-full rounded-2xl bg-emerald-600 px-5 py-3 font-semibold text-white transition hover:bg-emerald-700 sm:w-auto"
               >
                 Copy Login Message
               </button>
@@ -399,27 +372,15 @@ Once you log in, you’ll be able to view your plan, workouts, goals, and progre
           <button
             type="submit"
             disabled={isSaving}
-            className="mt-6 w-full rounded-2xl bg-blue-600 px-5 py-4 font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-6 w-full rounded-2xl bg-accent px-5 py-4 font-semibold text-white transition hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving ? "Creating Client..." : "Create Client Account"}
           </button>
         </form>
-      </section>
-    </main>
+    </TrainerLayout>
   );
 }
 
-function SummaryCard({ title, value }: { title: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 sm:p-5">
-      <p className="text-xs font-medium text-slate-500 sm:text-sm">{title}</p>
-
-      <h2 className="mt-2 break-words text-lg font-bold text-slate-900 sm:text-xl">
-        {value}
-      </h2>
-    </div>
-  );
-}
 
 function FormSection({
   title,
@@ -431,11 +392,11 @@ function FormSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-3xl border border-sky-100 bg-sky-50 p-4 sm:p-5">
+    <section className="rounded-[18px] border border-line bg-canvas p-4 sm:p-5">
       <div className="mb-5">
-        <h2 className="text-lg font-bold text-slate-900 sm:text-xl">{title}</h2>
+        <h2 className="text-lg font-bold text-ink sm:text-xl">{title}</h2>
 
-        <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
+        <p className="mt-1 text-sm leading-6 text-muted">{description}</p>
       </div>
 
       {children}
@@ -458,7 +419,7 @@ function Input({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-semibold text-slate-700">
+      <label className="mb-2 block text-sm font-semibold text-ink/80">
         {label}
       </label>
 
@@ -467,7 +428,7 @@ function Input({
         type={type}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+        className="w-full rounded-xl border border-line bg-white px-4 py-3 text-ink outline-none ring-0 placeholder:text-muted focus:border-accent/40 focus:ring-2 focus:ring-line"
       />
     </div>
   );
@@ -486,7 +447,7 @@ function TextArea({
 }) {
   return (
     <div className="mt-4">
-      <label className="mb-2 block text-sm font-semibold text-slate-700">
+      <label className="mb-2 block text-sm font-semibold text-ink/80">
         {label}
       </label>
 
@@ -495,7 +456,7 @@ function TextArea({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         rows={4}
-        className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+        className="w-full rounded-xl border border-line bg-white px-4 py-3 text-ink outline-none ring-0 placeholder:text-muted focus:border-accent/40 focus:ring-2 focus:ring-line"
       />
     </div>
   );

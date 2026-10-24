@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { MoreHorizontal, Plus, Search } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
+import TrainerLayout from "../components/TrainerLayout";
+import PageHeader from "../components/ui/PageHeader";
+import { btnGhost, btnPrimary, card } from "../components/ui/styles";
 
 type ClientProfile = {
   id: string;
@@ -282,118 +286,75 @@ export default function Clients() {
   ).length;
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
-      <section className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:py-10">
-        <div className="mb-8 overflow-hidden rounded-3xl border border-sky-100 bg-white shadow-sm sm:rounded-[2rem]">
-          <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-6 text-white sm:px-6 sm:py-8 md:px-8">
-            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
-                  Trainer Dashboard
-                </p>
+    <TrainerLayout>
+      <PageHeader
+        eyebrow="Roster"
+        title="Clients"
+        actions={
+          <>
+            <button type="button" onClick={loadClients} className={btnGhost}>
+              Refresh
+            </button>
+            <Link to="/create-client" className={btnPrimary}>
+              <Plus className="h-4 w-4" />
+              Add client
+            </Link>
+          </>
+        }
+      />
 
-                <h1 className="mt-3 break-words text-3xl font-bold md:text-4xl">
-                  Client List
-                </h1>
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard title="Total clients" value={`${clients.length}`} />
+        <StatCard title="Setup complete" value={`${completedSetupCount}`} />
+        <StatCard
+          title="Needs setup"
+          value={`${incompleteSetupCount}`}
+          warn={incompleteSetupCount > 0}
+        />
+        <StatCard
+          title="Latest client"
+          value={clients[0]?.full_name || "None yet"}
+          small
+        />
+      </div>
 
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
-                  View client profiles, open client details, manage starting
-                  info, goals, assigned programs, submitted workouts, reset
-                  passwords, and reactivate locked or suspended logins.
-                </p>
-              </div>
+      {statusMessage && (
+        <div className="mb-4 rounded-2xl border border-line bg-white p-4 text-sm leading-6 text-ink/80">
+          <p>{statusMessage}</p>
 
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={loadClients}
-                  className="w-full rounded-xl bg-white/15 px-4 py-3 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto sm:py-2"
-                >
-                  Refresh
-                </button>
-
-                <Link
-                  to="/create-client"
-                  className="w-full rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-50 sm:w-auto sm:py-2"
-                >
-                  Add Client
-                </Link>
-
-                <Link
-                  to="/trainer"
-                  className="w-full rounded-xl bg-white/15 px-4 py-3 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 sm:w-auto sm:py-2"
-                >
-                  Back to Trainer
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-4 p-4 sm:p-6 md:grid-cols-4 md:p-8">
-            <StatCard title="Total Clients" value={`${clients.length}`} />
-
-            <StatCard
-              title="Setup Complete"
-              value={`${completedSetupCount}`}
-            />
-
-            <StatCard title="Needs Setup" value={`${incompleteSetupCount}`} />
-
-            <StatCard
-              title="Latest Client"
-              value={clients[0]?.full_name || "None yet"}
-            />
-          </div>
-        </div>
-
-        <div className="mb-6 rounded-3xl border border-sky-100 bg-white p-4 shadow-sm sm:p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">
-                Search Clients
-              </h2>
-
-              <p className="mt-1 text-sm leading-6 text-slate-500">
-                Search by name, client ID, or auth UID.
+          {lastResetLink && (
+            <div className="mt-3 rounded-xl bg-canvas p-3">
+              <p className="text-xs font-semibold text-muted">
+                Last generated reset link
               </p>
+              <p className="mt-1 break-all text-xs text-muted">{lastResetLink}</p>
+              <button
+                type="button"
+                onClick={copyLastResetLink}
+                className={`${btnPrimary} mt-3 h-9`}
+              >
+                Copy again
+              </button>
             </div>
-
-            <div className="w-full md:max-w-md">
-              <input
-                value={searchText}
-                onChange={(event) => setSearchText(event.target.value)}
-                placeholder="Search clients..."
-                className="w-full rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-          </div>
+          )}
         </div>
+      )}
 
-        {statusMessage && (
-          <div className="mb-6 rounded-2xl border border-sky-100 bg-white p-4 text-sm font-medium leading-6 text-slate-700 shadow-sm">
-            <p>{statusMessage}</p>
-
-            {lastResetLink && (
-              <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Last Generated Reset Link
-                </p>
-
-                <p className="mt-2 break-all text-xs text-slate-600">
-                  {lastResetLink}
-                </p>
-
-                <button
-                  type="button"
-                  onClick={copyLastResetLink}
-                  className="mt-3 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-                >
-                  Copy Again
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+      <section className={`${card} overflow-hidden`}>
+        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <h2 className="text-lg font-bold">All clients</h2>
+          <label className="relative w-full sm:max-w-xs">
+            <span className="sr-only">Search clients</span>
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+            <input
+              type="search"
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              placeholder="Search by name, client ID or auth UID..."
+              className="h-11 w-full rounded-xl border border-line bg-white pl-10 pr-4 text-sm outline-none placeholder:text-muted focus:border-accent/40 focus:ring-2 focus:ring-accent/15"
+            />
+          </label>
+        </div>
 
         {isLoading ? (
           <EmptyState
@@ -403,7 +364,7 @@ export default function Clients() {
         ) : clients.length === 0 ? (
           <EmptyState
             title="No clients found"
-            description="Click Add Client to create your first real client profile."
+            description="Click Add client to create your first real client profile."
           />
         ) : filteredClients.length === 0 ? (
           <EmptyState
@@ -411,7 +372,7 @@ export default function Clients() {
             description="Try searching a different name, client ID, or auth UID."
           />
         ) : (
-          <div className="grid gap-5 md:grid-cols-2">
+          <ul>
             {filteredClients.map((client) => {
               const isDeleting = deletingClientId === client.id;
               const isResetting = resettingClientId === client.id;
@@ -419,157 +380,149 @@ export default function Clients() {
               const isBusy = isDeleting || isResetting || isReactivating;
 
               return (
-                <div
+                <li
                   key={client.id}
-                  className={`rounded-3xl border border-sky-100 bg-white p-5 shadow-sm transition sm:p-6 ${
-                    isBusy
-                      ? "opacity-60"
-                      : "hover:-translate-y-1 hover:border-blue-200 hover:shadow-md"
+                  className={`flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-line px-4 py-4 sm:px-6 ${
+                    isBusy ? "opacity-60" : ""
                   }`}
                 >
-                  <div className="mb-5 flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-xl ring-1 ring-sky-100">
-                        👤
-                      </div>
-
-                      <h2 className="break-words text-xl font-bold text-slate-900">
+                  <Link
+                    to={`/clients/${client.id}`}
+                    className="flex min-w-[220px] flex-1 items-center gap-3"
+                  >
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink text-xs font-bold text-white">
+                      {getInitials(client.full_name)}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold">
                         {client.full_name}
-                      </h2>
+                      </span>
+                      <span className="block truncate text-sm text-muted">
+                        {client.client_id || "No client ID"} · Added{" "}
+                        {new Date(client.created_at).toLocaleDateString()}
+                      </span>
+                    </span>
+                  </Link>
 
-                      <p className="mt-1 break-words text-sm text-slate-500">
-                        Client ID: {client.client_id || "Not set"}
-                      </p>
-                    </div>
+                  <SetupBadge setupComplete={client.setup_complete} />
 
-                    <SetupBadge setupComplete={client.setup_complete} />
-                  </div>
-
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <InfoBox
-                      label="Created"
-                      value={new Date(client.created_at).toLocaleDateString()}
-                    />
-
-                    <InfoBox
-                      label="Setup"
-                      value={
-                        client.setup_complete
-                          ? "Complete"
-                          : "Not completed yet"
-                      }
-                    />
-                  </div>
-
-                  <div className="mt-4 rounded-2xl border border-sky-100 bg-sky-50 p-4">
-                    <p className="text-sm font-medium text-slate-500">
-                      Auth UID
-                    </p>
-
-                    <p className="mt-1 break-words text-sm font-semibold text-slate-700">
-                      {client.id}
-                    </p>
-                  </div>
-
-                  <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  <div className="flex items-center gap-2">
                     <Link
                       to={`/clients/${client.id}`}
-                      className={`rounded-xl bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-blue-700 sm:py-2 ${
-                        isBusy ? "pointer-events-none opacity-50" : ""
-                      }`}
+                      className={`${btnGhost} h-9 ${isBusy ? "pointer-events-none" : ""}`}
                     >
-                      Open Details
+                      Open
                     </Link>
-
-                    <Link
-                      to="/create-program"
-                      className={`rounded-xl border border-sky-100 bg-sky-50 px-4 py-3 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-50 sm:py-2 ${
-                        isBusy ? "pointer-events-none opacity-50" : ""
-                      }`}
-                    >
-                      Add Program
-                    </Link>
-
                     <Link
                       to="/messages"
-                      className={`rounded-xl border border-sky-100 bg-white px-4 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-sky-50 sm:py-2 ${
-                        isBusy ? "pointer-events-none opacity-50" : ""
-                      }`}
+                      className={`${btnGhost} h-9 ${isBusy ? "pointer-events-none" : ""}`}
                     >
                       Message
                     </Link>
 
-                    <button
-                      type="button"
-                      disabled={isBusy}
-                      onClick={() => generateClientResetLink(client)}
-                      className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50 sm:py-2"
-                    >
-                      {isResetting ? "Generating..." : "Reset Password"}
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={isBusy}
-                      onClick={() => reactivateClientLogin(client)}
-                      className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-center text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50 sm:py-2"
-                    >
-                      {isReactivating ? "Reactivating..." : "Reactivate Login"}
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={isBusy}
-                      onClick={() => deleteClient(client.id, client.full_name)}
-                      className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-center text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 sm:py-2"
-                    >
-                      {isDeleting ? "Deleting..." : "Delete Client"}
-                    </button>
+                    <details className="relative">
+                      <summary
+                        aria-label={`More actions for ${client.full_name}`}
+                        className={`${btnGhost} h-9 w-9 cursor-pointer list-none px-0 [&::-webkit-details-marker]:hidden`}
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </summary>
+                      <div className="absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-xl border border-line bg-white py-1 shadow-[0_8px_30px_rgba(15,20,25,0.12)]">
+                        <Link
+                          to="/create-program"
+                          className="block px-4 py-2.5 text-sm hover:bg-canvas"
+                        >
+                          Add program
+                        </Link>
+                        <button
+                          type="button"
+                          disabled={isBusy}
+                          onClick={() => generateClientResetLink(client)}
+                          className="block w-full px-4 py-2.5 text-left text-sm hover:bg-canvas disabled:opacity-50"
+                        >
+                          {isResetting ? "Generating..." : "Reset password"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isBusy}
+                          onClick={() => reactivateClientLogin(client)}
+                          className="block w-full px-4 py-2.5 text-left text-sm hover:bg-canvas disabled:opacity-50"
+                        >
+                          {isReactivating ? "Reactivating..." : "Reactivate login"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isBusy}
+                          onClick={() => deleteClient(client.id, client.full_name)}
+                          className="block w-full px-4 py-2.5 text-left text-sm text-red-700 hover:bg-red-50 disabled:opacity-50"
+                        >
+                          {isDeleting ? "Deleting..." : "Delete client"}
+                        </button>
+                      </div>
+                    </details>
                   </div>
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
       </section>
-    </main>
+    </TrainerLayout>
   );
+}
+
+function getInitials(name: string) {
+  const parts = name.trim().split(" ").filter(Boolean);
+
+  if (parts.length === 0) return "C";
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
 }
 
 function SetupBadge({ setupComplete }: { setupComplete: boolean | null }) {
   if (setupComplete) {
     return (
-      <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
-        Setup Complete
+      <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+        Setup complete
       </span>
     );
   }
 
   return (
-    <span className="shrink-0 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-100">
-      Needs Setup
+    <span className="shrink-0 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
+      Needs setup
     </span>
   );
 }
 
-function StatCard({ title, value }: { title: string; value: string }) {
+function StatCard({
+  title,
+  value,
+  warn = false,
+  small = false,
+}: {
+  title: string;
+  value: string;
+  warn?: boolean;
+  small?: boolean;
+}) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 sm:p-5">
-      <p className="text-xs font-medium text-slate-500 sm:text-sm">{title}</p>
-
-      <h2 className="mt-2 break-words text-lg font-bold text-slate-900 sm:text-xl">
+    <div
+      className={`rounded-[18px] border p-4 sm:p-5 ${
+        warn ? "border-amber-200 bg-amber-50 text-amber-900" : "border-line bg-white"
+      }`}
+    >
+      <p className={`text-sm ${warn ? "" : "text-muted"}`}>{title}</p>
+      <p
+        className={`mt-1 break-words font-display font-bold ${
+          small ? "text-lg" : "text-[28px] leading-tight"
+        }`}
+      >
         {value}
-      </h2>
-    </div>
-  );
-}
-
-function InfoBox({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
-      <p className="text-sm font-medium text-slate-500">{label}</p>
-
-      <p className="mt-1 break-words font-semibold text-slate-900">{value}</p>
+      </p>
     </div>
   );
 }
@@ -582,14 +535,9 @@ function EmptyState({
   description: string;
 }) {
   return (
-    <div className="rounded-3xl border border-sky-100 bg-white p-8 shadow-sm">
-      <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-xl ring-1 ring-sky-100">
-        👥
-      </div>
-
-      <h2 className="text-xl font-bold text-slate-900">{title}</h2>
-
-      <p className="mt-2 text-slate-500">{description}</p>
+    <div className="border-t border-line px-6 py-10 text-center">
+      <h3 className="text-lg font-bold">{title}</h3>
+      <p className="mt-1 text-sm text-muted">{description}</p>
     </div>
   );
 }

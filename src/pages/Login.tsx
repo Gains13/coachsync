@@ -135,18 +135,18 @@ export default function Login() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
+    <main className="min-h-screen bg-canvas text-ink">
       <section className="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-6 py-10 lg:grid-cols-2">
         <div>
-          <div className="mb-6 inline-flex rounded-full border border-sky-100 bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm">
+          <div className="mb-6 inline-flex rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-accent ">
             CoachSync Training App
           </div>
 
-          <h1 className="text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">
+          <h1 className="text-4xl font-bold tracking-tight text-ink md:text-5xl">
             Training plans, client progress, and workout check-ins in one place.
           </h1>
 
-          <p className="mt-5 max-w-xl text-lg text-slate-500">
+          <p className="mt-5 max-w-xl text-lg text-muted">
             Log in as a trainer to manage clients and programs, or as a client
             to view your plan and submit completed workouts.
           </p>
@@ -158,17 +158,17 @@ export default function Login() {
           </div>
         </div>
 
-        <div className="rounded-[2rem] border border-sky-100 bg-white p-6 shadow-sm md:p-8">
+        <div className="rounded-[18px] border border-line bg-white p-6 md:p-8">
           <div className="mb-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-600">
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-accent">
               Welcome Back
             </p>
 
-            <h2 className="mt-2 text-3xl font-bold text-slate-900">
+            <h2 className="mt-2 text-3xl font-bold text-ink">
               Sign in
             </h2>
 
-            <p className="mt-2 text-slate-500">
+            <p className="mt-2 text-muted">
               Use the email and password connected to your CoachSync account.
             </p>
           </div>
@@ -193,14 +193,14 @@ export default function Login() {
             <div className="-mt-2 flex justify-end">
               <Link
                 to="/forgot-password"
-                className="text-sm font-semibold text-blue-700 transition hover:text-blue-800"
+                className="text-sm font-semibold text-accent transition hover:text-accent-dark"
               >
                 Forgot password?
               </Link>
             </div>
 
             {statusMessage && (
-              <p className="rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-medium text-slate-700">
+              <p className="rounded-2xl border border-line bg-canvas p-4 text-sm font-medium text-ink/80">
                 {statusMessage}
               </p>
             )}
@@ -208,13 +208,13 @@ export default function Login() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full rounded-2xl bg-blue-600 px-5 py-4 font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-2xl bg-accent px-5 py-4 font-semibold text-white hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isLoading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 
-          <p className="mt-5 text-center text-sm text-slate-500">
+          <p className="mt-5 text-center text-sm text-muted">
             Trainer and client access are controlled by the user profile role.
           </p>
         </div>
@@ -238,7 +238,7 @@ function Input({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-semibold text-slate-700">
+      <label className="mb-2 block text-sm font-semibold text-ink/80">
         {label}
       </label>
 
@@ -247,7 +247,7 @@ function Input({
         type={type}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+        className="w-full rounded-xl border border-line bg-white px-4 py-3 text-ink outline-none ring-0 placeholder:text-muted focus:border-accent/40 focus:ring-2 focus:ring-line"
       />
     </div>
   );
@@ -255,12 +255,12 @@ function Input({
 
 function FeatureCard({ title, icon }: { title: string; icon: string }) {
   return (
-    <div className="rounded-3xl border border-sky-100 bg-white p-5 shadow-sm">
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-xl ring-1 ring-sky-100">
+    <div className="rounded-[18px] border border-line bg-white p-5 ">
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-canvas text-xl ring-1 ring-line">
         {icon}
       </div>
 
-      <p className="font-bold text-slate-900">{title}</p>
+      <p className="font-bold text-ink">{title}</p>
     </div>
   );
 }

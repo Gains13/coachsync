@@ -256,17 +256,17 @@ export default function ClientPlan() {
 
   return (
     <ClientLayout unreadMessages={unreadMessages}>
-      <section className="mb-4 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-6 sm:rounded-[2rem]">
-        <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-5 text-white sm:px-6 sm:py-8 md:px-8">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
+      <section className="mb-4 sm:mb-6">
+        <div className="mb-4">
+          <p className="text-sm text-muted">
             CoachSync
           </p>
 
-          <h1 className="mt-2 break-words text-2xl font-black leading-tight sm:mt-3 sm:text-4xl">
+          <h1 className="break-words text-2xl font-bold leading-tight tracking-tight sm:text-[30px]">
             My Plan
           </h1>
 
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
             {activePlan
               ? `${activePlan.name}: view your current workout and upcoming sessions.`
               : "View your current workout and upcoming sessions."} Completed weeks
@@ -275,9 +275,9 @@ export default function ClientPlan() {
         </div>
 
         {activePlan && (
-          <div className="mx-3 mt-3 rounded-2xl border border-blue-100 bg-blue-50 p-4 sm:mx-6 sm:mt-6 md:mx-8">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">Current Plan</p>
-            <p className="mt-1 text-lg font-black text-slate-900">
+          <div className="mb-3 rounded-2xl border border-line bg-accent-soft p-4">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Current Plan</p>
+            <p className="mt-1 text-lg font-bold text-ink">
               {activePlan.name}
               {activePlan.plan_type === "fixed" && activePlan.planned_weeks
                 ? ` • ${activePlan.planned_weeks} weeks`
@@ -286,7 +286,7 @@ export default function ClientPlan() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 md:grid-cols-4 md:p-8">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
           <SummaryCard title="Active Weeks" value={`${activeAssignedWeeks.length}`} />
 
           <SummaryCard title="Completed Weeks" value={`${completedWeekCount}`} />
@@ -305,40 +305,40 @@ export default function ClientPlan() {
         </div>
       </section>
 
-      <section className="rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+      <section className="rounded-[18px] border border-line bg-white p-4 sm:rounded-[18px] sm:p-6">
         {statusMessage && (
-          <p className="mb-5 rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-semibold text-slate-700">
+          <p className="mb-5 rounded-2xl border border-line bg-canvas p-4 text-sm font-semibold text-ink/80">
             {statusMessage}
           </p>
         )}
 
         {isLoadingProgram || isLoadingCompleted ? (
-          <p className="rounded-2xl bg-sky-50 p-5 text-sm font-semibold text-slate-500">
+          <p className="rounded-2xl bg-canvas p-5 text-sm font-semibold text-muted">
             Loading your assigned program...
           </p>
         ) : assignedWeeks.length === 0 ? (
-          <div className="rounded-2xl border border-sky-100 bg-sky-50 p-6">
-            <h3 className="text-lg font-black text-slate-900">
+          <div className="rounded-2xl border border-line bg-canvas p-6">
+            <h3 className="text-lg font-bold text-ink">
               No assigned program yet
             </h3>
 
-            <p className="mt-2 text-sm leading-6 text-slate-500">
+            <p className="mt-2 text-sm leading-6 text-muted">
               Your trainer has not added a program for you yet.
             </p>
           </div>
         ) : sortedActiveWeeks.length === 0 ? (
           <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-6">
-            <h3 className="text-lg font-black text-slate-900">
+            <h3 className="text-lg font-bold text-ink">
               All assigned workouts completed
             </h3>
 
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+            <p className="mt-2 text-sm leading-6 text-muted">
               Great job. Your completed workouts have moved to Past Workouts.
             </p>
 
             <Link
               to="/client-past-workouts"
-              className="mt-5 inline-block rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-700"
+              className="mt-5 inline-block rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700"
             >
               View Past Workouts →
             </Link>
@@ -374,33 +374,33 @@ export default function ClientPlan() {
               return (
                 <div
                   key={week.id}
-                  className={`rounded-[1.5rem] border p-4 sm:rounded-3xl sm:p-5 ${
+                  className={`rounded-[18px] border p-4 sm:rounded-[18px] sm:p-5 ${
                     week.status === "locked"
-                      ? "border-slate-200 bg-slate-50 opacity-80"
-                      : "border-sky-100 bg-sky-50"
+                      ? "border-line bg-canvas opacity-80"
+                      : "border-line bg-canvas"
                   }`}
                 >
                   <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">
                         Training Week
                       </p>
 
-                      <h3 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+                      <h3 className="mt-1 text-xl font-bold text-ink sm:text-2xl">
                         Week {week.week_number}
                       </h3>
 
-                      <p className="mt-1 text-sm font-semibold text-slate-500">
+                      <p className="mt-1 text-sm font-semibold text-muted">
                         {weekCompletedCount} / {weekTotalCount} workout
                         {weekTotalCount === 1 ? "" : "s"} completed
                       </p>
                     </div>
 
                     <span
-                      className={`w-fit rounded-full px-3 py-1 text-xs font-black ${
+                      className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${
                         week.status === "locked"
                           ? "bg-red-50 text-red-600 ring-1 ring-red-100"
-                          : "bg-blue-50 text-blue-700 ring-1 ring-blue-100"
+                          : "bg-accent-soft text-accent ring-1 ring-line"
                       }`}
                     >
                       {week.status === "locked"
@@ -411,7 +411,7 @@ export default function ClientPlan() {
 
                   <div className="space-y-4">
                     {sortedWeekWorkouts.length === 0 ? (
-                      <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-500">
+                      <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-muted">
                         No workouts added for this week yet.
                       </p>
                     ) : (
@@ -432,21 +432,21 @@ export default function ClientPlan() {
                             <Link
                               key={workout.id}
                               to={`/workout-history/${completedSubmissionId}`}
-                              className="block rounded-2xl border border-slate-200 bg-white p-4 opacity-70 shadow-sm transition hover:border-blue-200 hover:opacity-100 hover:shadow-md active:scale-[0.99] sm:p-5"
+                              className="block rounded-2xl border border-line bg-white p-4 opacity-70 transition hover:border-accent/30 hover:opacity-100  active:scale-[0.99] sm:p-5"
                             >
                               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                <h4 className="text-base font-black text-slate-900 sm:text-lg">
+                                <h4 className="text-base font-bold text-ink sm:text-lg">
                                   {workout.title}
                                 </h4>
 
-                                <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-100">
+                                <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">
                                   Completed
                                 </span>
                               </div>
 
                               <WorkoutExerciseList workout={workout} />
 
-                              <div className="mt-4 inline-block rounded-xl bg-slate-100 px-4 py-3 text-sm font-black text-slate-700">
+                              <div className="mt-4 inline-block rounded-xl bg-slate-100 px-4 py-3 text-sm font-bold text-ink/80">
                                 View Completed Workout →
                               </div>
                             </Link>
@@ -456,27 +456,27 @@ export default function ClientPlan() {
                         return (
                           <div
                             key={workout.id}
-                            className={`rounded-2xl border p-4 shadow-sm sm:p-5 ${
+                            className={`rounded-2xl border p-4  sm:p-5 ${
                               isCurrentWorkout
-                                ? "border-blue-300 bg-white shadow-blue-100"
-                                : "border-slate-200 bg-white opacity-75"
+                                ? "border-accent/40 bg-white shadow-blue-100"
+                                : "border-line bg-white opacity-75"
                             }`}
                           >
                             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                              <h4 className="text-base font-black text-slate-900 sm:text-lg">
+                              <h4 className="text-base font-bold text-ink sm:text-lg">
                                 {workout.title}
                               </h4>
 
                               {isCurrentWorkout ? (
-                                <span className="w-fit rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-100">
+                                <span className="w-fit rounded-full bg-accent-soft px-3 py-1 text-xs font-bold text-accent ring-1 ring-line">
                                   Current Workout
                                 </span>
                               ) : week.status === "locked" ? (
-                                <span className="w-fit rounded-full bg-red-50 px-3 py-1 text-xs font-black text-red-600 ring-1 ring-red-100">
+                                <span className="w-fit rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-600 ring-1 ring-red-100">
                                   Locked
                                 </span>
                               ) : isUpcoming ? (
-                                <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-500 ring-1 ring-slate-200">
+                                <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-muted ring-1 ring-slate-200">
                                   Upcoming
                                 </span>
                               ) : null}
@@ -488,7 +488,7 @@ export default function ClientPlan() {
                               {week.status !== "locked" && (
                                 <Link
                                   to={`/preview-workout?workoutId=${workout.id}`}
-                                  className="block w-full rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-center text-sm font-black text-blue-700 hover:bg-blue-100 active:scale-[0.99] sm:w-auto"
+                                  className="block w-full rounded-2xl border border-accent/30 bg-accent-soft px-4 py-3 text-center text-sm font-bold text-accent hover:bg-accent-soft active:scale-[0.99] sm:w-auto"
                                 >
                                   Preview Workout
                                 </Link>
@@ -497,14 +497,14 @@ export default function ClientPlan() {
                               {isCurrentWorkout ? (
                                 <Link
                                   to={`/start-workout?workoutId=${workout.id}`}
-                                  className="block w-full rounded-2xl bg-blue-600 px-4 py-3 text-center text-sm font-black text-white shadow-sm hover:bg-blue-700 active:scale-[0.99] sm:w-auto"
+                                  className="block w-full rounded-2xl bg-accent px-4 py-3 text-center text-sm font-bold text-white hover:bg-accent-dark active:scale-[0.99] sm:w-auto"
                                 >
                                   Start Workout →
                                 </Link>
                               ) : (
                                 <button
                                   disabled
-                                  className="w-full cursor-not-allowed rounded-2xl bg-slate-100 px-4 py-3 text-sm font-black text-slate-500 sm:w-auto"
+                                  className="w-full cursor-not-allowed rounded-2xl bg-slate-100 px-4 py-3 text-sm font-bold text-muted sm:w-auto"
                                 >
                                   {week.status === "locked"
                                     ? "Locked until trainer unlocks"
@@ -525,7 +525,7 @@ export default function ClientPlan() {
       </section>
 
       {!isLoadingProgram && !isLoadingCompleted && activeWorkoutCount > 0 && (
-        <p className="mt-4 text-center text-xs font-semibold text-slate-400">
+        <p className="mt-4 text-center text-xs font-semibold text-muted">
           Completed workouts will stay visible here until the whole week is done.
           Once the week is completed, it moves out of My Plan and remains in Past
           Workouts.
@@ -542,7 +542,7 @@ function WorkoutExerciseList({ workout }: { workout: PlanWorkout }) {
 
   if (exercises.length === 0) {
     return (
-      <p className="rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-semibold text-slate-500">
+      <p className="rounded-2xl border border-line bg-canvas p-4 text-sm font-semibold text-muted">
         No exercises added yet.
       </p>
     );
@@ -553,17 +553,17 @@ function WorkoutExerciseList({ workout }: { workout: PlanWorkout }) {
       {exercises.map((exercise) => (
         <div
           key={exercise.id}
-          className="rounded-2xl border border-sky-100 bg-sky-50 p-4"
+          className="rounded-2xl border border-line bg-canvas p-4"
         >
           {exercise.section && (
-            <p className="mb-1 text-xs font-black uppercase tracking-wide text-blue-600">
+            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-accent">
               {exercise.section}
             </p>
           )}
 
-          <p className="font-black text-slate-900">{exercise.exercise_name}</p>
+          <p className="font-bold text-ink">{exercise.exercise_name}</p>
 
-          <p className="mt-1 text-sm leading-6 text-slate-500">
+          <p className="mt-1 text-sm leading-6 text-muted">
             {exercise.sets} sets x {exercise.reps} reps • Weight:{" "}
             {exercise.weight || "N/A"} • Rest: {exercise.rest || "N/A"}
           </p>
@@ -574,7 +574,7 @@ function WorkoutExerciseList({ workout }: { workout: PlanWorkout }) {
               target="_blank"
               rel="noreferrer"
               onClick={(event) => event.stopPropagation()}
-              className="mt-3 inline-block rounded-xl bg-blue-600 px-3 py-2 text-sm font-black text-white hover:bg-blue-700"
+              className="mt-3 inline-block rounded-xl bg-accent px-3 py-2 text-sm font-bold text-white hover:bg-accent-dark"
             >
               Watch Video
             </a>
@@ -596,17 +596,17 @@ function SummaryCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border p-4 shadow-sm ${
-        alert ? "border-blue-200 bg-blue-50" : "border-sky-100 bg-sky-50"
+      className={`rounded-2xl border p-4  ${
+        alert ? "border-accent/30 bg-accent-soft" : "border-line bg-canvas"
       }`}
     >
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+      <p className="text-xs font-bold uppercase tracking-wide text-muted">
         {title}
       </p>
 
       <h2
-        className={`mt-2 line-clamp-2 break-words text-xl font-black leading-tight sm:text-2xl ${
-          alert ? "text-blue-700" : "text-slate-900"
+        className={`mt-2 line-clamp-2 break-words text-xl font-bold leading-tight sm:text-2xl ${
+          alert ? "text-accent" : "text-ink"
         }`}
       >
         {value}

@@ -1,7 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
-import { logoutUser } from "../lib/authHelpers";
+import {
+  AlertTriangle,
+  BookOpen,
+  CalendarDays,
+  ChevronRight,
+  Layers,
+  Plus,
+  RefreshCw,
+  Upload,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
+import TrainerLayout from "../components/TrainerLayout";
+import PageHeader from "../components/ui/PageHeader";
+import { btnGhost, btnPrimary, card } from "../components/ui/styles";
 
 type ClientProfile = {
   id: string;
@@ -66,19 +80,13 @@ type ActivityItem = {
   priority?: "high" | "normal";
 };
 
-type SidebarItem = {
-  to: string;
-  title: string;
-  icon: string;
-  badge?: number;
-};
-
 export default function TrainerDashboard() {
   const displayName =
     localStorage.getItem("coachsync-display-name") || "Trainer";
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [feedFilter, setFeedFilter] = useState<"all" | "pain" | "messages">(
+    "all"
+  );
 
   const [trainerUserId, setTrainerUserId] = useState("");
   const [clients, setClients] = useState<ClientProfile[]>([]);
@@ -395,516 +403,250 @@ export default function TrainerDashboard() {
     recentPersonalLogs.length +
     painReports.length;
 
-  const sidebarItems: SidebarItem[] = [
-    {
-      to: "/clients",
-      title: "Clients",
-      icon: "👥",
-    },
-    {
-      to: "/create-client",
-      title: "Create Client",
-      icon: "➕",
-    },
-    {
-      to: "/create-program",
-      title: "Create Program",
-      icon: "📋",
-    },
-    {
-      to: "/training-plans",
-      title: "Training Plans",
-      icon: "🗂️",
-    },
-    {
-      to: "/import-program",
-      title: "Import Program",
-      icon: "📥",
-    },
-    {
-      to: "/messages",
-      title: "Messages",
-      icon: "💬",
-      badge: unreadClientMessages.length,
-    },
-    {
-      to: "/workout-tracker",
-      title: "Workout Tracker",
-      icon: "🏋️",
-      badge: exerciseNotes.length + painReports.length,
-    },
-    {
-      to: "/workout-history",
-      title: "Workout History",
-      icon: "🕓",
-      badge: recentWorkoutSubmissions.length,
-    },
-    {
-      to: "/program",
-      title: "Templates",
-      icon: "📚",
-    },
-  ];
+  const visibleActivity = activityItems.filter((item) => {
+    if (feedFilter === "pain") return item.type === "pain";
+    if (feedFilter === "messages") return item.type === "message";
+    return true;
+  });
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
-      <div className="flex min-h-screen">
-        <aside
-          className={`hidden border-r border-sky-100 bg-white shadow-sm transition-all duration-300 lg:block ${
-            sidebarOpen ? "w-72" : "w-24"
-          }`}
-        >
-          <SidebarContent
-            sidebarOpen={sidebarOpen}
-            setSidebarOpen={setSidebarOpen}
-            sidebarItems={sidebarItems}
-          />
-        </aside>
+    <TrainerLayout unreadMessages={unreadClientMessages.length}>
+      <PageHeader
+        eyebrow="Today"
+        title={`Welcome, ${displayName}`}
+        description={`${notificationCount} activity update${
+          notificationCount === 1 ? "" : "s"
+        } to review.`}
+        actions={
+          <>
+            <Link to="/create-client" className={btnGhost}>
+              Add client
+            </Link>
+            <Link to="/create-program" className={btnPrimary}>
+              <Plus className="h-4 w-4" />
+              Create program
+            </Link>
+          </>
+        }
+      />
 
-        {mobileSidebarOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden">
-            <button
-              type="button"
-              aria-label="Close sidebar"
-              onClick={() => setMobileSidebarOpen(false)}
-              className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
-            />
+      <div className="mb-4 grid grid-cols-3 gap-3 lg:grid-cols-6">
+        <SummaryCard
+          title="Pain alerts"
+          value={painReports.length}
+          danger={painReports.length > 0}
+        />
+        <SummaryCard
+          title="High pain"
+          value={highPriorityPainReports.length}
+          danger={highPriorityPainReports.length > 0}
+        />
+        <SummaryCard title="Messages" value={unreadClientMessages.length} />
+        <SummaryCard title="Workouts" value={recentWorkoutSubmissions.length} />
+        <SummaryCard title="Personal" value={recentPersonalLogs.length} />
+        <SummaryCard title="Notes" value={exerciseNotes.length} />
+      </div>
 
-            <aside className="relative h-full w-80 max-w-[86vw] border-r border-sky-100 bg-white shadow-2xl">
-              <SidebarContent
-                sidebarOpen={true}
-                setSidebarOpen={setSidebarOpen}
-                sidebarItems={sidebarItems}
-                closeMobile={() => setMobileSidebarOpen(false)}
-              />
-            </aside>
+      {highPriorityPainReports.length > 0 && (
+        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-800">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+          <div>
+            <p className="font-semibold">
+              {highPriorityPainReports.length} high-priority pain report
+              {highPriorityPainReports.length === 1 ? "" : "s"} need review.
+            </p>
+            <p className="text-sm">These are reports marked 7/10 or higher.</p>
           </div>
-        )}
+        </div>
+      )}
 
-        <section className="min-w-0 flex-1">
-          <div className="sticky top-0 z-30 border-b border-sky-100 bg-white/90 px-4 py-3 shadow-sm backdrop-blur lg:hidden">
-            <div className="flex items-center justify-between gap-3">
+      {statusMessage && (
+        <p className="mb-4 rounded-2xl border border-line bg-white p-4 text-sm leading-6 text-ink/80">
+          {statusMessage}
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-start gap-4">
+        <section className={`${card} min-w-0 flex-[999_1_520px] overflow-hidden`}>
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 pb-3 pt-5 sm:px-6">
+            <h2 className="text-lg font-bold">Needs attention</h2>
+            <div className="flex items-center gap-1.5">
+              {(
+                [
+                  ["all", "All"],
+                  ["pain", "Pain"],
+                  ["messages", "Messages"],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={feedFilter === value}
+                  onClick={() => setFeedFilter(value)}
+                  className={`h-8 rounded-full border px-3 text-sm font-medium transition ${
+                    feedFilter === value
+                      ? "border-ink bg-ink text-white"
+                      : "border-line bg-white text-ink hover:bg-canvas"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
               <button
                 type="button"
-                onClick={() => setMobileSidebarOpen(true)}
-                className="inline-flex items-center gap-2 rounded-2xl border border-sky-100 bg-white px-3 py-2 text-sm font-bold text-blue-700 shadow-sm active:scale-[0.98]"
+                onClick={loadTrainerDashboardData}
+                aria-label="Refresh activity"
+                className="ml-1 flex h-8 w-8 items-center justify-center rounded-full border border-line text-muted hover:bg-canvas"
               >
-                <span className="text-lg">☰</span>
-                Menu
-              </button>
-
-              <div className="min-w-0 text-center">
-                <p className="truncate text-sm font-black text-slate-900">
-                  CoachSync
-                </p>
-                <p className="text-[11px] font-medium text-slate-500">
-                  Trainer Portal
-                </p>
-              </div>
-
-              <button
-                onClick={logoutUser}
-                className="rounded-2xl border border-sky-100 bg-white px-3 py-2 text-sm font-bold text-slate-700 shadow-sm active:scale-[0.98]"
-              >
-                Logout
+                <RefreshCw className="h-4 w-4" />
               </button>
             </div>
           </div>
 
-          <div className="mx-auto w-full max-w-7xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
-            <section className="mb-4 overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-sm sm:mb-8 sm:rounded-[2rem]">
-              <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-5 text-white sm:px-6 sm:py-8 md:px-8">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100 sm:text-sm sm:tracking-[0.3em]">
-                      CoachSync Trainer Dashboard
-                    </p>
-
-                    <h1 className="mt-2 break-words text-2xl font-black leading-tight sm:mt-3 sm:text-4xl">
-                      Welcome, {displayName}
-                    </h1>
-
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50 sm:mt-3 sm:text-base">
-                      You have{" "}
-                      <span className="font-bold text-white">
-                        {notificationCount}
-                      </span>{" "}
-                      activity updates to review.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={logoutUser}
-                    className="hidden rounded-xl bg-white/15 px-4 py-3 text-center text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25 lg:block"
-                  >
-                    Log out
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-6 lg:grid-cols-6 lg:p-8">
-                <SummaryCard
-                  title="Pain Alerts"
-                  value={`${painReports.length}`}
-                  danger={painReports.length > 0}
-                />
-
-                <SummaryCard
-                  title="High Pain"
-                  value={`${highPriorityPainReports.length}`}
-                  danger={highPriorityPainReports.length > 0}
-                />
-
-                <SummaryCard
-                  title="Messages"
-                  value={`${unreadClientMessages.length}`}
-                  alert={unreadClientMessages.length > 0}
-                />
-
-                <SummaryCard
-                  title="Workouts"
-                  value={`${recentWorkoutSubmissions.length}`}
-                  alert={recentWorkoutSubmissions.length > 0}
-                />
-
-                <SummaryCard
-                  title="Personal"
-                  value={`${recentPersonalLogs.length}`}
-                  alert={recentPersonalLogs.length > 0}
-                />
-
-                <SummaryCard
-                  title="Notes"
-                  value={`${exerciseNotes.length}`}
-                  alert={exerciseNotes.length > 0}
-                />
-              </div>
-
-              {highPriorityPainReports.length > 0 && (
-                <div className="px-4 pb-4 sm:px-6 lg:px-8 lg:pb-8">
-                  <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
-                    <p className="text-sm font-black text-red-700">
-                      {highPriorityPainReports.length} high-priority pain report
-                      {highPriorityPainReports.length === 1 ? "" : "s"} need
-                      review.
-                    </p>
-
-                    <p className="mt-1 text-sm font-semibold leading-6 text-red-600">
-                      These are reports marked 7/10 or higher.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </section>
-
-            {statusMessage && (
-              <p className="mb-4 rounded-2xl border border-sky-100 bg-white p-4 text-sm font-medium leading-6 text-slate-700 shadow-sm sm:mb-6">
-                {statusMessage}
-              </p>
-            )}
-
-            <section className="rounded-[1.75rem] border border-sky-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
-              <div className="mb-4 flex flex-col gap-3 sm:mb-5 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
-                    Priority Activity
-                  </p>
-
-                  <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
-                    Activity Center
-                  </h2>
-
-                  <p className="mt-1 text-sm leading-6 text-slate-500">
-                    Pain reports, new messages, program workouts, personal
-                    activity logs, and exercise notes from your clients.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={loadTrainerDashboardData}
-                  className="w-full rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-center text-sm font-bold text-blue-700 transition hover:bg-blue-50 active:scale-[0.99] sm:w-auto"
-                >
-                  Refresh
-                </button>
-              </div>
-
-              {isLoadingActivity ? (
-                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5 text-sm font-semibold text-slate-600">
-                  Loading dashboard activity...
-                </div>
-              ) : activityItems.length === 0 ? (
-                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5">
-                  <h3 className="font-black text-slate-900">
-                    No new activity yet
-                  </h3>
-
-                  <p className="mt-1 text-sm leading-6 text-slate-500">
-                    Pain reports, client messages, workout submissions, personal
-                    activity logs, and exercise notes will appear here.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid gap-3 sm:gap-4">
-                  {activityItems.map((item) => (
-                    <ActivityCard
-                      key={item.id}
-                      item={item}
-                      clientId={getClientId(item.clientUserId)}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-          </div>
-        </section>
-      </div>
-    </main>
-  );
-}
-
-function SidebarContent({
-  sidebarOpen,
-  setSidebarOpen,
-  sidebarItems,
-  closeMobile,
-}: {
-  sidebarOpen: boolean;
-  setSidebarOpen: (value: boolean) => void;
-  sidebarItems: SidebarItem[];
-  closeMobile?: () => void;
-}) {
-  return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-sky-100 p-4">
-        <Link
-          to="/trainer"
-          onClick={closeMobile}
-          className="flex min-w-0 items-center gap-3"
-        >
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-lg font-black text-white">
-            C
-          </div>
-
-          {sidebarOpen && (
-            <div className="min-w-0">
-              <p className="truncate text-sm font-black text-slate-900">
-                CoachSync
-              </p>
-
-              <p className="truncate text-xs font-medium text-slate-500">
-                Trainer Portal
+          {isLoadingActivity ? (
+            <p className="border-t border-line px-6 py-8 text-sm text-muted">
+              Loading dashboard activity...
+            </p>
+          ) : visibleActivity.length === 0 ? (
+            <div className="border-t border-line px-6 py-10 text-center">
+              <h3 className="font-bold">Nothing here yet</h3>
+              <p className="mt-1 text-sm text-muted">
+                Pain reports, client messages, workout submissions, personal
+                activity and exercise notes will appear here.
               </p>
             </div>
+          ) : (
+            <ul>
+              {visibleActivity.map((item) => (
+                <ActivityRow
+                  key={item.id}
+                  item={item}
+                  clientId={getClientId(item.clientUserId)}
+                />
+              ))}
+            </ul>
           )}
-        </Link>
+        </section>
 
-        <button
-          type="button"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="hidden rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-sm font-black text-blue-700 hover:bg-blue-50 lg:block"
-        >
-          {sidebarOpen ? "‹" : "›"}
-        </button>
+        <aside className={`${card} flex-[1_1_280px] p-5`}>
+          <h2 className="text-lg font-bold">Quick actions</h2>
+          <div className="mt-3 grid gap-2">
+            <QuickLink to="/clients" icon={Users} label="View clients" />
+            <QuickLink to="/create-program" icon={Layers} label="Create program" />
+            <QuickLink to="/training-plans" icon={CalendarDays} label="Training plans" />
+            <QuickLink to="/import-program" icon={Upload} label="Import notes" />
+            <QuickLink to="/program" icon={BookOpen} label="Templates" />
+          </div>
+        </aside>
       </div>
-
-      <nav className="flex-1 space-y-2 overflow-y-auto p-4">
-        {sidebarItems.map((item) => (
-          <SidebarLink
-            key={item.to}
-            item={item}
-            sidebarOpen={sidebarOpen}
-            closeMobile={closeMobile}
-          />
-        ))}
-      </nav>
-
-      <div className="border-t border-sky-100 p-4">
-        <button
-          type="button"
-          onClick={logoutUser}
-          className={`flex w-full items-center gap-3 rounded-2xl border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-700 transition hover:bg-red-100 ${
-            sidebarOpen ? "justify-start" : "justify-center"
-          }`}
-        >
-          <span className="text-lg">🚪</span>
-
-          {sidebarOpen && <span>Log out</span>}
-        </button>
-      </div>
-    </div>
+    </TrainerLayout>
   );
 }
 
-function SidebarLink({
-  item,
-  sidebarOpen,
-  closeMobile,
+function QuickLink({
+  to,
+  icon: Icon,
+  label,
 }: {
-  item: SidebarItem;
-  sidebarOpen: boolean;
-  closeMobile?: () => void;
+  to: string;
+  icon: LucideIcon;
+  label: string;
 }) {
   return (
     <Link
-      to={item.to}
-      onClick={closeMobile}
-      className={`group relative flex items-center gap-3 rounded-2xl border border-transparent p-3 text-sm font-bold text-slate-700 transition hover:border-blue-100 hover:bg-blue-50 hover:text-blue-700 ${
-        sidebarOpen ? "justify-start" : "justify-center"
-      }`}
+      to={to}
+      className="flex items-center gap-3 rounded-xl bg-canvas px-3 py-2.5 text-sm font-semibold transition hover:bg-accent-soft hover:text-accent"
     >
-      <span className="text-xl">{item.icon}</span>
-
-      {sidebarOpen && (
-        <span className="min-w-0 flex-1 truncate">{item.title}</span>
-      )}
-
-      {item.badge && item.badge > 0 ? (
-        <span
-          className={`rounded-full bg-red-600 px-2 py-0.5 text-xs font-black text-white ${
-            sidebarOpen ? "" : "absolute right-1 top-1"
-          }`}
-        >
-          {item.badge}
-        </span>
-      ) : null}
+      <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
+      <span className="flex-1">{label}</span>
+      <ChevronRight className="h-4 w-4 text-muted" />
     </Link>
   );
 }
 
-function ActivityCard({
+function getInitials(name: string) {
+  const parts = name.trim().split(" ").filter(Boolean);
+
+  if (parts.length === 0) return "C";
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
+const typeStyles = {
+  message: { label: "Message", pill: "bg-accent-soft text-accent" },
+  workout: { label: "Workout", pill: "bg-emerald-50 text-emerald-700" },
+  personal: { label: "Personal activity", pill: "bg-violet-50 text-violet-700" },
+  note: { label: "Exercise note", pill: "bg-amber-50 text-amber-800" },
+  pain: { label: "Pain report", pill: "bg-red-50 text-red-700" },
+};
+
+function ActivityRow({
   item,
   clientId,
 }: {
   item: ActivityItem;
   clientId: string;
 }) {
-  const typeStyles = {
-    message: {
-      icon: "💬",
-      label: "Message",
-      badge: "bg-blue-50 text-blue-700 ring-blue-100",
-      card: "border-sky-100 bg-sky-50 hover:border-blue-200 hover:bg-blue-50",
-      text: "text-blue-600",
-    },
-    workout: {
-      icon: "✅",
-      label: "Program Workout",
-      badge: "bg-emerald-50 text-emerald-700 ring-emerald-100",
-      card:
-        "border-emerald-100 bg-emerald-50 hover:border-emerald-200 hover:bg-emerald-50",
-      text: "text-emerald-700",
-    },
-    personal: {
-      icon: "🚶",
-      label: "Personal Activity",
-      badge: "bg-teal-50 text-teal-700 ring-teal-100",
-      card: "border-teal-100 bg-teal-50 hover:border-teal-200 hover:bg-teal-50",
-      text: "text-teal-700",
-    },
-    note: {
-      icon: "📝",
-      label: "Exercise Note",
-      badge: "bg-amber-50 text-amber-700 ring-amber-100",
-      card:
-        "border-amber-100 bg-amber-50 hover:border-amber-200 hover:bg-amber-50",
-      text: "text-amber-700",
-    },
-    pain: {
-      icon: "⚠️",
-      label: item.priority === "high" ? "High Priority Pain" : "Pain Report",
-      badge: "bg-red-50 text-red-700 ring-red-100",
-      card: "border-red-100 bg-red-50 hover:border-red-200 hover:bg-red-50",
-      text: "text-red-700",
-    },
-  };
-
   const style = typeStyles[item.type];
 
   return (
-    <Link
-      to={item.link}
-      className={`block rounded-2xl border p-4 transition hover:-translate-y-1 hover:shadow-md active:scale-[0.99] sm:rounded-3xl sm:p-5 ${style.card}`}
-    >
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0">
-          <div className="mb-3 flex flex-wrap items-center gap-2 sm:gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-lg ring-1 ring-sky-100 sm:h-11 sm:w-11 sm:text-xl">
-              {style.icon}
-            </div>
+    <li className="border-t border-line">
+      <Link
+        to={item.link}
+        className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-4 transition hover:bg-canvas sm:px-6"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink text-xs font-bold text-white">
+          {getInitials(item.clientName)}
+        </span>
 
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${style.badge}`}
-            >
-              {style.label}
+        <div className="min-w-[200px] flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-semibold">{item.clientName}</p>
+            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${style.pill}`}>
+              {item.priority === "high" ? "High priority pain" : style.label}
             </span>
-
-            {item.priority === "high" && (
-              <span className="rounded-full bg-red-600 px-3 py-1 text-xs font-black text-white">
-                Review Now
-              </span>
-            )}
           </div>
-
-          <h3 className="break-words text-base font-black leading-snug text-slate-900 sm:text-lg">
-            {item.title}
-          </h3>
-
-          <p className="mt-1 text-sm font-bold text-slate-700">
-            {item.clientName}
-          </p>
-
-          <p className="text-xs font-medium text-slate-500">
-            Client ID: {clientId}
-          </p>
-
-          <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-500">
-            {item.description}
-          </p>
+          <p className="mt-0.5 text-sm font-medium text-ink/80">{item.title}</p>
+          <p className="line-clamp-2 text-sm text-muted">{item.description}</p>
+          <p className="text-xs text-muted">Client ID: {clientId}</p>
         </div>
 
-        <div className="shrink-0 text-xs font-medium text-slate-400 sm:text-sm sm:text-slate-500">
-          {new Date(item.createdAt).toLocaleString()}
-        </div>
-      </div>
-
-      <p className={`mt-3 text-sm font-black sm:mt-4 ${style.text}`}>Open →</p>
-    </Link>
+        <span className="text-sm text-muted">
+          {new Date(item.createdAt).toLocaleString(undefined, {
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          })}
+        </span>
+        <span className="text-sm font-semibold text-accent">Open</span>
+      </Link>
+    </li>
   );
 }
 
 function SummaryCard({
   title,
   value,
-  alert = false,
   danger = false,
 }: {
   title: string;
-  value: string;
-  alert?: boolean;
+  value: number;
   danger?: boolean;
 }) {
   return (
     <div
-      className={`rounded-2xl border p-4 shadow-sm ${
-        danger
-          ? "border-red-200 bg-red-50"
-          : alert
-          ? "border-blue-200 bg-blue-50"
-          : "border-sky-100 bg-sky-50"
+      className={`rounded-[18px] border p-3.5 sm:p-4 ${
+        danger ? "border-red-200 bg-red-50 text-red-700" : "border-line bg-white"
       }`}
     >
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-        {title}
-      </p>
-
-      <h2
-        className={`mt-2 break-words text-2xl font-black leading-none sm:text-3xl ${
-          danger ? "text-red-700" : alert ? "text-blue-700" : "text-slate-900"
-        }`}
-      >
+      <p className={`text-xs sm:text-sm ${danger ? "" : "text-muted"}`}>{title}</p>
+      <p className="mt-1 font-display text-2xl font-bold leading-none sm:text-[30px]">
         {value}
-      </h2>
+      </p>
     </div>
   );
 }

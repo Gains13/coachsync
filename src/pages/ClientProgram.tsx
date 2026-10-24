@@ -291,13 +291,13 @@ export default function CreateProgram() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 text-slate-900">
+    <main className="min-h-screen bg-canvas text-ink">
       <section className="mx-auto max-w-6xl px-6 py-10">
-        <div className="mb-8 overflow-hidden rounded-[2rem] border border-sky-100 bg-white shadow-sm">
-          <div className="bg-gradient-to-r from-blue-600 to-sky-500 px-6 py-8 text-white md:px-8">
+        <div className="mb-8 overflow-hidden rounded-[18px] border border-line bg-white ">
+          <div className="bg-ink px-6 py-8 text-white md:px-8">
             <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-100">
+                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white/75">
                   Program Builder
                 </p>
 
@@ -305,7 +305,7 @@ export default function CreateProgram() {
                   Create Client Program
                 </h1>
 
-                <p className="mt-3 max-w-2xl text-blue-50">
+                <p className="mt-3 max-w-2xl text-white/75">
                   Build one training week with multiple workouts and exercises.
                 </p>
               </div>
@@ -328,18 +328,18 @@ export default function CreateProgram() {
 
         <form
           onSubmit={saveProgram}
-          className="rounded-3xl border border-sky-100 bg-white p-6 shadow-sm"
+          className="rounded-[18px] border border-line bg-white p-6 "
         >
           <div className="grid gap-4 md:grid-cols-3">
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
+              <label className="mb-2 block text-sm font-semibold text-ink/80">
                 Client
               </label>
 
               <select
                 value={selectedClientId}
                 onChange={(event) => setSelectedClientId(event.target.value)}
-                className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                className="w-full rounded-xl border border-line bg-white px-4 py-3 text-ink outline-none focus:border-accent/40 focus:ring-2 focus:ring-line"
               >
                 <option value="">Select client</option>
                 {clients.map((client) => (
@@ -359,14 +359,14 @@ export default function CreateProgram() {
             />
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
+              <label className="mb-2 block text-sm font-semibold text-ink/80">
                 Week Status
               </label>
 
               <select
                 value={weekStatus}
                 onChange={(event) => setWeekStatus(event.target.value)}
-                className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                className="w-full rounded-xl border border-line bg-white px-4 py-3 text-ink outline-none focus:border-accent/40 focus:ring-2 focus:ring-line"
               >
                 <option value="unlocked">Unlocked</option>
                 <option value="locked">Locked</option>
@@ -378,10 +378,10 @@ export default function CreateProgram() {
           <div className="mt-8">
             <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <h2 className="text-xl font-bold text-slate-900">
+                <h2 className="text-xl font-bold text-ink">
                   Workouts / Sessions
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-muted">
                   Add each session for this week, then add exercises inside each session.
                 </p>
               </div>
@@ -389,7 +389,7 @@ export default function CreateProgram() {
               <button
                 type="button"
                 onClick={addWorkout}
-                className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-dark"
               >
                 Add Workout
               </button>
@@ -399,10 +399,10 @@ export default function CreateProgram() {
               {workouts.map((workout, workoutIndex) => (
                 <div
                   key={workoutIndex}
-                  className="rounded-3xl border border-sky-100 bg-sky-50 p-5"
+                  className="rounded-[18px] border border-line bg-canvas p-5"
                 >
                   <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <h3 className="text-lg font-bold text-slate-900">
+                    <h3 className="text-lg font-bold text-ink">
                       Workout {workoutIndex + 1}
                     </h3>
 
@@ -424,12 +424,12 @@ export default function CreateProgram() {
 
                   <div className="mt-5">
                     <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                      <h4 className="font-bold text-slate-900">Exercises</h4>
+                      <h4 className="font-bold text-ink">Exercises</h4>
 
                       <button
                         type="button"
                         onClick={() => addExercise(workoutIndex)}
-                        className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-blue-700 ring-1 ring-sky-100 hover:bg-blue-50"
+                        className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-accent ring-1 ring-line hover:bg-accent-soft"
                       >
                         Add Exercise
                       </button>
@@ -439,10 +439,10 @@ export default function CreateProgram() {
                       {workout.exercises.map((exercise, exerciseIndex) => (
                         <div
                           key={exerciseIndex}
-                          className="rounded-2xl border border-sky-100 bg-white p-4"
+                          className="rounded-2xl border border-line bg-white p-4"
                         >
                           <div className="mb-3 flex items-center justify-between">
-                            <h5 className="font-semibold text-slate-900">
+                            <h5 className="font-semibold text-ink">
                               Exercise {exerciseIndex + 1}
                             </h5>
 
@@ -520,7 +520,7 @@ export default function CreateProgram() {
           </div>
 
           {statusMessage && (
-            <p className="mt-6 rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm font-medium text-slate-700">
+            <p className="mt-6 rounded-2xl border border-line bg-canvas p-4 text-sm font-medium text-ink/80">
               {statusMessage}
             </p>
           )}
@@ -528,7 +528,7 @@ export default function CreateProgram() {
           <button
             type="submit"
             disabled={isSaving}
-            className="mt-6 w-full rounded-2xl bg-blue-600 px-5 py-4 font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-6 w-full rounded-2xl bg-accent px-5 py-4 font-semibold text-white hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving ? "Saving Program..." : "Save Program Week"}
           </button>
@@ -540,9 +540,9 @@ export default function CreateProgram() {
 
 function SummaryCard({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5">
-      <p className="text-sm font-medium text-slate-500">{title}</p>
-      <h2 className="mt-2 text-xl font-bold text-slate-900">{value}</h2>
+    <div className="rounded-[18px] border border-line bg-white p-5">
+      <p className="text-sm font-medium text-muted">{title}</p>
+      <h2 className="mt-2 text-xl font-bold text-ink">{value}</h2>
     </div>
   );
 }
@@ -562,7 +562,7 @@ function Input({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-semibold text-slate-700">
+      <label className="mb-2 block text-sm font-semibold text-ink/80">
         {label}
       </label>
 
@@ -571,7 +571,7 @@ function Input({
         type={type}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+        className="w-full rounded-xl border border-line bg-white px-4 py-3 text-ink outline-none ring-0 placeholder:text-muted focus:border-accent/40 focus:ring-2 focus:ring-line"
       />
     </div>
   );
