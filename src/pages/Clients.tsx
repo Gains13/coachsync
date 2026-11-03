@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { MoreHorizontal, Plus, Search } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
+import ClientLoginActions from "../components/ClientLoginActions";
 import TrainerLayout from "../components/TrainerLayout";
 import PageHeader from "../components/ui/PageHeader";
 import { btnGhost, btnPrimary, card } from "../components/ui/styles";
@@ -20,13 +21,6 @@ export default function Clients() {
   const [searchText, setSearchText] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
-  const [resettingClientId, setResettingClientId] = useState<string | null>(
-    null
-  );
-  const [reactivatingClientId, setReactivatingClientId] = useState<
-    string | null
-  >(null);
-  const [lastResetLink, setLastResetLink] = useState("");
 
   useEffect(() => {
     loadClients();
@@ -35,7 +29,6 @@ export default function Clients() {
   async function loadClients() {
     setIsLoading(true);
     setStatusMessage("");
-    setLastResetLink("");
 
     const { data, error } = await supabase
       .from("profiles")
@@ -52,141 +45,6 @@ export default function Clients() {
 
     setClients(data || []);
     setIsLoading(false);
-  }
-
-  async function generateClientResetLink(client: ClientProfile) {
-    setResettingClientId(client.id);
-    setLastResetLink("");
-    setStatusMessage(`Generating reset link for ${client.full_name}...`);
-
-    try {
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError || !session) {
-        setStatusMessage("You must be logged in as a trainer to reset passwords.");
-        setResettingClientId(null);
-        return;
-      }
-
-      const { data, error } = await supabase.functions.invoke(
-        "admin-generate-client-reset-link",
-        {
-          body: {
-            clientUserId: client.id,
-          },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
-
-      if (error) {
-        console.error(error);
-        setStatusMessage("Could not generate reset link: " + error.message);
-        setResettingClientId(null);
-        return;
-      }
-
-      if (data?.error) {
-        setStatusMessage("Could not generate reset link: " + data.error);
-        setResettingClientId(null);
-        return;
-      }
-
-      if (!data?.resetLink) {
-        setStatusMessage("Reset link was not returned by the server.");
-        setResettingClientId(null);
-        return;
-      }
-
-      await navigator.clipboard.writeText(data.resetLink);
-
-      setLastResetLink(data.resetLink);
-      setStatusMessage(
-        `Password reset link for ${client.full_name} was copied to your clipboard. Send it to the client so they can create a new password.`
-      );
-
-      setResettingClientId(null);
-    } catch (error) {
-      console.error(error);
-      setStatusMessage(
-        "Something went wrong while generating the reset link. Check the browser console and Supabase function logs."
-      );
-      setResettingClientId(null);
-    }
-  }
-
-  async function reactivateClientLogin(client: ClientProfile) {
-    const confirmed = window.confirm(
-      `Reactivate login for ${client.full_name}? This will clear failed login attempts, remove any temporary lock, and remove suspension.`
-    );
-
-    if (!confirmed) return;
-
-    setReactivatingClientId(client.id);
-    setStatusMessage(`Reactivating login for ${client.full_name}...`);
-
-    try {
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError || !session) {
-        setStatusMessage(
-          "You must be logged in as a trainer to reactivate client logins."
-        );
-        setReactivatingClientId(null);
-        return;
-      }
-
-      const { data, error } = await supabase.functions.invoke(
-        "admin-reactivate-client-login",
-        {
-          body: {
-            clientUserId: client.id,
-          },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
-
-      if (error) {
-        console.error(error);
-        setStatusMessage("Could not reactivate login: " + error.message);
-        setReactivatingClientId(null);
-        return;
-      }
-
-      if (data?.error) {
-        setStatusMessage("Could not reactivate login: " + data.error);
-        setReactivatingClientId(null);
-        return;
-      }
-
-      setStatusMessage(
-        data?.message || `Login for ${client.full_name} has been reactivated.`
-      );
-
-      setReactivatingClientId(null);
-    } catch (error) {
-      console.error(error);
-      setStatusMessage(
-        "Something went wrong while reactivating the client login. Check the browser console and Supabase function logs."
-      );
-      setReactivatingClientId(null);
-    }
-  }
-
-  async function copyLastResetLink() {
-    if (!lastResetLink) return;
-
-    await navigator.clipboard.writeText(lastResetLink);
-    setStatusMessage("Reset link copied again.");
   }
 
   async function deleteClient(clientId: string, clientName: string) {
@@ -321,26 +179,10 @@ export default function Clients() {
       {statusMessage && (
         <div className="mb-4 rounded-2xl border border-line bg-white p-4 text-sm leading-6 text-ink/80">
           <p>{statusMessage}</p>
-
-          {lastResetLink && (
-            <div className="mt-3 rounded-xl bg-canvas p-3">
-              <p className="text-xs font-semibold text-muted">
-                Last generated reset link
-              </p>
-              <p className="mt-1 break-all text-xs text-muted">{lastResetLink}</p>
-              <button
-                type="button"
-                onClick={copyLastResetLink}
-                className={`${btnPrimary} mt-3 h-9`}
-              >
-                Copy again
-              </button>
-            </div>
-          )}
         </div>
       )}
 
-      <section className={`${card} overflow-hidden`}>
+      <section className={card}>
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <h2 className="text-lg font-bold">All clients</h2>
           <label className="relative w-full sm:max-w-xs">
@@ -375,17 +217,16 @@ export default function Clients() {
           <ul>
             {filteredClients.map((client) => {
               const isDeleting = deletingClientId === client.id;
-              const isResetting = resettingClientId === client.id;
-              const isReactivating = reactivatingClientId === client.id;
-              const isBusy = isDeleting || isResetting || isReactivating;
+              const isBusy = isDeleting;
 
               return (
                 <li
                   key={client.id}
-                  className={`flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-line px-4 py-4 sm:px-6 ${
+                  className={`border-t border-line px-4 py-4 sm:px-6 ${
                     isBusy ? "opacity-60" : ""
                   }`}
                 >
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
                   <Link
                     to={`/clients/${client.id}`}
                     className="flex min-w-[220px] flex-1 items-center gap-3"
@@ -423,9 +264,9 @@ export default function Clients() {
                     <details className="relative">
                       <summary
                         aria-label={`More actions for ${client.full_name}`}
-                        className={`${btnGhost} h-9 w-9 cursor-pointer list-none px-0 [&::-webkit-details-marker]:hidden`}
+                        className={`${btnGhost} h-9 w-9 cursor-pointer list-none !px-0 [&::-webkit-details-marker]:hidden`}
                       >
-                        <MoreHorizontal className="h-4 w-4" />
+                        <MoreHorizontal className="h-4 w-4 shrink-0" />
                       </summary>
                       <div className="absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-xl border border-line bg-white py-1 shadow-[0_8px_30px_rgba(15,20,25,0.12)]">
                         <Link
@@ -437,22 +278,6 @@ export default function Clients() {
                         <button
                           type="button"
                           disabled={isBusy}
-                          onClick={() => generateClientResetLink(client)}
-                          className="block w-full px-4 py-2.5 text-left text-sm hover:bg-canvas disabled:opacity-50"
-                        >
-                          {isResetting ? "Generating..." : "Reset password"}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={isBusy}
-                          onClick={() => reactivateClientLogin(client)}
-                          className="block w-full px-4 py-2.5 text-left text-sm hover:bg-canvas disabled:opacity-50"
-                        >
-                          {isReactivating ? "Reactivating..." : "Reactivate login"}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={isBusy}
                           onClick={() => deleteClient(client.id, client.full_name)}
                           className="block w-full px-4 py-2.5 text-left text-sm text-red-700 hover:bg-red-50 disabled:opacity-50"
                         >
@@ -460,6 +285,11 @@ export default function Clients() {
                         </button>
                       </div>
                     </details>
+                  </div>
+                  </div>
+
+                  <div className="mt-3">
+                    <ClientLoginActions client={client} disabled={isBusy} />
                   </div>
                 </li>
               );

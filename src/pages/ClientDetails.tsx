@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { Eye } from "lucide-react";
+import ClientLoginActions from "../components/ClientLoginActions";
 import TrainerLayout from "../components/TrainerLayout";
 import PageHeader from "../components/ui/PageHeader";
 import { btnGhost, btnPrimary } from "../components/ui/styles";
@@ -511,6 +512,11 @@ export default function ClientDetails() {
             <InfoRow label="Full Name" value={profile.full_name} />
             <InfoRow label="Client ID" value={profile.client_id || "Not set"} />
             <InfoRow label="Auth UID" value={profile.id} />
+
+            <div className="mt-4 border-t border-line pt-4">
+              <h3 className="mb-3 text-sm font-bold">Login & password</h3>
+              <ClientLoginActions client={profile} />
+            </div>
           </SectionCard>
 
           <SectionCard title="Goals">

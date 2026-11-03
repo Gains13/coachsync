@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Check, ChevronLeft, ListChecks } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import ClientLayout from "../components/ClientLayout";
 
@@ -383,6 +384,10 @@ export default function StartWorkout({
   }, [activeStepIndex, activeSetNumber]);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [activeStepIndex, activeSetNumber, showFinalReview, showSectionIntro, isResting]);
+
+  useEffect(() => {
     if (
       previewMode ||
       isRepeatMode ||
@@ -641,17 +646,24 @@ export default function StartWorkout({
       ? Math.round((completedCount / loggedExercises.length) * 100)
       : 0;
 
-  const setProgressPercent =
-    currentTotalSets > 0
-      ? Math.round((currentCompletedSets / currentTotalSets) * 100)
-      : 0;
-
   const lastSavedLabel = draftSavedAt
     ? new Date(draftSavedAt).toLocaleTimeString([], {
         hour: "numeric",
         minute: "2-digit",
       })
     : "";
+
+  const otherExercisesRemaining = loggedExercises.filter(
+    (exercise) =>
+      !exercise.completed && exercise.exerciseId !== activeExercise?.exerciseId
+  ).length;
+
+  const completeButtonLabel =
+    activeSetNumber < currentTotalSets
+      ? `Complete Set ${activeSetNumber}`
+      : otherExercisesRemaining === 0
+      ? "Complete & Finish"
+      : "Complete Exercise";
 
   function speakAudio(text: string) {
     if (!audioCountdownEnabled) return;
@@ -2006,11 +2018,19 @@ export default function StartWorkout({
             )}
           </div>
         ) : (
+        <>
+        {completedCount < loggedExercises.length && (
+          <p className="mt-6 text-center text-sm font-semibold text-muted">
+            {loggedExercises.length - completedCount} of{" "}
+            {loggedExercises.length} exercises will be submitted as incomplete.
+            Tap Back to finish them.
+          </p>
+        )}
         <button
           type="button"
           onClick={submitWorkout}
           disabled={isSubmitting || loggedExercises.length === 0}
-          className="mt-6 w-full rounded-2xl bg-accent px-5 py-4 text-sm font-bold text-white hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60 sm:mt-8"
+          className="mt-4 w-full rounded-2xl bg-accent px-5 py-4 text-sm font-bold text-white hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60 sm:mt-8"
         >
           {isSubmitting
             ? "Submitting workout..."
@@ -2018,6 +2038,7 @@ export default function StartWorkout({
             ? "Submit Repeated Workout"
             : "Submit Workout"}
         </button>
+        </>
         )}
       </WorkoutFrame>
     );
@@ -2189,70 +2210,67 @@ export default function StartWorkout({
           </section>
         ) : (
           <>
-            <section className="mb-3 rounded-2xl border border-line bg-accent p-4 text-white ">
-              <div className="flex items-center justify-between gap-3">
+            <section className="mb-3 rounded-2xl border border-line bg-white p-4">
+              <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/75">
+                  <p className="break-words text-[11px] font-bold uppercase tracking-[0.14em] text-accent">
                     {activeExercise.section}
                   </p>
 
-                  <h2 className="mt-1 break-words text-lg font-bold leading-tight">
+                  <p className="mt-1 text-xs font-semibold text-muted">
                     Exercise {currentExerciseInSectionPosition} of{" "}
                     {totalExercisesInCurrentSection}
-                  </h2>
-
-                  <p className="mt-1 text-xs font-bold text-white/75">
+                    {" • "}
                     {previewMode
-                      ? "Preview mode • nothing saved"
+                      ? "Preview, nothing saved"
                       : isRepeatMode
                       ? "Repeat workout"
                       : !isOnline
-                      ? "Offline • backed up on this device"
+                      ? "Offline, backed up on this device"
                       : isSavingDraft
                       ? "Saving..."
                       : usingLocalBackup
-                      ? "Local backup • syncing when possible"
+                      ? "Local backup"
                       : lastSavedLabel
                       ? `Saved ${lastSavedLabel}`
                       : "Guided workout"}
                   </p>
                 </div>
 
-                <div className="shrink-0 rounded-2xl bg-white/20 px-4 py-2 text-sm font-bold ring-1 ring-white/20">
-                  {activeStepIndex + 1}/{guidedSteps.length}
-                </div>
+                <Link
+                  to={previewExitPath}
+                  className="shrink-0 rounded-xl border border-line bg-white px-3 py-1.5 text-xs font-bold text-muted hover:bg-canvas"
+                >
+                  {previewMode ? "Exit Preview" : "Exit"}
+                </Link>
               </div>
 
-              <div className="mt-3 h-2 rounded-full bg-white/20">
+              <div className="mt-3 h-1.5 rounded-full bg-canvas">
                 <div
-                  className="h-2 rounded-full bg-white transition-all"
+                  className="h-1.5 rounded-full bg-accent transition-all"
                   style={{ width: `${completionPercent}%` }}
                 />
               </div>
+
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold text-muted">
+                  {completedCount} of {loggedExercises.length} exercises done
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowExerciseNavigator(false);
+                    setShowSectionIntro(false);
+                    setShowFinalReview(true);
+                  }}
+                  disabled={isSubmitting}
+                  className="-my-1 py-1 text-xs font-bold text-accent disabled:opacity-60"
+                >
+                  {previewMode ? "Finish Preview" : "Finish Workout →"}
+                </button>
+              </div>
             </section>
-
-            <div className="mb-3 grid gap-3 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() =>
-                  setShowExerciseNavigator((currentValue) => !currentValue)
-                }
-                className="rounded-2xl border border-accent/30 bg-white px-4 py-3 text-sm font-bold text-accent hover:bg-accent-soft"
-              >
-                {showExerciseNavigator
-                  ? "Hide Exercise List"
-                  : "View / Switch Exercise"}
-              </button>
-
-              <button
-                type="button"
-                onClick={skipCurrentExercise}
-                disabled={isSubmitting}
-                className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Machine Busy? Skip for Now
-              </button>
-            </div>
 
             {showExerciseNavigator && (
               <section className="mb-3 rounded-[18px] border border-line bg-white p-4 sm:p-5">
@@ -2365,67 +2383,70 @@ export default function StartWorkout({
                     </div>
                   ))}
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowExerciseNavigator(false);
+                    setShowSectionIntro(false);
+                    setShowFinalReview(true);
+                  }}
+                  disabled={isSubmitting}
+                  className="mt-5 w-full rounded-2xl bg-accent px-4 py-3 text-sm font-bold text-white hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {previewMode ? "Finish Preview" : "Review & Submit Workout"}
+                </button>
               </section>
             )}
 
-            <section className="overflow-hidden rounded-[18px] border border-line bg-white ">
-              <div className="bg-white p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-accent">
-                      Current Movement
-                    </p>
-
-                    <h1 className="mt-2 break-words text-4xl font-bold leading-tight text-ink">
-                      {activeExercise.exerciseName || "Unnamed Exercise"}
-                    </h1>
-
-                    <p className="mt-3 text-sm font-bold text-muted">
-                      Set {activeSetNumber} of {currentTotalSets}
-                    </p>
-                  </div>
-
-                  <Link
-                    to={previewExitPath}
-                    className="shrink-0 rounded-2xl border border-line bg-white px-3 py-2 text-xs font-bold text-muted hover:bg-canvas"
-                  >
-                    {previewMode ? "Exit Preview" : "Exit"}
-                  </Link>
-                </div>
-              </div>
-
+            <section className="overflow-hidden rounded-[18px] border border-line bg-white">
               <div className="p-5">
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="rounded-2xl border border-line bg-canvas p-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted">
-                      Reps/Time
-                    </p>
+                <h1 className="break-words text-3xl font-bold leading-tight text-ink">
+                  {activeExercise.exerciseName || "Unnamed Exercise"}
+                </h1>
 
-                    <p className="mt-1 break-words text-lg font-bold leading-tight text-ink">
-                      {activeExercise.plannedReps || "N/A"}
-                    </p>
-                  </div>
+                <div className="mt-3">
+                  <p className="text-sm font-bold text-muted">
+                    Set {activeSetNumber} of {currentTotalSets}
+                  </p>
 
-                  <div className="rounded-2xl border border-line bg-canvas p-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted">
-                      Weight
-                    </p>
-
-                    <p className="mt-1 break-words text-lg font-bold leading-tight text-ink">
-                      {activeExercise.plannedWeight || "N/A"}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-line bg-canvas p-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted">
-                      Rest
-                    </p>
-
-                    <p className="mt-1 break-words text-lg font-bold leading-tight text-ink">
-                      {activeExercise.plannedRest || "60 sec"}
-                    </p>
+                  <div className="mt-2 flex gap-1.5" aria-hidden="true">
+                    {Array.from({ length: currentTotalSets }, (_, index) => (
+                      <span
+                        key={index}
+                        className={`h-1.5 flex-1 rounded-full ${
+                          index < currentCompletedSets
+                            ? "bg-accent"
+                            : index === activeSetNumber - 1
+                            ? "bg-accent/30"
+                            : "bg-canvas"
+                        }`}
+                      />
+                    ))}
                   </div>
                 </div>
+
+                <dl className="mt-5 divide-y divide-line rounded-2xl border border-line">
+                  {[
+                    ["Reps / Time", activeExercise.plannedReps || "N/A"],
+                    ["Weight", activeExercise.plannedWeight],
+                    ["Rest", activeExercise.plannedRest || "60 sec"],
+                  ]
+                    .filter(([, value]) => value)
+                    .map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="flex items-baseline justify-between gap-4 px-4 py-3"
+                    >
+                      <dt className="shrink-0 text-sm font-semibold text-muted">
+                        {label}
+                      </dt>
+                      <dd className="min-w-0 break-words text-right text-base font-bold text-ink">
+                        {value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
 
                 {isTimedExercise(activeExercise) && (
                   <div className="mt-5 rounded-2xl border border-line bg-accent-soft p-4">
@@ -2469,7 +2490,7 @@ export default function StartWorkout({
                       </div>
                     )}
 
-                    <div className="mt-4 grid grid-cols-3 gap-3">
+                    <div className="mt-4 grid grid-cols-2 gap-3">
                       {!isExerciseTimerRunning ? (
                         <button
                           type="button"
@@ -2497,59 +2518,32 @@ export default function StartWorkout({
                         Reset
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={completeCurrentSet}
-                        disabled={isSubmitting}
-                        className="rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-3 text-sm font-bold text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        Done
-                      </button>
                     </div>
                   </div>
                 )}
 
-                <div className="mt-5 rounded-2xl border border-line bg-canvas p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-bold text-ink/80">
-                      Set Progress
-                    </p>
+                <div className="mt-4 flex gap-3">
+                  {activeExercise.videoLink && (
+                    <a
+                      href={activeExercise.videoLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 rounded-2xl bg-accent-soft px-3 py-3 text-center text-sm font-bold text-accent"
+                    >
+                      Watch Video
+                    </a>
+                  )}
 
-                    <p className="text-sm font-bold text-accent">
-                      {currentCompletedSets} / {currentTotalSets}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 h-3 rounded-full bg-white">
-                    <div
-                      className="h-3 rounded-full bg-accent transition-all"
-                      style={{ width: `${setProgressPercent}%` }}
-                    />
-                  </div>
-                </div>
-
-                {activeExercise.videoLink && (
-                  <a
-                    href={activeExercise.videoLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-4 block w-full rounded-2xl border border-line bg-accent-soft px-4 py-3 text-center text-sm font-bold text-accent hover:bg-accent-soft"
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowExerciseDetails((currentValue) => !currentValue)
+                    }
+                    className="flex-1 rounded-2xl border border-line bg-white px-3 py-3 text-sm font-bold text-ink/80 hover:bg-canvas"
                   >
-                    Watch Exercise Video
-                  </a>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowExerciseDetails((currentValue) => !currentValue)
-                  }
-                  className="mt-4 w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm font-bold text-ink/80 hover:bg-canvas"
-                >
-                  {showExerciseDetails
-                    ? "Hide Difficulty / Notes"
-                    : "Add Difficulty / Notes"}
-                </button>
+                    {showExerciseDetails ? "Hide Notes" : "Add Notes"}
+                  </button>
+                </div>
 
                 {showExerciseDetails && (
                   <div className="mt-4 rounded-2xl border border-line bg-canvas p-4">
@@ -2599,16 +2593,21 @@ export default function StartWorkout({
                   </div>
                 )}
 
-                <div className="mt-4 flex items-center justify-between gap-3 text-xs font-bold text-muted">
-                  <span>
-                    {completedCount} of {loggedExercises.length} completed
-                  </span>
+                <div className="mt-4 flex items-center justify-between gap-3 text-xs font-bold">
+                  <button
+                    type="button"
+                    onClick={skipCurrentExercise}
+                    disabled={isSubmitting}
+                    className="py-1 text-orange-700 disabled:opacity-60"
+                  >
+                    Machine busy? Skip for now
+                  </button>
 
                   <button
                     type="button"
                     onClick={resetWorkoutProgress}
                     disabled={isSubmitting}
-                    className="font-bold text-red-600 disabled:opacity-60"
+                    className="py-1 text-muted disabled:opacity-60"
                   >
                     Clear Progress
                   </button>
@@ -2616,33 +2615,45 @@ export default function StartWorkout({
               </div>
             </section>
 
-            <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-line bg-white/95 p-4 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur md:static md:mt-6 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
-              <div className="mx-auto grid max-w-3xl grid-cols-3 gap-3">
+            {/* z-[45]: must sit over the z-40 mobile tab bar, under the z-50 menu. */}
+            <div className="fixed bottom-0 left-0 right-0 z-[45] border-t border-line bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(15,23,42,0.08)] md:static md:mt-6 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
+              <div className="mx-auto flex max-w-3xl gap-2">
                 <button
                   type="button"
                   onClick={goBackStep}
                   disabled={activeStepIndex === 0 && activeSetNumber === 1}
-                  className="rounded-2xl border border-line bg-white px-3 py-4 text-sm font-bold text-ink/80 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Back"
+                  title="Back"
+                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-line bg-white text-ink/80 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Back
+                  <ChevronLeft className="h-5 w-5" />
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setShowExerciseNavigator(true)}
+                  onClick={() => {
+                    if (!showExerciseNavigator) {
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                    setShowExerciseNavigator((currentValue) => !currentValue);
+                  }}
                   disabled={isSubmitting}
-                  className="rounded-2xl border border-line bg-accent-soft px-3 py-4 text-sm font-bold text-accent disabled:cursor-not-allowed disabled:opacity-60"
+                  aria-label={showExerciseNavigator ? "Hide exercise list" : "Show exercise list"}
+                  aria-expanded={showExerciseNavigator}
+                  title="Exercises"
+                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent-soft text-accent disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Exercises
+                  <ListChecks className="h-5 w-5" />
                 </button>
 
                 <button
                   type="button"
                   onClick={completeCurrentSet}
                   disabled={isSubmitting}
-                  className="rounded-2xl bg-accent px-3 py-4 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex h-14 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-accent px-3 text-base font-bold text-white hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Complete
+                  <Check className="h-5 w-5 shrink-0" />
+                  {completeButtonLabel}
                 </button>
               </div>
             </div>
@@ -2697,6 +2708,8 @@ function WorkoutFrame({
   }
 
   return (
-    <ClientLayout unreadMessages={unreadMessages}>{children}</ClientLayout>
+    <ClientLayout unreadMessages={unreadMessages} hideTabBar>
+      {children}
+    </ClientLayout>
   );
 }
