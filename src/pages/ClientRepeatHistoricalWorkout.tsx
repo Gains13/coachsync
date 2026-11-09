@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import ClientLayout from "../components/ClientLayout";
+import HoldTimer, { shouldOfferHoldTimer } from "../components/HoldTimer";
 
 const SECTION_ORDER = [
   "Warm-Up",
@@ -775,6 +776,24 @@ export default function ClientRepeatHistoricalWorkout() {
                       )}
                     </div>
                   </div>
+
+                  {shouldOfferHoldTimer(
+                    exercise.exerciseName,
+                    exercise.plannedReps,
+                    exercise.section
+                  ) && (
+                    <div className="mb-4">
+                      <HoldTimer
+                        exerciseName={exercise.exerciseName}
+                        plannedReps={exercise.plannedReps}
+                        plannedSets={exercise.plannedSets}
+                        plannedRest={exercise.plannedRest}
+                        onComplete={() => {
+                          if (!exercise.completed) toggleCompleted(originalIndex);
+                        }}
+                      />
+                    </div>
+                  )}
 
                   <label
                     className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 ${

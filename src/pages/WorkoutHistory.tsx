@@ -259,15 +259,6 @@ export default function WorkoutHistory() {
     historyItems.map((item) => item.clientUserId)
   ).size;
 
-  const averageCompletion =
-    submissions.length > 0
-      ? Math.round(
-          submissions.reduce((total, submission) => {
-            return total + getCompletionStats(submission).percent;
-          }, 0) / submissions.length
-        )
-      : 0;
-
   const latestActivity =
     historyItems.length > 0 ? historyItems[0].title : "None yet";
 

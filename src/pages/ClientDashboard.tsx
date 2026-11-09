@@ -83,7 +83,7 @@ export default function ClientDashboard({
   const navigate = useNavigate();
 
   const [client, setClient] = useState<ClientData | null>(null);
-  const [goal, setGoal] = useState<GoalData | null>(null);
+  const [, setGoal] = useState<GoalData | null>(null);
   const [activePlan, setActivePlan] = useState<TrainingPlan | null>(null);
   const [currentWeek, setCurrentWeek] = useState<number | null>(null);
   const [totalWeeks, setTotalWeeks] = useState(0);
@@ -349,7 +349,7 @@ export default function ClientDashboard({
 
     const { data: lastWorkoutData, error: lastWorkoutError } = await supabase
       .from("workout_submissions")
-      .select("id, workout_title, title, submitted_at, completed_at, date")
+      .select("id, workout_title, submitted_at")
       .eq("client_user_id", userId)
       .order("submitted_at", { ascending: false })
       .limit(1)

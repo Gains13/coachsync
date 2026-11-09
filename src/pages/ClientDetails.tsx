@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { Eye, Play } from "lucide-react";
+import ClientLoginActions from "../components/ClientLoginActions";
+import ClientWorkoutProgress, {
+  MarkCompletePanel,
+} from "../components/ClientWorkoutProgress";
+import VideoLinkInput from "../components/VideoLinkInput";
 import TrainerLayout from "../components/TrainerLayout";
 import PageHeader from "../components/ui/PageHeader";
 import { btnGhost, btnPrimary } from "../components/ui/styles";
@@ -43,6 +48,7 @@ type ClientGoals = {
 
 type SubmittedWorkout = {
   id: string;
+  workout_id: string | null;
   workout_title: string;
   submitted_at: string;
 };
@@ -109,6 +115,7 @@ export default function ClientDetails() {
     useState<EditingWorkout | null>(null);
   const [editingExercise, setEditingExercise] =
     useState<EditingExercise | null>(null);
+  const [markingWorkoutId, setMarkingWorkoutId] = useState("");
 
   useEffect(() => {
     loadClientDetails();
@@ -170,7 +177,7 @@ export default function ClientDetails() {
 
     const { data: workoutsData, error: workoutsError } = await supabase
       .from("workout_submissions")
-      .select("id, workout_title, submitted_at")
+      .select("id, workout_id, workout_title, submitted_at")
       .eq("client_user_id", profileData.id)
       .order("submitted_at", { ascending: false });
 
@@ -518,6 +525,11 @@ export default function ClientDetails() {
             <InfoRow label="Full Name" value={profile.full_name} />
             <InfoRow label="Client ID" value={profile.client_id || "Not set"} />
             <InfoRow label="Auth UID" value={profile.id} />
+
+            <div className="mt-4 border-t border-line pt-4">
+              <h3 className="mb-3 text-sm font-bold">Login & password</h3>
+              <ClientLoginActions client={profile} />
+            </div>
           </SectionCard>
 
           <SectionCard title="Goals">
@@ -583,6 +595,13 @@ export default function ClientDetails() {
             ) : (
               <p className="text-muted">No starting info added yet.</p>
             )}
+          </SectionCard>
+
+          <SectionCard title="Workouts In Progress">
+            <ClientWorkoutProgress
+              clientUserId={profile.id}
+              emptyText="Nothing started and left unfinished."
+            />
           </SectionCard>
 
           <SectionCard title="Submitted Workouts">
@@ -762,6 +781,29 @@ export default function ClientDetails() {
                                   </div>
 
                                   <div className="flex flex-wrap gap-2">
+                                    {submittedWorkouts.some(
+                                      (submitted) =>
+                                        submitted.workout_id === workout.id
+                                    ) ? (
+                                      <span className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+                                        Submitted
+                                      </span>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setMarkingWorkoutId(
+                                            markingWorkoutId === workout.id
+                                              ? ""
+                                              : workout.id
+                                          )
+                                        }
+                                        className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-100 hover:bg-emerald-100"
+                                      >
+                                        Mark Complete
+                                      </button>
+                                    )}
+
                                     <Link
                                       to={`/edit-workout/${workout.id}`}
                                       className="rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white hover:bg-accent-dark"
@@ -787,6 +829,26 @@ export default function ClientDetails() {
                                       Delete Workout
                                     </button>
                                   </div>
+                                </div>
+                              )}
+
+                              {markingWorkoutId === workout.id && (
+                                <div className="mb-4">
+                                  <MarkCompletePanel
+                                    clientUserId={profile.id}
+                                    workoutId={workout.id}
+                                    title={workout.title}
+                                    exercises={[...workout.client_plan_exercises]
+                                      .sort(
+                                        (a, b) =>
+                                          a.exercise_order - b.exercise_order
+                                      )
+                                      .map((exercise) => ({
+                                        exerciseId: exercise.id,
+                                        name: exercise.exercise_name,
+                                      }))}
+                                    onCancel={() => setMarkingWorkoutId("")}
+                                  />
                                 </div>
                               )}
 
@@ -892,10 +954,12 @@ export default function ClientDetails() {
                                               />
 
                                               <div className="md:col-span-3">
-                                                <Input
-                                                  label="Video Link"
+                                                <VideoLinkInput
                                                   value={
                                                     editingExercise.video_link
+                                                  }
+                                                  exerciseName={
+                                                    editingExercise.exercise_name
                                                   }
                                                   onChange={(value) =>
                                                     setEditingExercise({
@@ -903,7 +967,6 @@ export default function ClientDetails() {
                                                       video_link: value,
                                                     })
                                                   }
-                                                  placeholder="https://youtube.com/..."
                                                 />
                                               </div>
                                             </div>

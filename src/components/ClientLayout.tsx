@@ -27,6 +27,7 @@ type ClientMenuItem = {
 type ClientLayoutProps = {
   children: ReactNode;
   unreadMessages?: number;
+  hideTabBar?: boolean;
 };
 
 type ProfileSummary = {
@@ -86,6 +87,7 @@ function getInitials(name: string) {
 export default function ClientLayout({
   children,
   unreadMessages = 0,
+  hideTabBar = false,
 }: ClientLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -192,12 +194,16 @@ export default function ClientLayout({
       )}
 
       <div className="lg:pl-60">
-        <div className="mx-auto w-full max-w-[1200px] px-4 pb-32 pt-5 sm:px-6 lg:px-10 lg:pb-12 lg:pt-7">
+        <div
+          className={`mx-auto w-full max-w-[1200px] px-4 pt-5 sm:px-6 lg:px-10 lg:pb-12 lg:pt-7 ${
+            hideTabBar ? "pb-8" : "pb-32"
+          }`}
+        >
           {children}
         </div>
       </div>
 
-      <MobileTabBar unreadMessages={unreadMessages} />
+      {!hideTabBar && <MobileTabBar unreadMessages={unreadMessages} />}
     </main>
   );
 }

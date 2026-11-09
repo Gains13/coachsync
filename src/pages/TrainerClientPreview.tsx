@@ -466,7 +466,7 @@ function PastWorkoutsPreview({
   async function load() {
     setLoading(true);
     const [a, b, c] = await Promise.all([
-      supabase.from("workout_submissions").select("id, workout_id, workout_title, title, submitted_at, completed_at, date, notes").eq("client_user_id", clientUserId).order("submitted_at", { ascending: false }),
+      supabase.from("workout_submissions").select("id, workout_id, workout_title, submitted_at, notes").eq("client_user_id", clientUserId).order("submitted_at", { ascending: false }),
       supabase.from("personal_workout_logs").select("id, activity_type, title, duration_minutes, intensity, location, notes, logged_at, created_at").eq("client_user_id", clientUserId).order("logged_at", { ascending: false }),
       supabase.from("client_historical_workouts").select("id, title, workout_date, source, notes").eq("client_user_id", clientUserId).order("workout_date", { ascending: false }),
     ]);
@@ -733,10 +733,7 @@ function CompletedPreview({
         id,
         workout_id,
         workout_title,
-        title,
         submitted_at,
-        completed_at,
-        date,
         notes,
         workout_submission_exercises (*)
       `)

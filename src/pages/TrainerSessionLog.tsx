@@ -5,6 +5,8 @@ import {
   ArrowUp,
   Check,
   ChevronLeft,
+  ChevronRight,
+  ChevronUp,
   Plus,
   Trash2,
   X,
@@ -24,6 +26,7 @@ import {
   type Session,
   type SessionExercise,
 } from "../lib/sessions";
+import { describeSets, parseQuickLog } from "../lib/quickLog";
 
 type SaveState = "saved" | "dirty" | "saving" | "error";
 
@@ -317,7 +320,7 @@ export default function TrainerSessionLog() {
           <div className={`${card} p-6 text-center`}>
             <p className="font-semibold">No exercises yet</p>
             <p className="mt-1 text-sm text-muted">
-              Add the first one and log sets as your client does them.
+              Type the first one below, the same way you would in your notes.
             </p>
           </div>
         )}
@@ -341,13 +344,23 @@ export default function TrainerSessionLog() {
           />
         ))}
 
+        <QuickEntry
+          lastSection={session.exercises[session.exercises.length - 1]?.section}
+          onAdd={(exercises) =>
+            update((current) => ({
+              ...current,
+              exercises: [...current.exercises, ...exercises],
+            }))
+          }
+        />
+
         <button
           type="button"
           onClick={addExercise}
-          className="flex h-14 items-center justify-center gap-2 rounded-[18px] border border-dashed border-ink/25 bg-white font-semibold transition hover:bg-canvas"
+          className="flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-muted transition hover:bg-white"
         >
-          <Plus className="h-5 w-5" />
-          Add exercise
+          <Plus className="h-4 w-4" />
+          Add one set by set instead
         </button>
 
         <label className={`${card} block p-4`}>
@@ -364,7 +377,7 @@ export default function TrainerSessionLog() {
         </label>
       </div>
 
-      <div className="sticky bottom-24 z-20 mt-4 flex flex-wrap gap-2 rounded-[18px] border border-line bg-white p-3 shadow-[0_8px_30px_rgba(15,20,25,0.08)] lg:bottom-4">
+      <div className="z-20 mt-4 flex flex-wrap gap-2 rounded-[18px] border border-line bg-white p-3 lg:sticky lg:bottom-4 lg:shadow-[0_8px_30px_rgba(15,20,25,0.08)]">
         <button type="button" onClick={remove} className={btnDanger}>
           <Trash2 className="h-4 w-4" />
           Delete
@@ -378,7 +391,7 @@ export default function TrainerSessionLog() {
             className={btnPrimary}
           >
             <Check className="h-4 w-4" />
-            {isFinishing ? "Finishing..." : "Finish & share with client"}
+            {isFinishing ? "Finishing..." : "Finish & share"}
           </button>
         ) : (
           <button type="button" onClick={reopen} className={btnGhost}>
@@ -387,6 +400,84 @@ export default function TrainerSessionLog() {
         )}
       </div>
     </TrainerLayout>
+  );
+}
+
+function QuickEntry({
+  lastSection,
+  onAdd,
+}: {
+  lastSection?: string;
+  onAdd: (exercises: SessionExercise[]) => void;
+}) {
+  const [text, setText] = useState("");
+  const [section, setSection] = useState(lastSection || "Resistance");
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const sections = SESSION_SECTIONS.includes(section as (typeof SESSION_SECTIONS)[number])
+    ? SESSION_SECTIONS
+    : [...SESSION_SECTIONS, section];
+
+  function add() {
+    const parsed = parseQuickLog(text, section);
+    if (parsed.exercises.length > 0) onAdd(parsed.exercises);
+    setSection(parsed.section);
+    setText("");
+    inputRef.current?.focus();
+  }
+
+  return (
+    <section className={`${card} p-4`}>
+      <div className="flex items-center justify-between gap-3">
+        <label htmlFor="quick-entry" className="font-semibold">
+          Type it like your notes
+        </label>
+        <select
+          value={section}
+          onChange={(event) => setSection(event.target.value)}
+          aria-label="Section for new exercises"
+          className="h-9 min-w-0 rounded-full border border-line bg-canvas px-3 text-xs font-semibold"
+        >
+          {sections.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <textarea
+        id="quick-entry"
+        ref={inputRef}
+        rows={2}
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+            event.preventDefault();
+            add();
+          }
+        }}
+        enterKeyHint="done"
+        placeholder="Goblet squat 3x10 35"
+        className="mt-2 w-full resize-y rounded-xl border border-line px-3 py-2.5 text-base outline-none focus:border-accent/40 focus:ring-2 focus:ring-accent/15"
+      />
+
+      <div className="mt-2 flex items-start justify-between gap-3">
+        <p className="min-w-0 text-xs leading-5 text-muted">
+          Press Enter after each one. Also works: Bench 135x10, 155x8 · Plank 3x30s ·
+          "Warm up" starts a section. You can paste a whole list.
+        </p>
+        <button
+          type="button"
+          onClick={add}
+          disabled={!text.trim()}
+          className={`${btnPrimary} h-10 shrink-0`}
+        >
+          Add
+        </button>
+      </div>
+    </section>
   );
 }
 
@@ -413,6 +504,49 @@ function ExerciseCard({
     ? SESSION_SECTIONS
     : [...SESSION_SECTIONS, exercise.section];
 
+  const [isExpanded, setIsExpanded] = useState(exercise.exerciseName.trim() === "");
+  const allDone = exercise.sets.every((set) => set.done);
+
+  if (!isExpanded) {
+    return (
+      <section className={`${card} flex items-center gap-2 p-2`}>
+        <button
+          type="button"
+          onClick={() => setIsExpanded(true)}
+          aria-label={`Edit ${exercise.exerciseName}`}
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-2 py-1.5 text-left hover:bg-canvas"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block break-words font-semibold">{exercise.exerciseName}</span>
+            <span className="block break-words text-sm text-muted">
+              {describeSets(exercise.sets)}
+              {exercise.rest ? ` · rest ${exercise.rest}` : ""}
+            </span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted" />
+        </button>
+        <button
+          type="button"
+          aria-pressed={allDone}
+          aria-label={`Mark all sets of ${exercise.exerciseName} done`}
+          onClick={() =>
+            onChange((current) => ({
+              ...current,
+              sets: current.sets.map((set) => ({ ...set, done: !allDone })),
+            }))
+          }
+          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition ${
+            allDone
+              ? "border-emerald-700 bg-emerald-700 text-white"
+              : "border-line bg-white text-muted hover:bg-canvas"
+          }`}
+        >
+          <Check className="h-5 w-5" strokeWidth={2.5} />
+        </button>
+      </section>
+    );
+  }
+
   return (
     <section className={`${card} p-4`}>
       <div className="flex flex-wrap items-center gap-2">
@@ -432,6 +566,9 @@ function ExerciseCard({
           ))}
         </select>
         <span className="flex-1" />
+        <IconButton label="Collapse" onClick={() => setIsExpanded(false)}>
+          <ChevronUp className="h-4 w-4" />
+        </IconButton>
         <IconButton label="Move up" disabled={isFirst} onClick={() => onMove(-1)}>
           <ArrowUp className="h-4 w-4" />
         </IconButton>

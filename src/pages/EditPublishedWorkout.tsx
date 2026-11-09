@@ -19,6 +19,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "../lib/supabaseClient";
 import TrainerLayout from "../components/TrainerLayout";
+import VideoLinkInput from "../components/VideoLinkInput";
 import PageHeader from "../components/ui/PageHeader";
 import { btnGhost } from "../components/ui/styles";
 
@@ -1456,14 +1457,15 @@ function SortableExerciseEditor({
               placeholder="30-60 sec"
             />
 
-            <Input
-              label="Video Link"
-              value={exercise.videoLink}
-              onChange={(value) =>
-                updateExercise(exercise.formId, "videoLink", value)
-              }
-              placeholder="https://youtube.com/..."
-            />
+            <div className="md:col-span-3">
+              <VideoLinkInput
+                value={exercise.videoLink}
+                exerciseName={exercise.exerciseName}
+                onChange={(value) =>
+                  updateExercise(exercise.formId, "videoLink", value)
+                }
+              />
+            </div>
 
             <div className="md:col-span-3">
               <label className="mb-2 block text-sm font-bold text-ink/80">

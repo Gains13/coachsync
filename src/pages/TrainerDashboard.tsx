@@ -14,6 +14,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import ClientWorkoutProgress from "../components/ClientWorkoutProgress";
 import TrainerLayout from "../components/TrainerLayout";
 import PageHeader from "../components/ui/PageHeader";
 import { btnGhost, btnPrimary, card } from "../components/ui/styles";
@@ -466,6 +467,8 @@ export default function TrainerDashboard() {
           {statusMessage}
         </p>
       )}
+
+      <ClientWorkoutProgress showClientName onlyStarted limit={8} />
 
       <div className="flex flex-wrap items-start gap-4">
         <section className={`${card} min-w-0 flex-[999_1_520px] overflow-hidden`}>
